@@ -1,0 +1,321 @@
+// =============================================================================
+// Community Platform — Prisma schema
+//
+// This file is split conceptually into sections that mirror /modules:
+//   - Core (users, profiles, settings)               -> modules/auth, modules/users, modules/profiles, modules/settings
+//   - Content & Media foundation                      -> modules/content, modules/media
+//   - Billing foundation (Stripe, test mode)           -> modules/payments
+//
+// Deliberately NOT modeled yet (future modules, per the Foundation Phase spec):
+//   Discussions, Courses (beyond a bare courseId placeholder on Purchase),
+//   Events, full Membership benefits, Notifications.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Core: Users, Profiles, Roles, Settings
+// -----------------------------------------------------------------------------
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  passwordHash String?
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  profile Profile?
+
+  // Billing foundation (see modules/payments) — every user maps to at most
+  // one Stripe Customer. Created lazily on first checkout/donation.
+  stripeCustomerId String? @unique
+
+  authoredContent ContentItem[] @relation("ContentAuthor")
+  uploadedMedia   Media[]       @relation("MediaUploadedBy")
+
+  subscriptions Subscription[]
+  payments      Payment[]
+  purchases     Purchase[]
+  donations     Donation[]
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+enum ProfileVisibility {
+  PUBLIC
+  MEMBERS
+  PRIVATE
+}
+
+model Profile {
+  id         String            @id @default(cuid())
+  userId     String            @unique
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarUrl  String?
+  bio        String?
+  interests  String[]          @default([])
+  visibility ProfileVisibility @default(MEMBERS)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@map("profiles")
+}
+
+// Simple typed key/value application settings (name, logo, default currency,
+// contact info, feature toggles, ...). Kept generic on purpose so future
+// modules can add their own settings without a schema change.
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// -----------------------------------------------------------------------------
+// Content & Media foundation
+// -----------------------------------------------------------------------------
+
+enum ContentType {
+  ARTICLE
+  ANNOUNCEMENT
+  EDUCATIONAL
+  OTHER
+}
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+// Minimal content model that both Articles and Announcements can use for now.
+// A dedicated Blog/CMS module can extend this later (categories, tags,
+// gallery images, reading time, etc.) without breaking this foundation.
+model ContentItem {
+  id          String        @id @default(cuid())
+  type        ContentType
+  title       String
+  slug        String        @unique
+  excerpt     String?
+  body        String?
+  status      ContentStatus @default(DRAFT)
+  featured    Boolean       @default(false)
+  pinned      Boolean       @default(false)
+  publishedAt DateTime?
+
+  authorId String?
+  author   User?   @relation("ContentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  coverMediaId String?
+  coverMedia   Media?  @relation("ContentCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, status])
+  @@index([pinned])
+  @@map("content_items")
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+// Storage-agnostic media reference. `provider` + `url` let this point at
+// local dev storage today and S3-compatible storage later without changing
+// how Articles/Courses reference media (see modules/media/storage.ts).
+model Media {
+  id       String    @id @default(cuid())
+  type     MediaType
+  provider String    @default("local")
+  url      String
+  fileName String
+  mimeType String?
+  size     Int?
+
+  uploadedById String?
+  uploadedBy   User?   @relation("MediaUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  contentCovers ContentItem[] @relation("ContentCover")
+
+  @@map("media")
+}
+
+// -----------------------------------------------------------------------------
+// Billing foundation (Stripe, TEST MODE) — see modules/payments
+// No checkout UI is wired up yet; this only prepares the data model and
+// service layer so future modules (Membership, Courses, Donations) can
+// build on top of it without another schema migration.
+// -----------------------------------------------------------------------------
+
+model MembershipPlan {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  amount          Int // in the smallest currency unit (e.g. cents)
+  currency        String   @default("eur")
+  interval        String // "month" | "year"
+  stripeProductId String?
+  stripePriceId   String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("membership_plans")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  UNPAID
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  membershipPlanId     String
+  membershipPlan       MembershipPlan     @relation(fields: [membershipPlanId], references: [id])
+  stripeCustomerId     String
+  stripeSubscriptionId String             @unique
+  status               SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  REFUNDED
+  REQUIRES_ACTION
+}
+
+enum PaymentType {
+  MEMBERSHIP
+  COURSE
+  DONATION
+  OTHER
+}
+
+model Payment {
+  id                       String        @id @default(cuid())
+  userId                   String?
+  user                     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  amount                   Int
+  currency                 String        @default("eur")
+  type                     PaymentType
+  status                   PaymentStatus @default(PENDING)
+  stripePaymentIntentId    String?       @unique
+  stripeCheckoutSessionId  String?       @unique
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("payments")
+}
+
+// Prepared for future one-time course purchases. `courseId` is a plain field
+// (not a relation) because the Courses module does not exist yet — this
+// avoids a premature dependency while keeping the shape ready.
+model Purchase {
+  id                       String        @id @default(cuid())
+  userId                   String
+  user                     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId                 String
+  amount                   Int
+  currency                 String        @default("eur")
+  status                   PaymentStatus @default(PENDING)
+  stripePaymentIntentId    String?
+  stripeCheckoutSessionId  String?
+  purchasedAt              DateTime?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([courseId])
+  @@map("purchases")
+}
+
+model Donation {
+  id                       String        @id @default(cuid())
+  userId                   String?
+  user                     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  amount                   Int
+  currency                 String        @default("eur")
+  status                   PaymentStatus @default(PENDING)
+  stripePaymentIntentId    String?
+  stripeCheckoutSessionId  String?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  @@index([userId])
+  @@map("donations")
+}
+
+// Audit/idempotency log for inbound Stripe webhook events. `eventId` is the
+// Stripe event id — used to guarantee a given event is only ever applied once,
+// even across retries.
+model PaymentEvent {
+  id           String    @id @default(cuid())
+  eventId      String    @unique
+  provider     String    @default("stripe")
+  eventType    String
+  userId       String?
+  paymentId    String?
+  status       String
+  errorMessage String?
+  processedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@map("payment_events")
+}
