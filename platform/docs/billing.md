@@ -149,9 +149,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 ## Future implementation steps (suggested order)
 
-1. **Membership module**: admin CRUD for `MembershipPlan` (incl. creating
-   the Stripe Product/Price), a real membership pricing page, and
-   `createSubscriptionCheckout()` wired to a "Join" button.
+1. ~~**Membership module**~~ — done, see [`membership.md`](./membership.md).
 2. **Donations module**: a donation page using
    `createDonationCheckout()` (preset + custom amounts).
 3. **Courses module**: once Courses exist, replace `Purchase.courseId`'s

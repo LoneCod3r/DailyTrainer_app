@@ -10,6 +10,7 @@ import { clsx } from '@/lib/clsx';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
+  { href: '/membership', label: 'Membership' },
   { href: '/articles', label: 'Articles', comingSoon: true },
   { href: '/courses', label: 'Courses', comingSoon: true },
   { href: '/events', label: 'Events', comingSoon: true },

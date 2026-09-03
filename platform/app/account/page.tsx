@@ -2,14 +2,19 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getProfileByUserId } from '@/modules/profiles/profiles.service';
+import { getActiveSubscriptionForUser } from '@/modules/membership/membership.service';
 import { ProfileForm } from '@/components/account/ProfileForm';
+import { MembershipStatus } from '@/components/account/MembershipStatus';
 import { Container, Badge } from '@/components/ui';
 
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login?callbackUrl=/account');
 
-  const profile = await getProfileByUserId(session.user.id);
+  const [profile, subscription] = await Promise.all([
+    getProfileByUserId(session.user.id),
+    getActiveSubscriptionForUser(session.user.id),
+  ]);
 
   return (
     <Container className="flex flex-col gap-6 py-10">
@@ -19,6 +24,8 @@ export default async function AccountPage() {
           {session.user.email} · <Badge tone="brand">{session.user.role}</Badge>
         </p>
       </div>
+
+      <MembershipStatus subscription={subscription} />
 
       <ProfileForm
         initialProfile={{

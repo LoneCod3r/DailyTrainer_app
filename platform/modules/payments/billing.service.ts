@@ -10,11 +10,9 @@ const log = createLogger('billing');
 // -----------------------------------------------------------------------------
 // This is the ONLY file in the app that should import `stripe` directly
 // (besides lib/stripe.ts itself and the webhook route). Everything else —
-// future Membership/Course/Donation UI — should call these functions instead
+// Membership/future Course/Donation UI — should call these functions instead
 // of touching the Stripe SDK, per Prompt3 §2 ("Keep Stripe-specific logic
 // inside a dedicated billing/payment service layer").
-//
-// Nothing in this file is wired to a public checkout UI yet (Prompt3 §17).
 // -----------------------------------------------------------------------------
 
 function centsToStripeStatus(status: Stripe.PaymentIntent.Status): PaymentStatus {
@@ -87,6 +85,84 @@ export async function getOrCreateStripeCustomer(userId: string): Promise<string>
   return customer.id;
 }
 
+// --- Membership plan products/prices --------------------------------------------
+
+// Stripe Prices are immutable (amount/currency/interval can't be edited once
+// created) — see replaceMembershipPlanPrice below for how modules/membership
+// handles a price change. This function is only used to create the very
+// first Price for a brand-new MembershipPlan.
+export async function createMembershipPlanProduct(params: {
+  name: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  interval: 'month' | 'year';
+}) {
+  const stripe = getStripeClient();
+
+  const product = await stripe.products.create({
+    name: params.name,
+    description: params.description,
+  });
+  const price = await stripe.prices.create({
+    product: product.id,
+    unit_amount: params.amount,
+    currency: params.currency,
+    recurring: { interval: params.interval },
+  });
+
+  log.info('stripe membership product/price created', { stripeProductId: product.id, stripePriceId: price.id });
+  return { stripeProductId: product.id, stripePriceId: price.id };
+}
+
+export async function updateMembershipPlanProduct(
+  stripeProductId: string,
+  params: { name?: string; description?: string },
+) {
+  const stripe = getStripeClient();
+  await stripe.products.update(stripeProductId, {
+    ...(params.name !== undefined ? { name: params.name } : {}),
+    ...(params.description !== undefined ? { description: params.description } : {}),
+  });
+}
+
+// Creates a new Price for the plan's existing Product and archives the old
+// one (active: false) so it can no longer be used for new Checkout Sessions.
+// Existing subscribers keep billing at their original Price until they
+// resubscribe — Stripe does not retroactively change an active subscription.
+export async function replaceMembershipPlanPrice(params: {
+  stripeProductId: string;
+  oldStripePriceId?: string | null;
+  amount: number;
+  currency: string;
+  interval: 'month' | 'year';
+}) {
+  const stripe = getStripeClient();
+
+  const price = await stripe.prices.create({
+    product: params.stripeProductId,
+    unit_amount: params.amount,
+    currency: params.currency,
+    recurring: { interval: params.interval },
+  });
+
+  if (params.oldStripePriceId) {
+    await stripe.prices.update(params.oldStripePriceId, { active: false }).catch(() => undefined);
+  }
+
+  log.info('stripe membership price replaced', {
+    stripeProductId: params.stripeProductId,
+    oldStripePriceId: params.oldStripePriceId,
+    newStripePriceId: price.id,
+  });
+  return price.id;
+}
+
+export async function setMembershipPlanProductActive(stripeProductId: string, active: boolean) {
+  const stripe = getStripeClient();
+  await stripe.products.update(stripeProductId, { active });
+}
+
 // --- Checkout sessions ---------------------------------------------------------
 
 export async function createSubscriptionCheckout(params: { userId: string; membershipPlanId: string }) {
@@ -106,6 +182,13 @@ export async function createSubscriptionCheckout(params: { userId: string; membe
     success_url: `${process.env.APP_URL}/membership/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.APP_URL}/membership`,
     metadata: { userId: params.userId, membershipPlanId: plan.id, kind: 'membership' },
+    // Checkout Session metadata does NOT carry over to the Subscription object
+    // Stripe creates from it — it must be set explicitly via subscription_data
+    // so the customer.subscription.* webhook handlers below (which read
+    // sub.metadata.userId/membershipPlanId) can actually find it.
+    subscription_data: {
+      metadata: { userId: params.userId, membershipPlanId: plan.id },
+    },
   });
 
   log.info('subscription checkout session created', { userId: params.userId, planId: plan.id });

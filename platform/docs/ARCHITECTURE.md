@@ -83,6 +83,16 @@ and `lib/stripe.ts`; the database is the source of truth for payment state,
 never the frontend or a redirect URL; webhook events are idempotent via the
 `PaymentEvent` audit table.
 
+## Membership module
+
+See [`membership.md`](./membership.md). Built entirely on top of the billing
+foundation above — `modules/membership/membership.service.ts` owns
+`MembershipPlan` CRUD (delegating the actual Stripe Product/Price calls to
+`billing.service.ts`, never calling the SDK itself) and exposes
+`getActiveSubscriptionForUser()` as the single choke point a future module
+should use to check membership access, mirroring the `isProfileVisibleTo()`
+pattern in `modules/profiles`.
+
 ## Known risks / things to watch
 
 - **JWT session size** — role/status are embedded in the JWT; if a user's

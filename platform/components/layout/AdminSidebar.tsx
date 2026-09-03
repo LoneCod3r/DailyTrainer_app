@@ -10,10 +10,11 @@ import { clsx } from '@/lib/clsx';
 const AVAILABLE = [
   { href: '/admin', label: 'Dashboard', exact: true },
   { href: '/admin/users', label: 'Users' },
+  { href: '/admin/membership', label: 'Membership' },
   { href: '/admin/settings', label: 'Settings' },
 ];
 
-const FUTURE = ['Content', 'Courses', 'Discussions', 'Meetings', 'Membership', 'Payments'];
+const FUTURE = ['Content', 'Courses', 'Discussions', 'Meetings', 'Payments'];
 
 export function AdminSidebar() {
   const pathname = usePathname();
