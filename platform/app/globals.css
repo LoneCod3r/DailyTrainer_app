@@ -3,6 +3,40 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --page: 255 255 255;
+    --surface: 255 255 255;
+    --ink-900: 28 31 29;
+    --ink-700: 58 63 59;
+    --ink-500: 107 113 108;
+    --ink-300: 164 170 165;
+    --sand-50: 251 249 246;
+    --sand-100: 244 239 231;
+    --sand-200: 231 220 203;
+    --sand-300: 214 195 165;
+  }
+
+  :root.dark {
+    --page: 24 26 24;
+    --surface: 34 37 34;
+    --ink-900: 244 246 243;
+    --ink-700: 209 213 208;
+    --ink-500: 154 163 156;
+    --ink-300: 91 98 92;
+    --sand-50: 35 38 35;
+    --sand-100: 44 48 44;
+    --sand-200: 58 63 58;
+    --sand-300: 75 82 75;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
   h1,
   h2,
   h3 {

@@ -4,7 +4,7 @@ import { clsx } from '@/lib/clsx';
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={clsx('rounded-2xl border border-sand-200 bg-white shadow-card', className)}
+      className={clsx('rounded-2xl border border-sand-200 bg-surface shadow-card', className)}
       {...props}
     />
   );

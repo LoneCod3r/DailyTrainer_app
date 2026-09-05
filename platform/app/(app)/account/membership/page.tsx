@@ -1,5 +1,9 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getActiveSubscriptionForUser, listActivePlans } from '@/modules/membership/membership.service';
 import { Container, Card, CardContent, Badge, EmptyState } from '@/components/ui';
-import { listActivePlans } from '@/modules/membership/membership.service';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { MembershipStatus } from '@/components/account/MembershipStatus';
 import { JoinButton } from '@/components/membership/JoinButton';
 
 function formatPrice(amount: number, currency: string, interval: string) {
@@ -8,16 +12,21 @@ function formatPrice(amount: number, currency: string, interval: string) {
 }
 
 export default async function MembershipPage() {
-  const plans = await listActivePlans();
+  const session = await getServerSession(authOptions);
+  const [plans, subscription] = await Promise.all([
+    listActivePlans(),
+    session?.user ? getActiveSubscriptionForUser(session.user.id) : Promise.resolve(null),
+  ]);
 
   return (
-    <Container className="flex flex-col gap-8 py-10">
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-semibold text-ink-900">Membership</h1>
-        <p className="mt-1 text-sm text-ink-500">
-          Join the community with a membership plan. Pricing is set by the team and can change at any time.
-        </p>
-      </div>
+    <Container className="flex flex-col gap-8 py-8">
+      <PageHeader
+        eyebrow="Account"
+        title="Membership"
+        description="Recurring paid access to the KUKO WAY practice. Pricing is set by the team and can change at any time."
+      />
+
+      {session?.user && <MembershipStatus subscription={subscription} />}
 
       {plans.length === 0 ? (
         <EmptyState

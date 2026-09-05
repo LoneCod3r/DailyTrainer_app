@@ -1,8 +1,5 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
-import { Badge, Button, Alert, Card, CardContent } from '@/components/ui';
+import { Badge, Button, Card, CardContent } from '@/components/ui';
 
 type Subscription = {
   status: string;
@@ -21,28 +18,13 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> 
   UNPAID: 'danger',
 };
 
+// Shows membership status only — payment method/invoice management lives on
+// the separate Billing page (/account/billing), kept apart on purpose.
 export function MembershipStatus({ subscription }: { subscription: Subscription }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function openPortal() {
-    setLoading(true);
-    setError(null);
-    const res = await fetch('/api/membership/portal', { method: 'POST' });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data?.error?.message ?? 'Failed to open the billing portal');
-      return;
-    }
-    window.location.href = data.url;
-  }
-
   return (
     <Card className="max-w-xl">
       <CardContent className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold text-ink-900">Membership</h2>
-        {error && <Alert tone="danger">{error}</Alert>}
+        <h2 className="text-base font-semibold text-ink-900">Your membership</h2>
         {subscription ? (
           <>
             <div className="flex items-center gap-2">
@@ -56,20 +38,13 @@ export function MembershipStatus({ subscription }: { subscription: Subscription 
               </p>
             )}
             <div>
-              <Button variant="secondary" onClick={openPortal} loading={loading}>
-                Manage billing
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-ink-500">You don&apos;t have an active membership yet.</p>
-            <div>
-              <Link href="/membership">
-                <Button>View membership plans</Button>
+              <Link href="/account/billing">
+                <Button variant="secondary">Manage billing</Button>
               </Link>
             </div>
           </>
+        ) : (
+          <p className="text-sm text-ink-500">You don&apos;t have an active membership yet — choose a plan below.</p>
         )}
       </CardContent>
     </Card>

@@ -32,7 +32,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-soft"
+        className="relative w-full max-w-md rounded-2xl bg-surface p-6 shadow-soft"
       >
         {title && <h2 className="mb-4 text-lg font-semibold text-ink-900">{title}</h2>}
         {children}

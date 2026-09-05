@@ -15,8 +15,8 @@ export default function MembershipSuccessPage() {
             We&apos;re confirming your payment with Stripe now — this can take a few seconds. Your membership
             status will update automatically once it&apos;s confirmed.
           </p>
-          <Link href="/account">
-            <Button>Go to my account</Button>
+          <Link href="/account/membership">
+            <Button>Go to my membership</Button>
           </Link>
         </CardContent>
       </Card>

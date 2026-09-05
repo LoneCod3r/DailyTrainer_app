@@ -4,6 +4,7 @@ import type { Config } from 'tailwindcss';
 // modules added later (Courses, Events, Discussions, ...) should reuse these
 // tokens rather than introducing their own one-off colors/spacing.
 const config: Config = {
+  darkMode: 'class',
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -24,18 +25,23 @@ const config: Config = {
           800: '#2e4232',
           900: '#27362a',
         },
+        // sand/ink/surface/page are CSS-variable-backed (see globals.css) so
+        // every existing `text-ink-*` / `border-sand-*` / `bg-surface` usage
+        // repaints for dark mode without touching each call site.
         sand: {
-          50: '#fbf9f6',
-          100: '#f4efe7',
-          200: '#e7dccb',
-          300: '#d6c3a5',
+          50: 'rgb(var(--sand-50) / <alpha-value>)',
+          100: 'rgb(var(--sand-100) / <alpha-value>)',
+          200: 'rgb(var(--sand-200) / <alpha-value>)',
+          300: 'rgb(var(--sand-300) / <alpha-value>)',
         },
         ink: {
-          900: '#1c1f1d',
-          700: '#3a3f3b',
-          500: '#6b716c',
-          300: '#a4aaa5',
+          900: 'rgb(var(--ink-900) / <alpha-value>)',
+          700: 'rgb(var(--ink-700) / <alpha-value>)',
+          500: 'rgb(var(--ink-500) / <alpha-value>)',
+          300: 'rgb(var(--ink-300) / <alpha-value>)',
         },
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        page: 'rgb(var(--page) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],

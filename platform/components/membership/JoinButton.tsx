@@ -13,7 +13,7 @@ export function JoinButton({ membershipPlanId, disabled }: { membershipPlanId: s
 
   async function onClick() {
     if (status !== 'authenticated') {
-      router.push('/login?callbackUrl=/membership');
+      router.push('/login?callbackUrl=/account/membership');
       return;
     }
 

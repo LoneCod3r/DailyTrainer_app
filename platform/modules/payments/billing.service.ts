@@ -179,8 +179,8 @@ export async function createSubscriptionCheckout(params: { userId: string; membe
     mode: 'subscription',
     customer: customerId,
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
-    success_url: `${process.env.APP_URL}/membership/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.APP_URL}/membership`,
+    success_url: `${process.env.APP_URL}/account/membership/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.APP_URL}/account/membership`,
     metadata: { userId: params.userId, membershipPlanId: plan.id, kind: 'membership' },
     // Checkout Session metadata does NOT carry over to the Subscription object
     // Stripe creates from it — it must be set explicitly via subscription_data
@@ -222,8 +222,8 @@ export async function createOneTimeCheckout(params: {
         quantity: 1,
       },
     ],
-    success_url: `${process.env.APP_URL}/courses/${params.courseId}?purchase=success`,
-    cancel_url: `${process.env.APP_URL}/courses/${params.courseId}`,
+    success_url: `${process.env.APP_URL}/community/courses/${params.courseId}?purchase=success`,
+    cancel_url: `${process.env.APP_URL}/community/courses/${params.courseId}`,
     metadata: { userId: params.userId, courseId: params.courseId, kind: 'course' },
   });
 
@@ -262,8 +262,8 @@ export async function createDonationCheckout(params: { userId?: string; amount: 
         quantity: 1,
       },
     ],
-    success_url: `${process.env.APP_URL}/donate/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.APP_URL}/donate`,
+    success_url: `${process.env.APP_URL}/account/donation?donation=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.APP_URL}/account/donation`,
     metadata: { userId: params.userId ?? '', kind: 'donation' },
   });
 
@@ -286,7 +286,7 @@ export async function createCustomerPortalSession(userId: string) {
 
   return stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${process.env.APP_URL}/account`,
+    return_url: `${process.env.APP_URL}/account/billing`,
   });
 }
 

@@ -13,7 +13,7 @@ export const SETTINGS_KEYS = {
 } as const;
 
 const DEFAULTS: Record<keyof typeof SETTINGS_KEYS, string> = {
-  appName: process.env.APP_NAME ?? 'Community Platform',
+  appName: process.env.APP_NAME ?? 'KUKO WAY',
   logoUrl: '',
   defaultLanguage: process.env.DEFAULT_LANGUAGE ?? 'en',
   defaultCurrency: process.env.DEFAULT_CURRENCY ?? 'EUR',
