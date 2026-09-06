@@ -19,7 +19,7 @@ export function MobileBottomNav() {
   const t = useT();
 
   return (
-    <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-30 flex border-t border-sand-200 bg-surface/95 backdrop-blur md:hidden">
+    <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-30 flex border-t border-sand-200 bg-surface/95 backdrop-blur lg:hidden">
       {BOTTOM_NAV.map((item) => {
         const Icon = ICONS[item.icon];
         const active = isActive(pathname, item.href);

@@ -18,7 +18,7 @@ export function AppShell({ appName, children }: { appName: string; children: Rea
     <div className="min-h-screen bg-page">
       <div className="flex min-h-screen flex-col">
         <Topbar appName={appName} onOpenMenu={() => setDrawerOpen(true)} />
-        <main className="flex-1 pb-20 md:pb-0">{children}</main>
+        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
       </div>
       <MobileBottomNav />
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

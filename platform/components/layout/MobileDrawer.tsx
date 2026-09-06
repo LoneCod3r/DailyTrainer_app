@@ -30,7 +30,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 md:hidden">
+    <div className="fixed inset-0 z-40 lg:hidden">
       <div className="absolute inset-0 bg-ink-900/40" onClick={onClose} aria-hidden="true" />
       <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-surface p-4 shadow-soft">
         <div className="mb-2 flex items-center justify-between">

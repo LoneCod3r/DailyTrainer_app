@@ -7,12 +7,14 @@ for commercial and personal use, no attribution required, modification
 permitted). Attribution is included below anyway as a courtesy and so the
 source is traceable if any of these need to be swapped out later.
 
-| File | Source |
-|---|---|
-| `hero-todays-practice.jpg` | https://www.pexels.com/photo/4056723/ |
-| `explore-start-here.jpg` | https://www.pexels.com/photo/6975774/ |
-| `explore-feel-better-now.jpg` | https://www.pexels.com/photo/6926019/ |
-| `explore-library.jpg` | https://www.pexels.com/photo/6339388/ |
+| File | Source | Used for |
+|---|---|---|
+| `home-page.webp` | supplied directly by the client (not from Pexels) | Hero photo |
+| `hero-todays-practice.jpg` | https://www.pexels.com/photo/4056723/ | unused (kept on disk; earlier hero photo) |
+| `explore-start-here.jpg` | https://www.pexels.com/photo/6975774/ | "Start Here" row |
+| `explore-feel-better-now.jpg` | https://www.pexels.com/photo/6926019/ | "Feel Better Now" row |
+| `explore-library.jpg` | https://www.pexels.com/photo/6339388/ | unused (kept on disk; earlier hero photo) |
+| `library.jpeg` | supplied directly by the client (not from Pexels) | "Library" row |
 
 Replace any of these with real KUKO WAY photography/video stills whenever
 it becomes available — the components referencing them

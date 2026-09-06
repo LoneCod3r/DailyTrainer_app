@@ -75,7 +75,7 @@ export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: (
           type="button"
           onClick={onOpenMenu}
           aria-label={t('topbar.openMenu')}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-700 hover:bg-sand-100 md:hidden"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-700 hover:bg-sand-100 lg:hidden"
         >
           <MenuIcon />
         </button>
@@ -93,7 +93,7 @@ export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: (
         {/* Primary nav — Home / Practices / Community. Was the left sidebar;
             same Link+toggle-button contract, now a horizontal navbar with
             flyout submenus instead of an inline-expanding list. */}
-        <nav aria-label="Main" ref={navRef} className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Main" ref={navRef} className="hidden items-center gap-1 lg:flex">
           {PRIMARY_NAV.map((item) => {
             const active = isActive(pathname, item.href);
             // Unlike the old sidebar (an inline list, safe to auto-expand
@@ -110,7 +110,7 @@ export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: (
                     active ? 'text-link' : 'text-ink-700 hover:bg-sand-100',
                   )}
                 >
-                  <Link href={item.href} className="px-2 py-2 lg:px-3">
+                  <Link href={item.href} className="px-2 py-2">
                     {t(item.labelKey)}
                   </Link>
                   {item.children && (

@@ -44,6 +44,11 @@
 
   html {
     color-scheme: light;
+    /* Bumps every rem-based Tailwind text-* size site-wide (16px -> 18px)
+       without touching each call site. A percentage (not a fixed px) keeps
+       it relative to the browser's own default, so a visitor's own
+       accessibility zoom/font-size setting still compounds normally. */
+    font-size: 112.5%;
   }
 
   html.dark {

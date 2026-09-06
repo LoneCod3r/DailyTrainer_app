@@ -48,7 +48,7 @@ const EXPLORE_ITEMS = [
     href: '/practices/library',
     labelKey: 'nav.library',
     descKey: 'practices.libraryDesc',
-    image: '/images/home/explore-library.jpg',
+    image: '/images/home/library.jpeg',
   },
 ] as const;
 
@@ -76,85 +76,92 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero — full-bleed (breaks out of the standard content column for a
-          more immersive, less "dashboard" first impression), warm tonal
-          wash instead of a flat green block. Greeting stays the page's one
-          <h1> (a11y: single top-level heading); the practice title is the
-          visually dominant element, matching the "editorial headline over
-          personal kicker" pattern rather than a same-size UI label. */}
-      <section className="border-b border-sand-200 bg-sand-50/60 px-4 py-10 sm:px-6 sm:py-14 lg:px-10 lg:py-20 xl:px-16">
-        <div className="mx-auto grid max-w-[90rem] gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
-          {session ? (
-            // Signed in: the personal, practice-specific experience.
-            <div className="flex flex-col gap-5">
-              <h1 className="text-base font-semibold uppercase tracking-wide text-link">
-                {firstName ? t('home.welcomeBack', { name: firstName }) : t('home.welcome')}
-              </h1>
+      {/* Hero — a single, moderately-sized full-width photo (not a huge
+          full-viewport image) with the greeting/quote/CTA overlaid directly
+          on top of it, rather than split into a text column + side image.
+          `aspect-video` matches home-page.webp's real 16:9 shape exactly, so
+          object-cover barely has to crop anything at any screen width —
+          fixed pixel heights here previously fought the photo's shape
+          (over-cropping the top on wide desktop rows, and the sides down to
+          just the center person on narrow mobile ones). Greeting stays the
+          page's one <h1> (a11y: single top-level heading). A dark gradient
+          scrim keeps the overlaid text legible over any photo, in both
+          themes. */}
+      <section className="border-b border-sand-200 bg-sand-50/60 px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+        <div className="relative isolate mx-auto aspect-video w-full max-w-[90rem] overflow-hidden rounded-2xl bg-ink-900">
+          <Image
+            src="/images/home/home-page.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10"
+          />
 
-              <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-600 font-serif text-sm text-white">
-                  K
-                </span>
+          {/* Absolutely positioned (not a normal flex child) so the text's
+              own content height can never stretch this box past its
+              aspect-ratio — that mismatch was what broke the crop fix above
+              on narrow screens the first time around. */}
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-10 lg:p-14">
+            {session ? (
+              // Signed in: the personal, practice-specific experience.
+              <div className="flex max-w-lg flex-col gap-2 sm:gap-4">
+                <h1 className="text-sm font-semibold uppercase tracking-wide text-white/90 sm:text-base">
+                  {firstName ? t('home.welcomeBack', { name: firstName }) : t('home.welcome')}
+                </h1>
+
                 <Badge tone="brand" className="w-fit">
                   {t('home.todaysPractice')}
                 </Badge>
-              </div>
 
-              <h2 className="max-w-lg text-5xl font-medium leading-[1.1] text-ink-900 sm:text-6xl lg:text-7xl">
-                {practiceTitle?.value ?? t('home.todaysPracticeFallbackTitle')}
-              </h2>
-              <p className="max-w-md text-lg leading-relaxed text-ink-700 sm:text-xl">
-                {practiceSummary?.value ?? t('home.todaysPracticeFallbackDesc')}
-              </p>
+                <h2 className="text-2xl font-medium leading-[1.1] text-white sm:text-4xl lg:text-6xl">
+                  {practiceTitle?.value ?? t('home.todaysPracticeFallbackTitle')}
+                </h2>
+                <p className="max-w-md text-sm leading-relaxed text-white/85 sm:text-base lg:text-lg">
+                  {practiceSummary?.value ?? t('home.todaysPracticeFallbackDesc')}
+                </p>
 
-              <div className="flex flex-wrap items-center gap-5 pt-2">
-                <Link href={practiceHref} className="motion-safe:transition-transform motion-safe:hover:-translate-y-0.5">
-                  <Button size="lg">{t('home.startPractice')}</Button>
-                </Link>
-                {!!practiceStepCount && (
-                  <span className="text-base text-ink-500">
-                    {practiceStepCount} {t('common.steps')}
-                  </span>
-                )}
+                <div className="flex flex-wrap items-center gap-3 pt-1 sm:gap-5 sm:pt-2">
+                  <Link href={practiceHref} className="motion-safe:transition-transform motion-safe:hover:-translate-y-0.5">
+                    <Button size="sm" className="sm:hidden">
+                      {t('home.startPractice')}
+                    </Button>
+                    <Button size="lg" className="hidden sm:inline-flex">
+                      {t('home.startPractice')}
+                    </Button>
+                  </Link>
+                  {!!practiceStepCount && (
+                    <span className="text-sm text-white/80 sm:text-base">
+                      {practiceStepCount} {t('common.steps')}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            // Signed out: an inspirational entry point (real KUKO WAY
-            // philosophy, not a personalized dashboard that doesn't apply
-            // yet) — closer to how app.humangarage.net greets a visitor.
-            <div className="flex flex-col gap-6">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-600 font-serif text-sm text-white">
-                K
-              </span>
-              <h1 className="max-w-lg font-serif text-4xl italic leading-[1.15] text-ink-900 sm:text-5xl lg:text-6xl">
-                “{beliefsQuote ? localize(beliefsQuote, locale).value : t('home.welcome')}”
-              </h1>
-              <p className="text-sm font-semibold uppercase tracking-wide text-ink-500">KUKO WAY</p>
-              <div className="flex flex-wrap items-center gap-5 pt-2">
-                <Link href="/practices/start-here" className="motion-safe:transition-transform motion-safe:hover:-translate-y-0.5">
-                  <Button size="lg">{t('nav.startHere')}</Button>
-                </Link>
+            ) : (
+              // Signed out: an inspirational entry point (real KUKO WAY
+              // philosophy, not a personalized dashboard that doesn't apply
+              // yet) — closer to how app.humangarage.net greets a visitor.
+              <div className="flex max-w-lg flex-col gap-2 sm:gap-4">
+                <h1 className="font-serif text-xl italic leading-[1.2] text-white sm:text-3xl lg:text-5xl">
+                  “{beliefsQuote ? localize(beliefsQuote, locale).value : t('home.welcome')}”
+                </h1>
+                <p className="text-xs font-semibold uppercase tracking-wide text-white/80 sm:text-sm">KUKO WAY</p>
+                <div className="flex flex-wrap items-center gap-3 pt-1 sm:gap-5 sm:pt-2">
+                  <Link href="/practices/start-here" className="motion-safe:transition-transform motion-safe:hover:-translate-y-0.5">
+                    <Button size="sm" className="sm:hidden">
+                      {t('nav.startHere')}
+                    </Button>
+                    <Button size="lg" className="hidden sm:inline-flex">
+                      {t('nav.startHere')}
+                    </Button>
+                  </Link>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Large visual area for the practice — placeholder photography
-              (license: public/images/home/CREDITS.md) until real KUKO WAY
-              photography/video exists. A dark gradient scrim keeps the
-              "KUKO WAY" mark readable over any photo, in both themes. */}
-          <div className="relative isolate aspect-[16/11] w-full overflow-hidden rounded-2xl bg-ink-900 lg:aspect-[4/5]">
-            <Image
-              src="/images/home/hero-todays-practice.jpg"
-              alt=""
-              fill
-              priority
-              sizes="(min-width: 1024px) 45vw, 100vw"
-              className="object-cover"
-            />
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" />
-            <span aria-hidden="true" className="absolute bottom-5 left-5 font-serif text-sm text-white/90">
-              KUKO WAY
-            </span>
+            )}
           </div>
         </div>
       </section>
