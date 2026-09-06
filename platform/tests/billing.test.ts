@@ -6,7 +6,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findUnique: vi.fn(), updateMany: vi.fn() },
     membershipPlan: { findUnique: vi.fn() },
-    donation: { create: vi.fn(), updateMany: vi.fn() },
+    donation: { create: vi.fn(), updateMany: vi.fn(), findFirst: vi.fn() },
     purchase: { create: vi.fn(), updateMany: vi.fn() },
     subscription: { upsert: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     payment: { updateMany: vi.fn(), findUnique: vi.fn() },
@@ -16,19 +16,26 @@ vi.mock('@/lib/prisma', () => ({
 
 // Mock the Stripe client so no real network call is ever made in tests.
 const stripeMock = {
-  customers: { create: vi.fn(), del: vi.fn() },
+  customers: { create: vi.fn(), del: vi.fn(), retrieve: vi.fn() },
   checkout: { sessions: { create: vi.fn() } },
   subscriptions: { update: vi.fn() },
   billingPortal: { sessions: { create: vi.fn() } },
+  paymentMethods: { list: vi.fn() },
+  invoices: { list: vi.fn() },
 };
 vi.mock('@/lib/stripe', () => ({
   getStripeClient: () => stripeMock,
 }));
 
 const { prisma } = await import('@/lib/prisma');
-const { getOrCreateStripeCustomer, handleWebhook, createDonationCheckout } = await import(
-  '@/modules/payments/billing.service'
-);
+const {
+  getOrCreateStripeCustomer,
+  handleWebhook,
+  createDonationCheckout,
+  getPaymentMethodForUser,
+  listInvoicesForUser,
+  getDonationForUserBySession,
+} = await import('@/modules/payments/billing.service');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -134,5 +141,96 @@ describe('handleWebhook idempotency', () => {
     expect(prisma.paymentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ eventId: 'evt_3', status: 'error' }) }),
     );
+  });
+});
+
+describe('getPaymentMethodForUser', () => {
+  it('returns null without calling Stripe when the user has no Stripe customer yet', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: null });
+
+    const result = await getPaymentMethodForUser('u1');
+
+    expect(result).toBeNull();
+    expect(stripeMock.customers.retrieve).not.toHaveBeenCalled();
+  });
+
+  it('reads the card off the customer default payment method', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: 'cus_1' });
+    stripeMock.customers.retrieve.mockResolvedValue({
+      deleted: false,
+      invoice_settings: {
+        default_payment_method: { card: { brand: 'visa', last4: '4242', exp_month: 4, exp_year: 2030 } },
+      },
+    });
+
+    const result = await getPaymentMethodForUser('u1');
+
+    expect(result).toEqual({ brand: 'visa', last4: '4242', expMonth: 4, expYear: 2030 });
+    expect(stripeMock.paymentMethods.list).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the most recently attached card when no default is set', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: 'cus_1' });
+    stripeMock.customers.retrieve.mockResolvedValue({ deleted: false, invoice_settings: {} });
+    stripeMock.paymentMethods.list.mockResolvedValue({
+      data: [{ card: { brand: 'mastercard', last4: '4444', exp_month: 1, exp_year: 2028 } }],
+    });
+
+    const result = await getPaymentMethodForUser('u1');
+
+    expect(result).toEqual({ brand: 'mastercard', last4: '4444', expMonth: 1, expYear: 2028 });
+  });
+});
+
+describe('listInvoicesForUser', () => {
+  it('returns an empty list without calling Stripe when the user has no Stripe customer yet', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: null });
+
+    const result = await listInvoicesForUser('u1');
+
+    expect(result).toEqual([]);
+    expect(stripeMock.invoices.list).not.toHaveBeenCalled();
+  });
+
+  it('maps Stripe invoices to the display shape', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: 'cus_1' });
+    stripeMock.invoices.list.mockResolvedValue({
+      data: [
+        {
+          id: 'in_1',
+          created: 1700000000,
+          amount_paid: 1900,
+          amount_due: 0,
+          currency: 'eur',
+          status: 'paid',
+          hosted_invoice_url: 'https://stripe.example/in_1',
+        },
+      ],
+    });
+
+    const result = await listInvoicesForUser('u1');
+
+    expect(result).toEqual([
+      {
+        id: 'in_1',
+        date: new Date(1700000000 * 1000),
+        amount: 1900,
+        currency: 'eur',
+        status: 'paid',
+        hostedInvoiceUrl: 'https://stripe.example/in_1',
+      },
+    ]);
+  });
+});
+
+describe('getDonationForUserBySession', () => {
+  it('scopes the lookup to the given userId so one member cannot read another\'s donation', async () => {
+    (prisma.donation.findFirst as any).mockResolvedValue({ id: 'don_1', status: 'SUCCEEDED' });
+
+    await getDonationForUserBySession('u1', 'cs_123');
+
+    expect(prisma.donation.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'u1', stripeCheckoutSessionId: 'cs_123' },
+    });
   });
 });

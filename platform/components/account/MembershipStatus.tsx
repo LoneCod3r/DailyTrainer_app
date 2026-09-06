@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { Badge, Button, Card, CardContent } from '@/components/ui';
+import { SUBSCRIPTION_STATUS_TONE, subscriptionStatusKey } from '@/lib/billing-status';
+import { formatDate } from '@/lib/format-date';
+import { getT } from '@/lib/i18n/dictionaries';
+import type { Locale } from '@/lib/i18n/locale';
 
 type Subscription = {
   status: string;
@@ -8,43 +12,38 @@ type Subscription = {
   membershipPlan: { name: string };
 } | null;
 
-const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
-  ACTIVE: 'success',
-  TRIALING: 'success',
-  PAST_DUE: 'warning',
-  CANCELED: 'neutral',
-  INCOMPLETE: 'warning',
-  INCOMPLETE_EXPIRED: 'danger',
-  UNPAID: 'danger',
-};
-
 // Shows membership status only — payment method/invoice management lives on
 // the separate Billing page (/account/billing), kept apart on purpose.
-export function MembershipStatus({ subscription }: { subscription: Subscription }) {
+export function MembershipStatus({ subscription, locale }: { subscription: Subscription; locale: Locale }) {
+  const t = getT(locale);
+
   return (
     <Card className="max-w-xl">
       <CardContent className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold text-ink-900">Your membership</h2>
+        <h2 className="text-base font-semibold text-ink-900">{t('account.membership.yourMembership')}</h2>
         {subscription ? (
           <>
             <div className="flex items-center gap-2">
-              <Badge tone={STATUS_TONE[subscription.status] ?? 'neutral'}>{subscription.status}</Badge>
+              <Badge tone={SUBSCRIPTION_STATUS_TONE[subscription.status] ?? 'neutral'}>
+                {t(subscriptionStatusKey(subscription.status))}
+              </Badge>
               <span className="text-sm text-ink-700">{subscription.membershipPlan.name}</span>
             </div>
             {subscription.currentPeriodEnd && (
               <p className="text-sm text-ink-500">
-                {subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'} on{' '}
-                {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                {t(subscription.cancelAtPeriodEnd ? 'account.membership.endsOn' : 'account.membership.renewsOn', {
+                  date: formatDate(subscription.currentPeriodEnd, locale),
+                })}
               </p>
             )}
             <div>
               <Link href="/account/billing">
-                <Button variant="secondary">Manage billing</Button>
+                <Button variant="secondary">{t('account.membership.manageBilling')}</Button>
               </Link>
             </div>
           </>
         ) : (
-          <p className="text-sm text-ink-500">You don&apos;t have an active membership yet — choose a plan below.</p>
+          <p className="text-sm text-ink-500">{t('account.membership.noneDescription')}</p>
         )}
       </CardContent>
     </Card>

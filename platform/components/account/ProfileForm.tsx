@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Input, Textarea, Select, Button, Alert, Card, CardContent } from '@/components/ui';
+import { useT } from '@/lib/i18n/LocaleProvider';
 
 type Profile = {
   bio: string | null;
@@ -11,6 +12,7 @@ type Profile = {
 };
 
 export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
+  const t = useT();
   const [bio, setBio] = useState(initialProfile.bio ?? '');
   const [avatarUrl, setAvatarUrl] = useState(initialProfile.avatarUrl ?? '');
   const [visibility, setVisibility] = useState(initialProfile.visibility);
@@ -31,10 +33,10 @@ export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
 
     setSaving(false);
     if (!res.ok) {
-      setMessage({ tone: 'danger', text: data?.error?.message ?? 'Failed to save profile' });
+      setMessage({ tone: 'danger', text: data?.error?.message ?? t('account.settings.profileSaveError') });
       return;
     }
-    setMessage({ tone: 'success', text: 'Profile updated.' });
+    setMessage({ tone: 'success', text: t('account.settings.profileSaved') });
   }
 
   return (
@@ -42,20 +44,31 @@ export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
       <CardContent>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           {message && <Alert tone={message.tone}>{message.text}</Alert>}
-          <Input label="Avatar URL" placeholder="https://…" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} />
-          <Textarea label="Bio" rows={4} maxLength={1000} value={bio} onChange={(e) => setBio(e.target.value)} />
+          <Input
+            label={t('account.settings.avatarUrlLabel')}
+            placeholder="https://…"
+            value={avatarUrl}
+            onChange={(e) => setAvatarUrl(e.target.value)}
+          />
+          <Textarea
+            label={t('account.settings.bioLabel')}
+            rows={4}
+            maxLength={1000}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+          />
           <Select
-            label="Profile visibility"
+            label={t('account.settings.visibilityLabel')}
             value={visibility}
             onChange={(e) => setVisibility(e.target.value as Profile['visibility'])}
           >
-            <option value="PUBLIC">Public — visible to anyone</option>
-            <option value="MEMBERS">Members only — visible to logged-in members</option>
-            <option value="PRIVATE">Private — visible only to me</option>
+            <option value="PUBLIC">{t('account.settings.visibilityPublic')}</option>
+            <option value="MEMBERS">{t('account.settings.visibilityMembers')}</option>
+            <option value="PRIVATE">{t('account.settings.visibilityPrivate')}</option>
           </Select>
           <div>
             <Button type="submit" loading={saving}>
-              Save profile
+              {t('account.settings.saveProfile')}
             </Button>
           </div>
         </form>

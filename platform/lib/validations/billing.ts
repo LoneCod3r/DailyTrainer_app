@@ -20,6 +20,15 @@ export const createDonationCheckoutSchema = z.object({
   userId: z.string().cuid().optional(), // absent => guest donation
 });
 
+// What the donation API route accepts from the browser — no `userId` field
+// at all, so there is nothing a client could tamper with to attribute a
+// donation to another member; the route always resolves it server-side from
+// the authenticated session (see app/api/donations/checkout/route.ts).
+export const donationCheckoutRequestSchema = z.object({
+  amount: donationAmountSchema,
+  currency: z.enum(SUPPORTED_CURRENCIES).default('eur'),
+});
+
 export const createSubscriptionCheckoutSchema = z.object({
   membershipPlanId: z.string().cuid(),
   userId: z.string().cuid(),

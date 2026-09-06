@@ -31,3 +31,12 @@ export function getStripeClient(): Stripe {
   });
   return _stripe;
 }
+
+// Non-throwing check for UI code that needs to disable a payment action
+// (rather than let it fail) when Stripe isn't configured yet in this
+// environment — e.g. the Donation page's checkout button (Day 4 §24: never
+// pretend a payment action works when it can't).
+export function isStripeConfigured(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY;
+  return Boolean(key && key !== 'sk_test_replace_me');
+}

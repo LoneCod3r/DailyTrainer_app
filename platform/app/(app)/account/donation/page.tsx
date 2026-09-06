@@ -1,36 +1,108 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { Container, Card, CardContent, Button } from '@/components/ui';
+import { getDonationForUserBySession } from '@/modules/payments/billing.service';
+import { isStripeConfigured } from '@/lib/stripe';
+import { Container, Card, CardContent, Button, Alert } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { DonationForm } from '@/components/donation/DonationForm';
+import { getLocale } from '@/lib/i18n/get-locale';
+import { getT } from '@/lib/i18n/dictionaries';
+import { formatCurrency } from '@/lib/format-currency';
+
+type Confirmation = {
+  tone: 'success' | 'warning' | 'danger';
+  title: string;
+  description: string;
+  amountLabel?: string;
+};
 
 // Donation is voluntary support — intentionally kept separate from
 // Membership (recurring paid access), both in navigation and visually here.
-export default async function DonationPage() {
+// The success/cancelled states below only ever reflect the real Donation row
+// (written by the verified webhook, see modules/payments/billing.service.ts)
+// — reaching this URL never marks anything paid by itself.
+export default async function DonationPage({
+  searchParams,
+}: {
+  searchParams: { donation?: string; session_id?: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login?callbackUrl=/account/donation');
+
+  const locale = getLocale();
+  const t = getT(locale);
+
+  let confirmation: Confirmation | null = null;
+
+  if (searchParams.donation === 'cancelled') {
+    confirmation = {
+      tone: 'warning',
+      title: t('account.donation.cancelledTitle'),
+      description: t('account.donation.cancelledDesc'),
+    };
+  } else if (searchParams.donation === 'success') {
+    const donation = searchParams.session_id
+      ? await getDonationForUserBySession(session.user.id, searchParams.session_id)
+      : null;
+
+    if (!donation) {
+      confirmation = {
+        tone: 'danger',
+        title: t('account.donation.invalidSessionTitle'),
+        description: t('account.donation.invalidSessionDesc'),
+      };
+    } else if (donation.status === 'SUCCEEDED') {
+      confirmation = {
+        tone: 'success',
+        title: t('account.donation.successTitle'),
+        description: t('account.donation.successDesc'),
+        amountLabel: formatCurrency(donation.amount, donation.currency, locale),
+      };
+    } else if (donation.status === 'FAILED' || donation.status === 'CANCELED') {
+      confirmation = {
+        tone: 'danger',
+        title: t('account.donation.failedTitle'),
+        description: t('account.donation.failedDesc'),
+      };
+    } else {
+      // PENDING/PROCESSING/REQUIRES_ACTION — the webhook hasn't confirmed
+      // this session yet. Honest "still confirming" state, never a false
+      // success (Day 4 §13).
+      confirmation = {
+        tone: 'warning',
+        title: t('account.donation.processingTitle'),
+        description: t('account.donation.processingDesc'),
+      };
+    }
+  }
 
   return (
     <Container className="flex flex-col gap-8 py-8">
       <PageHeader
-        eyebrow="Account"
-        title="Donation"
-        description="Support the KUKO WAY with a one-off or recurring donation — separate from your membership."
+        eyebrow={t('nav.account')}
+        title={t('account.donation.title')}
+        description={t('account.donation.description')}
       />
 
-      <Card className="max-w-xl border-sand-300 bg-sand-50">
-        <CardContent className="flex flex-col gap-3">
-          <p className="text-sm text-ink-500">
-            Donations help fund the KUKO WAY beyond membership dues. The donation flow isn&apos;t wired up yet — this
-            is a structural placeholder.
-          </p>
-          <div>
-            <Button variant="secondary" disabled>
-              Donate — coming soon
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {confirmation && (
+        <Card className="max-w-xl">
+          <CardContent className="flex flex-col gap-3">
+            <Alert tone={confirmation.tone} title={confirmation.title}>
+              <p>{confirmation.description}</p>
+              {confirmation.amountLabel && <p className="mt-1 font-semibold">{confirmation.amountLabel}</p>}
+            </Alert>
+            <div>
+              <Link href="/account/donation">
+                <Button variant="secondary">{t('account.donation.makeAnother')}</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {confirmation?.tone !== 'success' && <DonationForm disabled={!isStripeConfigured()} />}
     </Container>
   );
 }

@@ -180,7 +180,7 @@ export async function createSubscriptionCheckout(params: { userId: string; membe
     customer: customerId,
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
     success_url: `${process.env.APP_URL}/account/membership/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.APP_URL}/account/membership`,
+    cancel_url: `${process.env.APP_URL}/account/membership?checkout=cancelled`,
     metadata: { userId: params.userId, membershipPlanId: plan.id, kind: 'membership' },
     // Checkout Session metadata does NOT carry over to the Subscription object
     // Stripe creates from it — it must be set explicitly via subscription_data
@@ -263,7 +263,7 @@ export async function createDonationCheckout(params: { userId?: string; amount: 
       },
     ],
     success_url: `${process.env.APP_URL}/account/donation?donation=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.APP_URL}/account/donation`,
+    cancel_url: `${process.env.APP_URL}/account/donation?donation=cancelled`,
     metadata: { userId: params.userId ?? '', kind: 'donation' },
   });
 
@@ -278,6 +278,81 @@ export async function createDonationCheckout(params: { userId?: string; amount: 
   });
 
   return session;
+}
+
+// --- Read-only Stripe lookups for the Billing page ------------------------------
+// These never persist anything locally (Prompt3 §23: no fake/duplicated
+// invoice or card data) — Stripe stays the single source of truth for
+// payment method and invoice details; this app only ever displays what
+// Stripe currently reports for the user's customer.
+
+export type PaymentMethodSummary = {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+};
+
+export async function getPaymentMethodForUser(userId: string): Promise<PaymentMethodSummary | null> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { stripeCustomerId: true } });
+  if (!user?.stripeCustomerId) return null;
+
+  const stripe = getStripeClient();
+  const customer = await stripe.customers.retrieve(user.stripeCustomerId, {
+    expand: ['invoice_settings.default_payment_method'],
+  });
+
+  if (!customer.deleted) {
+    const defaultPm = customer.invoice_settings?.default_payment_method;
+    if (defaultPm && typeof defaultPm === 'object' && defaultPm.card) {
+      return {
+        brand: defaultPm.card.brand,
+        last4: defaultPm.card.last4,
+        expMonth: defaultPm.card.exp_month,
+        expYear: defaultPm.card.exp_year,
+      };
+    }
+  }
+
+  // No default set yet (e.g. checkout hasn't stored one) — fall back to the
+  // most recently attached card, if any.
+  const methods = await stripe.paymentMethods.list({ customer: user.stripeCustomerId, type: 'card', limit: 1 });
+  const first = methods.data[0];
+  if (!first?.card) return null;
+  return { brand: first.card.brand, last4: first.card.last4, expMonth: first.card.exp_month, expYear: first.card.exp_year };
+}
+
+export type InvoiceSummary = {
+  id: string;
+  date: Date;
+  amount: number;
+  currency: string;
+  status: string;
+  hostedInvoiceUrl: string | null;
+};
+
+export async function listInvoicesForUser(userId: string, limit = 12): Promise<InvoiceSummary[]> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { stripeCustomerId: true } });
+  if (!user?.stripeCustomerId) return [];
+
+  const stripe = getStripeClient();
+  const invoices = await stripe.invoices.list({ customer: user.stripeCustomerId, limit });
+
+  return invoices.data.map((invoice) => ({
+    id: invoice.id,
+    date: new Date((invoice.created ?? 0) * 1000),
+    amount: invoice.amount_paid || invoice.amount_due,
+    currency: invoice.currency,
+    status: invoice.status ?? 'unknown',
+    hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+  }));
+}
+
+// Looks up a donation by Stripe Checkout Session id, scoped to the given
+// user — so the donation confirmation page can never be used to probe
+// another member's donation by guessing a session id in the URL.
+export async function getDonationForUserBySession(userId: string, stripeCheckoutSessionId: string) {
+  return prisma.donation.findFirst({ where: { userId, stripeCheckoutSessionId } });
 }
 
 export async function createCustomerPortalSession(userId: string) {

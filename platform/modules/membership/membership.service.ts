@@ -42,6 +42,17 @@ export async function getActiveSubscriptionForUser(userId: string) {
   });
 }
 
+// Unlike getActiveSubscriptionForUser, this includes CANCELED/INCOMPLETE_*
+// rows — the Billing page ("what am I paying for, and what happened to it")
+// should still show a just-canceled subscription rather than nothing.
+export async function getLatestSubscriptionForUser(userId: string) {
+  return prisma.subscription.findFirst({
+    where: { userId },
+    include: { membershipPlan: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 // --- Admin mutations -------------------------------------------------------------
 
 // Creates the plan's Stripe Product/Price first — if that fails, no DB row
