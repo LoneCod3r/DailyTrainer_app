@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { Container, EmptyState } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FeaturedArticle } from '@/components/blog/FeaturedArticle';
@@ -6,6 +7,11 @@ import { BlogCategoryFilter } from '@/components/blog/BlogCategoryFilter';
 import { listPublishedContent, getFeaturedContent, listContentCategories } from '@/modules/content/content.service';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
+
+export function generateMetadata(): Metadata {
+  const t = getT(getLocale());
+  return { title: t('blog.pageTitle'), description: t('blog.pageSubtitle') };
+}
 
 export default async function BlogPage({ searchParams }: { searchParams: { category?: string } }) {
   const locale = getLocale();

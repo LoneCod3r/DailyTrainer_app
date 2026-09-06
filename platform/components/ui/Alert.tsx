@@ -5,9 +5,9 @@ type Tone = 'info' | 'success' | 'warning' | 'danger';
 
 const toneClasses: Record<Tone, string> = {
   info: 'bg-brand-tint border-link/25 text-link',
-  success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-  warning: 'bg-amber-50 border-amber-200 text-amber-900',
-  danger: 'bg-red-50 border-red-200 text-red-800',
+  success: 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-300',
+  warning: 'bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-300',
+  danger: 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-300',
 };
 
 export function Alert({

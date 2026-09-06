@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Container, Card, CardContent, Badge } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -10,6 +11,11 @@ const AREAS: { href: string; titleKey: DictKey; descKey: DictKey }[] = [
   { href: '/community/courses', titleKey: 'community.coursesTitle', descKey: 'community.coursesDesc' },
   { href: '/community/meetings', titleKey: 'community.meetingsTitle', descKey: 'community.meetingsDesc' },
 ];
+
+export function generateMetadata(): Metadata {
+  const t = getT(getLocale());
+  return { title: t('community.title'), description: t('community.subtitle') };
+}
 
 // Community is the social/educational experience — deliberately separate
 // from Practices (the personal experience). Nothing here is mixed into the

@@ -46,7 +46,7 @@ export function UsersTable({ initialUsers, currentUserId }: { initialUsers: Row[
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="overflow-x-auto rounded-2xl border border-sand-200">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-sand-200 bg-sand-50 text-ink-500">

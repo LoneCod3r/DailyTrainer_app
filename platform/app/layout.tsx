@@ -8,7 +8,11 @@ const sans = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const serif = Fraunces({ subsets: ['latin'], variable: '--font-serif', weight: ['400', '500', '600'] });
 
 export const metadata: Metadata = {
-  title: 'KUKO WAY',
+  metadataBase: new URL(process.env.APP_URL ?? 'http://localhost:3000'),
+  title: {
+    default: 'KUKO WAY',
+    template: '%s · KUKO WAY',
+  },
   description: 'Your personal practice space for the KUKO WAY method.',
 };
 

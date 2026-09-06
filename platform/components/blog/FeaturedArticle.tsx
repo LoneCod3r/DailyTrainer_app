@@ -23,7 +23,7 @@ export function FeaturedArticle({
     <Card className="overflow-hidden">
       {article.coverMedia?.url && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={article.coverMedia.url} alt="" className="h-56 w-full object-cover sm:h-72" />
+        <img src={article.coverMedia.url} alt={article.title} className="h-56 w-full object-cover sm:h-72" />
       )}
       <CardContent className="flex flex-col gap-3 p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Container, Badge } from '@/components/ui';
@@ -7,6 +8,21 @@ import { getContentBySlug, getRelatedContent } from '@/modules/content/content.s
 import { formatDate } from '@/lib/format-date';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const article = await getContentBySlug(params.slug);
+  if (!article) return {};
+
+  return {
+    title: article.title,
+    description: article.excerpt ?? undefined,
+    openGraph: {
+      title: article.title,
+      description: article.excerpt ?? undefined,
+      images: article.coverMedia?.url ? [{ url: article.coverMedia.url }] : undefined,
+    },
+  };
+}
 
 export default async function ArticleDetailPage({ params }: { params: { slug: string } }) {
   const locale = getLocale();
@@ -35,7 +51,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
 
         {article.coverMedia?.url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={article.coverMedia.url} alt="" className="w-full rounded-2xl object-cover" />
+          <img src={article.coverMedia.url} alt={article.title} className="w-full rounded-2xl object-cover" />
         )}
 
         {article.excerpt && <p className="text-lg leading-relaxed text-ink-500">{article.excerpt}</p>}

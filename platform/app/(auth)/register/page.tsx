@@ -5,9 +5,11 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Container, Card, CardContent, Input, Button, Alert } from '@/components/ui';
+import { useT } from '@/lib/i18n/LocaleProvider';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useT();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +31,7 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data?.error?.message ?? 'Something went wrong. Please try again.');
+        setError(data?.error?.message ?? t('auth.registerGenericError'));
         setLoading(false);
         return;
       }
@@ -45,7 +47,7 @@ export default function RegisterPage() {
       router.push('/');
       router.refresh();
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t('auth.registerGenericError'));
       setLoading(false);
     }
   }
@@ -55,16 +57,16 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm">
         <CardContent className="flex flex-col gap-5 p-8">
           <div className="flex flex-col gap-1 text-center">
-            <h1 className="text-xl font-semibold text-ink-900">Create your account</h1>
-            <p className="text-sm text-ink-500">Join the community</p>
+            <h1 className="text-xl font-semibold text-ink-900">{t('auth.registerTitle')}</h1>
+            <p className="text-sm text-ink-500">{t('auth.registerSubtitle')}</p>
           </div>
 
           {error && <Alert tone="danger">{error}</Alert>}
 
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <Input label="Name" name="name" required value={name} onChange={(e) => setName(e.target.value)} />
+            <Input label={t('auth.nameLabel')} name="name" required value={name} onChange={(e) => setName(e.target.value)} />
             <Input
-              label="Email"
+              label={t('auth.emailLabel')}
               type="email"
               name="email"
               autoComplete="email"
@@ -73,25 +75,25 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
             />
             <Input
-              label="Password"
+              label={t('auth.passwordLabel')}
               type="password"
               name="password"
               autoComplete="new-password"
               required
               minLength={8}
-              hint="At least 8 characters"
+              hint={t('auth.passwordHint')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             <Button type="submit" loading={loading} className="w-full">
-              Create account
+              {t('auth.registerButton')}
             </Button>
           </form>
 
           <p className="text-center text-sm text-ink-500">
-            Already have an account?{' '}
+            {t('auth.hasAccount')}{' '}
             <Link href="/login" className="font-medium text-brand-700 hover:underline">
-              Log in
+              {t('auth.logIn')}
             </Link>
           </p>
         </CardContent>

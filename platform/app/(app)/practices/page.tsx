@@ -1,8 +1,14 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Container, Card, CardContent, Badge } from '@/components/ui';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import type { DictKey } from '@/lib/i18n/dictionaries';
+
+export function generateMetadata(): Metadata {
+  const t = getT(getLocale());
+  return { title: t('practices.pageTitle'), description: t('practices.pageSubtitle') };
+}
 
 // Practices is the core personal experience: Practices → category →
 // practice/program → practice session. This page is the "category" level —

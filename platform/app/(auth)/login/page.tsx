@@ -5,10 +5,12 @@ import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Container, Card, CardContent, Input, Button, Alert } from '@/components/ui';
+import { useT } from '@/lib/i18n/LocaleProvider';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError('Invalid email or password.');
+      setError(t('auth.loginError'));
       return;
     }
 
@@ -41,15 +43,15 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardContent className="flex flex-col gap-5 p-8">
           <div className="flex flex-col gap-1 text-center">
-            <h1 className="text-xl font-semibold text-ink-900">Welcome back</h1>
-            <p className="text-sm text-ink-500">Log in to your account</p>
+            <h1 className="text-xl font-semibold text-ink-900">{t('auth.loginTitle')}</h1>
+            <p className="text-sm text-ink-500">{t('auth.loginSubtitle')}</p>
           </div>
 
           {error && <Alert tone="danger">{error}</Alert>}
 
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <Input
-              label="Email"
+              label={t('auth.emailLabel')}
               type="email"
               name="email"
               autoComplete="email"
@@ -58,7 +60,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
             />
             <Input
-              label="Password"
+              label={t('auth.passwordLabel')}
               type="password"
               name="password"
               autoComplete="current-password"
@@ -67,14 +69,14 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
             <Button type="submit" loading={loading} className="w-full">
-              Log in
+              {t('auth.loginButton')}
             </Button>
           </form>
 
           <p className="text-center text-sm text-ink-500">
-            Don&apos;t have an account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link href="/register" className="font-medium text-brand-700 hover:underline">
-              Create one
+              {t('auth.createOne')}
             </Link>
           </p>
         </CardContent>

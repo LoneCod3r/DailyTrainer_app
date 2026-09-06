@@ -10,7 +10,7 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-red-100 bg-red-50/50 px-6 py-16 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-red-100 bg-red-50/50 px-6 py-16 text-center dark:border-red-900 dark:bg-red-950/30">
       <h3 className="text-base font-semibold text-ink-900">{title}</h3>
       <p className="max-w-sm text-sm text-ink-500">{description}</p>
       {onRetry && (
