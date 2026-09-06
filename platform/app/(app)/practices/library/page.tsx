@@ -6,15 +6,22 @@ import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { getTopLevelPractices, getStartHereSections, getPrograms } from '@/modules/kuko-way/service';
 
-export default function LibraryPage() {
+export default function LibraryPage({ searchParams }: { searchParams: { q?: string } }) {
   const locale = getLocale();
   const t = getT(locale);
+  const initialQuery = searchParams.q ?? '';
 
   return (
     <Container className="flex flex-col gap-8 py-8">
       <PageHeader eyebrow={t('nav.practices')} title={t('library.title')} description={t('library.subtitle')} />
 
-      <LibraryBrowser practices={getTopLevelPractices()} startHereSections={getStartHereSections()} programs={getPrograms()} />
+      <LibraryBrowser
+        key={initialQuery}
+        practices={getTopLevelPractices()}
+        startHereSections={getStartHereSections()}
+        programs={getPrograms()}
+        initialQuery={initialQuery}
+      />
 
       <Disclaimer t={t} />
     </Container>

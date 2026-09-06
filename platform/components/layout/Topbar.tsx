@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { isAdmin } from '@/lib/permissions';
 import { Button } from '@/components/ui';
@@ -13,7 +14,19 @@ import { MenuIcon, SearchIcon, ShieldIcon, LogOutIcon, AccountIcon } from './ico
 export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const t = useT();
+  const router = useRouter();
+
+  // Site search lives in the Library's existing filter (LibraryBrowser) —
+  // this just navigates there with the query so Enter from anywhere in the
+  // app opens real, working results instead of a disabled input.
+  const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    router.push(`/practices/library?q=${encodeURIComponent(q)}`);
+  };
 
   return (
     <header className="sticky top-0 z-20 grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-sand-200 bg-surface/90 px-4 backdrop-blur sm:px-6">
@@ -32,15 +45,16 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
           display:none on desktop (md:hidden), so it drops out of grid
           auto-placement entirely — without an explicit column, this would
           get placed in column 1 instead of 2. */}
-      <div className="relative col-start-2 hidden w-72 max-w-full sm:block">
+      <form onSubmit={handleSearchSubmit} className="relative col-start-2 hidden w-72 max-w-full sm:block">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-300" />
         <input
           type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder={t('topbar.searchPlaceholder')}
-          disabled
-          className="w-full cursor-not-allowed rounded-xl border border-sand-200 bg-page py-2 pl-9 pr-3 text-sm text-ink-500 placeholder:text-ink-300"
+          className="w-full rounded-xl border border-sand-200 bg-page py-2 pl-9 pr-3 text-sm text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-600"
         />
-      </div>
+      </form>
 
       <div className="col-start-3 flex items-center justify-end gap-2">
         <LanguageSwitcher />

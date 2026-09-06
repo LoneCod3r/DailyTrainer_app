@@ -18,13 +18,15 @@ export function LibraryBrowser({
   practices,
   startHereSections,
   programs,
+  initialQuery = '',
 }: {
   practices: Practice[];
   startHereSections: StartHereSection[];
   programs: Program[];
+  initialQuery?: string;
 }) {
   const { locale, t } = useLocale();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<Category>('all');
 
   const q = query.trim().toLowerCase();

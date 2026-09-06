@@ -95,6 +95,23 @@ test.describe('Practices — Library', () => {
   });
 });
 
+test.describe('Topbar search', () => {
+  test('searching from the topbar opens the Library filtered to that query', async ({ page }) => {
+    await page.goto('/');
+
+    const topbarSearch = page.getByPlaceholder('Search practices, articles…');
+    await expect(topbarSearch).toBeVisible();
+    await topbarSearch.fill('Pullover');
+    await topbarSearch.press('Enter');
+
+    await expect(page).toHaveURL('/practices/library?q=Pullover');
+    await expect(page.getByPlaceholder('Search the library…')).toHaveValue('Pullover');
+
+    await expect(page.getByRole('heading', { name: 'Practices', exact: true })).toBeVisible();
+    await expect(page.getByRole('main').getByText('Pullover', { exact: true })).toBeVisible();
+  });
+});
+
 test.describe('Practice completion (local, device-only state)', () => {
   test('marking a practice complete toggles and survives a reload', async ({ page }) => {
     await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
