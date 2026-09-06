@@ -88,6 +88,16 @@ export default async function HomePage() {
           scrim keeps the overlaid text legible over any photo, in both
           themes. */}
       <section className="border-b border-sand-200 bg-sand-50/60 px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+        {/* Signed-in greeting lives here, above the photo, as plain dark
+            text on the page background — not overlaid on the image, where
+            it competed with the practice title/CTA for attention. Keeps
+            this the page's one <h1> when signed in; the signed-out quote
+            below remains the <h1> in that state instead. */}
+        {session && (
+          <h1 className="mx-auto mb-4 w-full max-w-[90rem] text-xl font-serif text-ink-900 sm:mb-6 sm:text-2xl lg:text-3xl">
+            {firstName ? t('home.welcomeBack', { name: firstName }) : t('home.welcome')}
+          </h1>
+        )}
         <div className="relative isolate mx-auto aspect-video w-full max-w-[90rem] overflow-hidden rounded-2xl bg-ink-900">
           <Image
             src="/images/home/home-page.webp"
@@ -110,10 +120,6 @@ export default async function HomePage() {
             {session ? (
               // Signed in: the personal, practice-specific experience.
               <div className="flex max-w-lg flex-col gap-2 sm:gap-4">
-                <h1 className="text-sm font-semibold uppercase tracking-wide text-white/90 sm:text-base">
-                  {firstName ? t('home.welcomeBack', { name: firstName }) : t('home.welcome')}
-                </h1>
-
                 <Badge tone="brand" className="w-fit">
                   {t('home.todaysPractice')}
                 </Badge>
@@ -191,15 +197,12 @@ export default async function HomePage() {
                     className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
                   />
                 </div>
-                <div className="flex flex-1 items-start gap-5">
-                  <span className="font-serif text-4xl text-ink-300 sm:text-5xl">{String(i + 1).padStart(2, '0')}</span>
-                  <div className="flex flex-col gap-2">
-                    <span className="font-serif text-3xl text-ink-900 sm:text-4xl">{t(item.labelKey)}</span>
-                    <span className="max-w-md text-base text-ink-500 sm:text-lg">{t(item.descKey)}</span>
-                    <span className="pt-1 text-base font-medium text-link motion-safe:transition-transform motion-safe:group-hover:translate-x-1">
-                      →
-                    </span>
-                  </div>
+                <div className="flex flex-1 flex-col gap-2">
+                  <span className="font-serif text-3xl text-ink-900 sm:text-4xl">{t(item.labelKey)}</span>
+                  <span className="max-w-md text-base text-ink-500 sm:text-lg">{t(item.descKey)}</span>
+                  <span className="pt-1 text-base font-medium text-link motion-safe:transition-transform motion-safe:group-hover:translate-x-1">
+                    →
+                  </span>
                 </div>
               </Link>
             ))}
