@@ -38,7 +38,13 @@ export default async function AccountPage() {
             <p className="font-medium text-ink-900">{session.user.name ?? session.user.email}</p>
             <p className="text-sm text-ink-500">{session.user.email}</p>
           </div>
-          <Badge tone="brand">{t(ROLE_KEY[session.user.role] ?? 'profile.roleUser')}</Badge>
+          {/* A plain "Member" role badge here read as paid-membership status
+              (right above the actual Membership card, which correctly says
+              "None") — only call out Moderator/Admin, same as
+              UserProfilePreview does for community-visible role badges. */}
+          {session.user.role !== 'USER' && (
+            <Badge tone="brand">{t(ROLE_KEY[session.user.role] ?? 'profile.roleUser')}</Badge>
+          )}
         </CardContent>
       </Card>
 
