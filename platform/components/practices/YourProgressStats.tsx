@@ -20,12 +20,12 @@ export function YourProgressStats() {
   return (
     <>
       <div data-testid="streak-stat">
-        <p className="text-xl font-semibold text-ink-900">{summary.streakDays}</p>
-        <p className="text-xs text-ink-500">{t('home.currentStreak')}</p>
+        <p className="text-2xl font-semibold text-ink-900 sm:text-3xl">{summary.streakDays}</p>
+        <p className="text-sm text-ink-500">{t('home.currentStreak')}</p>
       </div>
       <div data-testid="practices-completed-stat">
-        <p className="text-xl font-semibold text-ink-900">{summary.practicesCompleted}</p>
-        <p className="text-xs text-ink-500">{t('home.practicesCompleted')}</p>
+        <p className="text-2xl font-semibold text-ink-900 sm:text-3xl">{summary.practicesCompleted}</p>
+        <p className="text-sm text-ink-500">{t('home.practicesCompleted')}</p>
       </div>
     </>
   );

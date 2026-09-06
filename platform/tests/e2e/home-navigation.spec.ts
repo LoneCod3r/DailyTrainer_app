@@ -5,7 +5,9 @@ test.describe('Home / public navigation', () => {
   test('@smoke home loads with visible primary navigation', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/KUKO WAY/);
-    await expect(page.getByRole('heading', { name: 'Welcome to your space' })).toBeVisible();
+    // Signed-out visitors get a real KUKO WAY philosophy quote as the hero
+    // heading (see app/(app)/page.tsx) rather than a personalized greeting.
+    await expect(page.getByRole('heading', { name: /power to change your body/i })).toBeVisible();
 
     const nav = page.getByRole('navigation', { name: 'Main' });
     await expect(nav).toBeVisible();
@@ -49,14 +51,14 @@ test.describe('Home / public navigation', () => {
 
   test('language switch (EN -> BG -> EN) updates visible navigation text', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Welcome to your space' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /power to change your body/i })).toBeVisible();
 
     await switchLanguage(page, 'en', 'bg');
-    await expect(page.getByRole('heading', { name: 'Добре дошъл в твоето пространство' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Силата да променяте тялото/i })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Практики' })).toBeVisible();
 
     await switchLanguage(page, 'bg', 'en');
-    await expect(page.getByRole('heading', { name: 'Welcome to your space' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /power to change your body/i })).toBeVisible();
   });
 
   test('sidebar arrow shows/hides the Practices and Community submenus independently of the active page', async ({ page }) => {
@@ -89,7 +91,7 @@ test.describe('Home / public navigation', () => {
   test('locale persists after navigation and reload', async ({ page }) => {
     await page.goto('/');
     await switchLanguage(page, 'en', 'bg');
-    await expect(page.getByRole('heading', { name: 'Добре дошъл в твоето пространство' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Силата да променяте тялото/i })).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Практики' }).click();
     await expect(page).toHaveURL('/practices');

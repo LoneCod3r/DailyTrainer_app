@@ -9,7 +9,9 @@ import { switchLanguage } from './fixtures/language-helpers';
 
 test('BG (default) -> EN -> BG preserves route and authentication across reloads', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Добре дошъл в твоето пространство' })).toBeVisible();
+  // Signed-out visitors get a real KUKO WAY philosophy quote as the hero
+  // heading (see app/(app)/page.tsx) rather than a personalized greeting.
+  await expect(page.getByRole('heading', { name: /Силата да променяте тялото/i })).toBeVisible();
 
   // Log in fully in Bulgarian — proves the login flow itself is localized,
   // not just the chrome around it.
