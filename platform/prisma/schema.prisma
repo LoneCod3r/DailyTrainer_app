@@ -7,8 +7,14 @@
 //   - Billing foundation (Stripe, test mode)           -> modules/payments
 //
 // Deliberately NOT modeled yet (future modules, per the Foundation Phase spec):
-//   Discussions, Courses (beyond a bare courseId placeholder on Purchase),
-//   Events, full Membership benefits, Notifications.
+//   Courses (beyond a bare courseId placeholder on Purchase), Events,
+//   full Membership benefits, Notifications.
+//
+// Day 3 adds Discussions (real, persisted) and LessonProgress (real,
+// persisted per-user completion for the otherwise-static Courses content —
+// see modules/courses). Course/module/lesson content and Member Meetings
+// stay static demo content for now (modules/courses, modules/events) since
+// nothing today needs to create/edit them — see those modules' READMEs.
 // =============================================================================
 
 generator client {
@@ -59,6 +65,10 @@ model User {
   payments      Payment[]
   purchases     Purchase[]
   donations     Donation[]
+
+  discussions       Discussion[]      @relation("DiscussionAuthor")
+  discussionReplies DiscussionReply[] @relation("DiscussionReplyAuthor")
+  lessonProgress    LessonProgress[]
 
   @@index([role])
   @@index([status])
@@ -125,6 +135,10 @@ model ContentItem {
   slug        String        @unique
   excerpt     String?
   body        String?
+  // Free-form, optional editorial category (e.g. "practices", "programs",
+  // "kuko-way", "announcements") — added Day 3 for the Blog module. Nullable
+  // so existing rows (and non-blog content types) don't require one.
+  category    String?
   status      ContentStatus @default(DRAFT)
   featured    Boolean       @default(false)
   pinned      Boolean       @default(false)
@@ -318,4 +332,96 @@ model PaymentEvent {
   createdAt    DateTime  @default(now())
 
   @@map("payment_events")
+}
+
+// -----------------------------------------------------------------------------
+// Community: Discussions (Day 3)
+// -----------------------------------------------------------------------------
+
+// App-level organizational categories (not official/proprietary categories —
+// easy to extend). Kept as an enum rather than a table since the set is
+// small and changes rarely; revisit if admin-editable categories are needed.
+enum DiscussionCategory {
+  GENERAL
+  PRACTICES
+  PROGRAMS
+  KUKO_WAY
+  COMMUNITY
+  QUESTIONS
+}
+
+// Shared moderation lifecycle for discussions and replies. PENDING/HIDDEN are
+// only ever shown to their author or a moderator+ (see discussions.service.ts
+// canViewDiscussion) — ordinary visitors never see internal moderation state.
+enum ModerationStatus {
+  PUBLISHED
+  PENDING
+  HIDDEN
+  REMOVED
+}
+
+model Discussion {
+  id       String             @id @default(cuid())
+  slug     String             @unique
+  title    String
+  body     String
+  category DiscussionCategory @default(GENERAL)
+  status   ModerationStatus   @default(PUBLISHED)
+  // Independent of `status` — a published, visible discussion can still be
+  // locked to stop new replies without hiding it.
+  locked   Boolean            @default(false)
+
+  authorId String
+  author   User   @relation("DiscussionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  replies DiscussionReply[]
+
+  // Denormalized so "last activity" sorting doesn't need an aggregate query
+  // over replies — bumped whenever a reply is created.
+  lastActivityAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([category, status])
+  @@index([status])
+  @@map("discussions")
+}
+
+model DiscussionReply {
+  id           String     @id @default(cuid())
+  discussionId String
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation("DiscussionReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  body   String
+  status ModerationStatus @default(PUBLISHED)
+
+  createdAt DateTime @default(now())
+
+  @@index([discussionId])
+  @@map("discussion_replies")
+}
+
+// -----------------------------------------------------------------------------
+// Community: Course lesson progress (Day 3)
+// Course/module/lesson content is static demo content (modules/courses) —
+// this table is the one real, persisted piece: which lessons a user has
+// actually completed.
+// -----------------------------------------------------------------------------
+model LessonProgress {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseSlug String
+  moduleSlug String
+  lessonSlug String
+
+  completedAt DateTime @default(now())
+
+  @@unique([userId, courseSlug, moduleSlug, lessonSlug])
+  @@index([userId, courseSlug])
+  @@map("lesson_progress")
 }

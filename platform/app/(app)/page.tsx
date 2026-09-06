@@ -3,12 +3,16 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Container, Card, CardContent, Badge, Button, EmptyState } from '@/components/ui';
 import { ProgressBar } from '@/components/practices/ProgressBar';
+import { MeetingStatusBadge } from '@/components/meetings/MeetingStatusBadge';
+import { JoinMeetingButton } from '@/components/meetings/JoinMeetingButton';
 import { listPublishedContent } from '@/modules/content/content.service';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { getPracticeById, getProgramBySlug } from '@/modules/kuko-way/service';
 import { demoProgress } from '@/modules/kuko-way/demo-progress';
 import { localize } from '@/modules/kuko-way/types';
+import { getNextUpcomingMeeting, getMeetingStatus } from '@/modules/events/service';
+import { formatDateTime } from '@/lib/format-date';
 
 // Home answers one question: "what should I do today?" Today's Practice is
 // the visual anchor; everything else supports it. Continue/Progress use
@@ -19,7 +23,8 @@ export default async function HomePage() {
   const session = await getServerSession(authOptions);
   const locale = getLocale();
   const t = getT(locale);
-  const latest = await listPublishedContent({ limit: 3 });
+  const latest = await listPublishedContent({ type: 'ARTICLE', limit: 3 });
+  const nextMeeting = getNextUpcomingMeeting();
 
   const firstName = session?.user?.name?.split(' ')[0];
   const todaysPractice = getPracticeById('body-scan-1');
@@ -132,24 +137,26 @@ export default async function HomePage() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-ink-900">{t('home.latestInfo')}</h2>
-          <Link href="/practices/library" className="text-sm font-medium text-link hover:underline">
-            {t('home.viewLibrary')}
+          <Link href="/blog" className="text-sm font-medium text-link hover:underline">
+            {t('home.viewBlog')}
           </Link>
         </div>
         {latest.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {latest.map((item) => (
-              <Card key={item.id}>
-                <CardContent>
-                  {item.featured && (
-                    <Badge tone="brand" className="mb-2">
-                      {t('home.featured')}
-                    </Badge>
-                  )}
-                  <h3 className="font-medium text-ink-900">{item.title}</h3>
-                  {item.excerpt && <p className="mt-1 line-clamp-2 text-sm text-ink-500">{item.excerpt}</p>}
-                </CardContent>
-              </Card>
+              <Link key={item.id} href={`/blog/${item.slug}`}>
+                <Card className="h-full transition-shadow hover:shadow-soft">
+                  <CardContent>
+                    {item.featured && (
+                      <Badge tone="brand" className="mb-2">
+                        {t('home.featured')}
+                      </Badge>
+                    )}
+                    <h3 className="font-medium text-ink-900">{item.title}</h3>
+                    {item.excerpt && <p className="mt-1 line-clamp-2 text-sm text-ink-500">{item.excerpt}</p>}
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         ) : (
@@ -159,15 +166,34 @@ export default async function HomePage() {
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold text-ink-900">{t('home.upcomingMeeting')}</h2>
-        <EmptyState
-          title={t('home.noMeetingTitle')}
-          description={t('home.noMeetingDesc')}
-          action={
-            <Link href="/community/meetings" className="text-sm font-medium text-link hover:underline">
-              {t('home.viewMeetings')}
-            </Link>
-          }
-        />
+        {nextMeeting ? (
+          <Card>
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <MeetingStatusBadge status={getMeetingStatus(nextMeeting)} t={t} />
+                <span className="text-sm font-medium text-ink-700">{formatDateTime(nextMeeting.startAt, locale)}</span>
+              </div>
+              <h3 className="font-medium text-ink-900">{localize(nextMeeting.title, locale).value}</h3>
+              <p className="text-sm text-ink-500">{t('meetings.hostedBy', { name: nextMeeting.hostName })}</p>
+              <div className="flex items-center gap-3 pt-1">
+                <JoinMeetingButton meeting={nextMeeting} t={t} size="sm" />
+                <Link href="/community/meetings" className="text-sm font-medium text-link hover:underline">
+                  {t('home.viewMeetings')}
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState
+            title={t('home.noMeetingTitle')}
+            description={t('home.noMeetingDesc')}
+            action={
+              <Link href="/community/meetings" className="text-sm font-medium text-link hover:underline">
+                {t('home.viewMeetings')}
+              </Link>
+            }
+          />
+        )}
       </section>
     </Container>
   );
