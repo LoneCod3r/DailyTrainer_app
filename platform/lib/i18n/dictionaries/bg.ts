@@ -83,7 +83,7 @@ const bg = {
     passwordHint: 'Поне 8 символа',
   },
   home: {
-    welcomeBack: 'Добре дошъл отново, {name}',
+    welcomeBack: 'Добре дошъл, {name}',
     welcome: 'Добре дошъл в твоето пространство',
     subtitle: 'Ето какво предстои в практиката ти днес.',
     todaysPractice: 'Практика за днес',

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Container, Card, CardContent, Badge, Button, EmptyState } from '@/components/ui';
-import { ProgressBar } from '@/components/practices/ProgressBar';
+import { ProgramDayProgress } from '@/components/practices/ProgramDayProgress';
 import { YourProgressStats } from '@/components/practices/YourProgressStats';
 import { MeetingStatusBadge } from '@/components/meetings/MeetingStatusBadge';
 import { JoinMeetingButton } from '@/components/meetings/JoinMeetingButton';
@@ -16,13 +16,13 @@ import { getNextUpcomingMeeting, getMeetingStatus } from '@/modules/events/servi
 import { formatDateTime } from '@/lib/format-date';
 
 // Home answers one question: "what should I do today?" Today's Practice is
-// the visual anchor; everything else supports it. "Continue your program"
-// still uses demoProgress (see modules/kuko-way/demo-progress.ts) since
-// there's no real per-user program/day tracking yet — but "Your progress"'s
-// streak/completed numbers are real, computed from this device's own
-// completion history (see lib/local-progress.ts and YourProgressStats), not
-// placeholder data. Latest Information reuses the real Day 1 content feed
-// as-is.
+// the visual anchor; everything else supports it. Which program is "active"
+// is still a fixed demo default (see modules/kuko-way/demo-progress.ts) —
+// there's no real enrollment flow yet — but every number shown about your
+// progress on it (day X of N, streak, completed count) is real, derived
+// from this device's own completion history (see lib/local-progress.ts,
+// ProgramDayProgress, YourProgressStats), not placeholder data. Latest
+// Information reuses the real Day 1 content feed as-is.
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
   const locale = getLocale();
@@ -68,14 +68,7 @@ export default async function HomePage() {
             {activeProgram ? (
               <>
                 <p className="text-sm text-ink-500">{localize(activeProgram.title, locale).value}</p>
-                <ProgressBar
-                  value={demoProgress.currentDay}
-                  max={activeProgram.length}
-                  label={t('home.dayOf', { current: demoProgress.currentDay, total: activeProgram.length })}
-                />
-                <p className="text-xs text-ink-500">
-                  {t('home.dayOf', { current: demoProgress.currentDay, total: activeProgram.length })}
-                </p>
+                <ProgramDayProgress programLength={activeProgram.length} />
                 <div>
                   <Link href={`/practices/programs/${activeProgram.slug}`}>
                     <Button variant="secondary" size="sm">

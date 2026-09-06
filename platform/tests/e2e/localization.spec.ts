@@ -18,7 +18,7 @@ test('BG (default) -> EN -> BG preserves route and authentication across reloads
 
   // BG -> EN
   await switchLanguage(page, 'bg', 'en');
-  await expect(page.getByRole('heading', { name: 'Welcome back, Demo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome, Demo' })).toBeVisible();
 
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Practices' }).click();
   await expect(page).toHaveURL('/practices');

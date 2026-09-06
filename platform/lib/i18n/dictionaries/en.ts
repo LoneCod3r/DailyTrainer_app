@@ -85,7 +85,7 @@ const en: typeof bg = {
     passwordHint: 'At least 8 characters',
   },
   home: {
-    welcomeBack: 'Welcome back, {name}',
+    welcomeBack: 'Welcome, {name}',
     welcome: 'Welcome to your space',
     subtitle: "Here's what's on your practice today.",
     todaysPractice: "Today's practice",

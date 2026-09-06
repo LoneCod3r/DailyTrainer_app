@@ -32,6 +32,7 @@ export function setPracticeCompleted(slug: string, completed: boolean): void {
 export interface LocalProgressSummary {
   practicesCompleted: number;
   streakDays: number;
+  practicedDays: number;
 }
 
 // practicesCompleted counts practices currently marked complete on this
@@ -39,7 +40,9 @@ export interface LocalProgressSummary {
 // streakDays counts consecutive calendar days, ending today, that have at
 // least one completion — walking backward from today, or from yesterday if
 // nothing is completed yet today so the streak doesn't look broken before
-// you've had a chance to practice.
+// you've had a chance to practice. practicedDays is the total count of
+// distinct calendar days that have ever had a completion (not necessarily
+// consecutive) — see getCurrentProgramDay, which is built on top of it.
 export function getLocalProgressSummary(): LocalProgressSummary {
   const completionDates = new Set<string>();
   let practicesCompleted = 0;
@@ -53,7 +56,7 @@ export function getLocalProgressSummary(): LocalProgressSummary {
       if (value && DATE_RE.test(value)) completionDates.add(value);
     }
   } catch {
-    return { practicesCompleted: 0, streakDays: 0 };
+    return { practicesCompleted: 0, streakDays: 0, practicedDays: 0 };
   }
 
   const cursor = new Date();
@@ -65,5 +68,15 @@ export function getLocalProgressSummary(): LocalProgressSummary {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  return { practicesCompleted, streakDays };
+  return { practicesCompleted, streakDays, practicedDays: completionDates.size };
+}
+
+// There's no backend that assigns specific practices to specific program
+// days (the handbook never does either — see modules/kuko-way/service.ts),
+// so "day X of N" is derived from real usage instead of invented: X is how
+// many distinct days you've practiced on, floored at 1 (so a brand-new user
+// sees "Day 1", never "Day 0") and capped at the program length.
+export function getCurrentProgramDay(programLength: number): number {
+  const { practicedDays } = getLocalProgressSummary();
+  return Math.min(Math.max(practicedDays, 1), programLength);
 }

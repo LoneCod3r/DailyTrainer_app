@@ -54,10 +54,39 @@ test.describe('Practices — Feel Better Now', () => {
 
 test.describe('Practices — Programs', () => {
   test('7-day program shows the active-progress state', async ({ page }) => {
+    // "Day X of N" is now derived from real local completion history (see
+    // lib/local-progress.ts's getCurrentProgramDay: distinct days practiced,
+    // not fixed demo data) — seed completions on two distinct past days so
+    // day 1 shows completed and day 2 shows current, instead of the
+    // brand-new-user default (day 1, nothing completed yet).
+    await page.goto('/');
+    await page.evaluate(() => {
+      const dateKey = (daysAgo: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() - daysAgo);
+        return d.toISOString().slice(0, 10);
+      };
+      localStorage.setItem('ptd:completed:body-scan-1', dateKey(2));
+      localStorage.setItem('ptd:completed:plazgane-po-nebtseto', dateKey(1));
+    });
+
     await page.goto('/practices/programs/7-days');
     await expect(page.getByRole('button', { name: 'Continue program' })).toBeVisible();
     await expect(page.getByText('Current', { exact: true })).toBeVisible();
     await expect(page.getByText('Completed', { exact: true }).first()).toBeVisible();
+
+    // Leave no lasting local state for other tests.
+    await page.evaluate(() => {
+      localStorage.removeItem('ptd:completed:body-scan-1');
+      localStorage.removeItem('ptd:completed:plazgane-po-nebtseto');
+    });
+  });
+
+  test('a brand-new user sees day 1 with nothing completed yet (not fixed demo progress)', async ({ page }) => {
+    await page.goto('/practices/programs/7-days');
+    await expect(page.getByRole('button', { name: 'Continue program' })).toBeVisible();
+    await expect(page.getByText('Day 1 of 7')).toBeVisible();
+    await expect(page.getByText('Completed', { exact: true })).toHaveCount(0);
   });
 
   test('14-day and 28-day programs show the coming-soon state', async ({ page }) => {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n/LocaleProvider';
 import { getLocalProgressSummary, type LocalProgressSummary } from '@/lib/local-progress';
 
-const EMPTY: LocalProgressSummary = { practicesCompleted: 0, streakDays: 0 };
+const EMPTY: LocalProgressSummary = { practicesCompleted: 0, streakDays: 0, practicedDays: 0 };
 
 // Real numbers from this device's own completion history (see
 // lib/local-progress.ts), not placeholder data — reads as 0/0 until mounted
