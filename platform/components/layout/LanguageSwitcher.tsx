@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { clsx } from '@/lib/clsx';
 import { useLocale } from '@/lib/i18n/LocaleProvider';
 import type { Locale } from '@/lib/i18n/locale';
+import { useClickOutside } from '@/lib/useClickOutside';
 import { BulgariaFlag, UKFlag } from './flags';
 import { ChevronIcon } from './icons';
 
@@ -20,6 +21,8 @@ const OPTIONS: { value: Locale; Flag: typeof BulgariaFlag }[] = [
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale, t } = useLocale();
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(menuRef, () => setOpen(false), open);
 
   useEffect(() => {
     if (!open) return;
@@ -34,7 +37,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   const currentLabel = t(`language.${current.value}`);
 
   return (
-    <div className={clsx('relative', className)}>
+    <div className={clsx('relative', className)} ref={menuRef}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -51,8 +54,6 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       </button>
 
       {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
             role="listbox"
             aria-label={t('language.label')}
@@ -84,7 +85,6 @@ export function LanguageSwitcher({ className }: { className?: string }) {
               );
             })}
           </div>
-        </>
       )}
     </div>
   );

@@ -52,16 +52,6 @@ const EXPLORE_ITEMS = [
   },
 ] as const;
 
-// Decorative only (aria-hidden) — a static triangle hinting at the future
-// Free Videos experience (see modules/kuko-way roadmap), not a real player.
-function PlayGlyph() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path d="M6.5 4.8c0-.9 1-1.5 1.8-1L14.7 8c.8.5.8 1.6 0 2.1l-6.4 4.2c-.8.5-1.8-.1-1.8-1V4.8Z" />
-    </svg>
-  );
-}
-
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
   const locale = getLocale();
@@ -150,10 +140,8 @@ export default async function HomePage() {
 
           {/* Large visual area for the practice — placeholder photography
               (license: public/images/home/CREDITS.md) until real KUKO WAY
-              photography/video exists; the play glyph previews where a
-              future Free Videos preview would sit, without implying a real
-              video exists yet. A dark gradient scrim keeps the "KUKO WAY"
-              mark readable over any photo, in both themes. */}
+              photography/video exists. A dark gradient scrim keeps the
+              "KUKO WAY" mark readable over any photo, in both themes. */}
           <div className="relative isolate aspect-[16/11] w-full overflow-hidden rounded-2xl bg-ink-900 lg:aspect-[4/5]">
             <Image
               src="/images/home/hero-todays-practice.jpg"
@@ -164,11 +152,6 @@ export default async function HomePage() {
               className="object-cover"
             />
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" />
-            <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 text-brand-700 shadow-soft">
-                <PlayGlyph />
-              </span>
-            </div>
             <span aria-hidden="true" className="absolute bottom-5 left-5 font-serif text-sm text-white/90">
               KUKO WAY
             </span>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { isAdmin } from '@/lib/permissions';
 import { useT } from '@/lib/i18n/LocaleProvider';
-import { PRIMARY_NAV, ACCOUNT_NAV } from './nav';
+import { PRIMARY_NAV } from './nav';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { CloseIcon, ShieldIcon, LogOutIcon } from './icons';
@@ -70,29 +70,22 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         ))}
 
-        <div className="mt-auto border-t border-sand-200 pt-4">
-          <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">{t('nav.account')}</p>
-          <div className="flex flex-col gap-0.5">
-            {ACCOUNT_NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className="rounded-lg px-2 py-1.5 text-sm text-ink-700 hover:bg-sand-100"
-              >
-                {t(item.labelKey)}
-              </Link>
-            ))}
-            {session?.user && isAdmin(session.user.role) && (
-              <Link
-                href="/admin"
-                onClick={onClose}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-700 hover:bg-sand-100"
-              >
-                <ShieldIcon width={16} height={16} /> {t('topbar.admin')}
-              </Link>
-            )}
-            {session?.user && (
+        {/* Account sub-pages live in the Topbar's profile dropdown on
+            desktop; on mobile they're reachable via the Account tab's hub
+            page (app/(app)/account/page.tsx), which links to all of them —
+            visible only when signed in, same as here. */}
+        {session?.user && (
+          <div className="mt-auto border-t border-sand-200 pt-4">
+            <div className="flex flex-col gap-0.5">
+              {isAdmin(session.user.role) && (
+                <Link
+                  href="/admin"
+                  onClick={onClose}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-700 hover:bg-sand-100"
+                >
+                  <ShieldIcon width={16} height={16} /> {t('topbar.admin')}
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => signOut({ callbackUrl: '/' })}
@@ -100,9 +93,9 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
               >
                 <LogOutIcon width={16} height={16} /> {t('topbar.signOut')}
               </button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
