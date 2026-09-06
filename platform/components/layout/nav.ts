@@ -25,6 +25,7 @@ export const PRIMARY_NAV: NavItem[] = [
       { href: '/practices/programs/14-days', labelKey: 'nav.days14' },
       { href: '/practices/programs/28-days', labelKey: 'nav.days28' },
       { href: '/practices/library', labelKey: 'nav.library' },
+      { href: '/practices/free-videos', labelKey: 'nav.freeVideos' },
     ],
   },
   {

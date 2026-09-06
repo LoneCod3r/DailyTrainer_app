@@ -32,6 +32,7 @@ const en: typeof bg = {
     days14: '14 Days',
     days28: '28 Days',
     library: 'Library',
+    freeVideos: 'Free Videos',
     discussions: 'Discussions',
     courses: 'Courses',
     meetings: 'Member Meetings',
@@ -138,6 +139,11 @@ const en: typeof bg = {
     subtitle: 'Choose a practice and start — no overthinking required.',
     flowLabel: 'Open → Choose → Start',
     allPractices: 'All practices',
+  },
+  freeVideos: {
+    title: 'Free Videos',
+    subtitle: 'Practices and explanations from the KUKO WAY YouTube channel.',
+    watchOnYoutube: 'Watch on YouTube',
   },
   library: {
     title: 'Library',

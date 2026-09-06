@@ -95,6 +95,30 @@ test.describe('Practices — Library', () => {
   });
 });
 
+test.describe('Practices — Free Videos', () => {
+  test('lists the real YouTube embeds with working watch-on-YouTube links', async ({ page }) => {
+    await page.goto('/practices/free-videos');
+    await expect(page.getByRole('heading', { name: 'Free Videos' })).toBeVisible();
+
+    // Checking the rendered src/href (not waiting on YouTube's own player to
+    // finish loading) keeps this test scoped to our code, not YouTube's.
+    const expectedIds = ['3FtN_xW-qDg', 'CoAToeX8z8c', 'VDyDyBqiHF4'];
+    await expect(page.locator('iframe[src*="youtube.com/embed/"]')).toHaveCount(expectedIds.length);
+    for (const id of expectedIds) {
+      await expect(page.locator(`iframe[src*="${id}"]`)).toHaveCount(1);
+      await expect(page.locator(`a[href*="watch?v=${id}"]`)).toHaveCount(1);
+    }
+  });
+
+  test('is reachable from the Practices submenu', async ({ page }) => {
+    await page.goto('/');
+    const nav = page.getByRole('navigation', { name: 'Main' });
+    await nav.getByRole('button', { name: 'Practices: Show' }).click();
+    await nav.getByRole('link', { name: 'Free Videos' }).click();
+    await expect(page).toHaveURL('/practices/free-videos');
+  });
+});
+
 test.describe('Topbar search', () => {
   test('searching from the topbar opens the Library filtered to that query', async ({ page }) => {
     await page.goto('/');
@@ -129,5 +153,29 @@ test.describe('Practice completion (local, device-only state)', () => {
     // Toggle back off so this test leaves no lasting local state.
     await completed.click();
     await expect(markComplete).toBeVisible();
+  });
+
+  test("Home's Your Progress reflects real completions, not fixed demo numbers", async ({ page }) => {
+    await page.goto('/');
+    const streakStat = page.getByTestId('streak-stat');
+    const completedStat = page.getByTestId('practices-completed-stat');
+
+    // A fresh browser context has completed nothing yet.
+    await expect(streakStat.locator('p').first()).toHaveText('0');
+    await expect(completedStat.locator('p').first()).toHaveText('0');
+
+    await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
+    await page.getByRole('button', { name: 'Mark as complete' }).click();
+
+    await page.goto('/');
+    await expect(streakStat.locator('p').first()).toHaveText('1');
+    await expect(completedStat.locator('p').first()).toHaveText('1');
+
+    // Leave no lasting local state for other tests.
+    await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
+    await page.getByRole('button', { name: '✓ Completed' }).click();
+    await page.goto('/');
+    await expect(streakStat.locator('p').first()).toHaveText('0');
+    await expect(completedStat.locator('p').first()).toHaveText('0');
   });
 });

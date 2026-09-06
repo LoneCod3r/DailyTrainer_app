@@ -30,6 +30,7 @@ const bg = {
     days14: '14 дни',
     days28: '28 дни',
     library: 'Библиотека',
+    freeVideos: 'Безплатни видеа',
     discussions: 'Дискусии',
     courses: 'Курсове',
     meetings: 'Срещи с общността',
@@ -137,6 +138,11 @@ const bg = {
     subtitle: 'Избери практика и започни — без излишно мислене.',
     flowLabel: 'Отвори → Избери → Започни',
     allPractices: 'Всички практики',
+  },
+  freeVideos: {
+    title: 'Безплатни видеа',
+    subtitle: 'Практики и обяснения от YouTube канала на KUKO WAY.',
+    watchOnYoutube: 'Гледай в YouTube',
   },
   library: {
     title: 'Библиотека',

@@ -66,3 +66,13 @@ export interface Program {
   title: LocalizedText;
   description: LocalizedText;
 }
+
+// External YouTube content (KUKO WAY's own channel), embedded rather than
+// hosted — not part of the handbook, so titles are the real video titles as
+// published, not handbook transcriptions.
+export interface FreeVideo {
+  id: string;
+  youtubeId: string;
+  order: number;
+  title: LocalizedText;
+}

@@ -1,7 +1,8 @@
 import { practices } from './content/practices';
 import { startHereSections } from './content/start-here';
 import { programs } from './content/programs';
-import type { Practice, Program, StartHereSection } from './types';
+import { freeVideos } from './content/free-videos';
+import type { FreeVideo, Practice, Program, StartHereSection } from './types';
 
 // Static content accessors. The KUKO WAY handbook is fixed reference
 // content for Day 2 (no admin CRUD yet) — see modules/kuko-way/types.ts for
@@ -62,4 +63,8 @@ export const TENSION_RESET_IDS = ['palate-slide', 'full-twist', 'anti-gravity'];
 
 export function getTensionResetPractices(): Practice[] {
   return TENSION_RESET_IDS.map((id) => getPracticeById(id)).filter((p): p is Practice => Boolean(p));
+}
+
+export function getFreeVideos(): FreeVideo[] {
+  return [...freeVideos].sort((a, b) => a.order - b.order);
 }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Container, Card, CardContent, Badge, Button, EmptyState } from '@/components/ui';
 import { ProgressBar } from '@/components/practices/ProgressBar';
+import { YourProgressStats } from '@/components/practices/YourProgressStats';
 import { MeetingStatusBadge } from '@/components/meetings/MeetingStatusBadge';
 import { JoinMeetingButton } from '@/components/meetings/JoinMeetingButton';
 import { listPublishedContent } from '@/modules/content/content.service';
@@ -15,10 +16,13 @@ import { getNextUpcomingMeeting, getMeetingStatus } from '@/modules/events/servi
 import { formatDateTime } from '@/lib/format-date';
 
 // Home answers one question: "what should I do today?" Today's Practice is
-// the visual anchor; everything else supports it. Continue/Progress use
-// demoProgress (see modules/kuko-way/demo-progress.ts) since there is no
-// practice-tracking backend yet — Latest Information reuses the real Day 1
-// content feed as-is.
+// the visual anchor; everything else supports it. "Continue your program"
+// still uses demoProgress (see modules/kuko-way/demo-progress.ts) since
+// there's no real per-user program/day tracking yet — but "Your progress"'s
+// streak/completed numbers are real, computed from this device's own
+// completion history (see lib/local-progress.ts and YourProgressStats), not
+// placeholder data. Latest Information reuses the real Day 1 content feed
+// as-is.
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
   const locale = getLocale();
@@ -120,14 +124,7 @@ export default async function HomePage() {
         <h2 className="text-base font-semibold text-ink-900">{t('home.yourProgress')}</h2>
         <Card>
           <CardContent className="flex flex-wrap gap-8">
-            <div>
-              <p className="text-xl font-semibold text-ink-900">{demoProgress.streakDays}</p>
-              <p className="text-xs text-ink-500">{t('home.currentStreak')}</p>
-            </div>
-            <div>
-              <p className="text-xl font-semibold text-ink-900">{demoProgress.practicesCompleted}</p>
-              <p className="text-xs text-ink-500">{t('home.practicesCompleted')}</p>
-            </div>
+            <YourProgressStats />
             {activeProgram && (
               <div>
                 <p className="text-xl font-semibold text-ink-900">{localize(activeProgram.title, locale).value}</p>
