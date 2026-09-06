@@ -1,16 +1,72 @@
-# Community Platform — Foundation
+# KUKO WAY — Platform
 
-A standalone, independently-deployable community & educational platform.
-This repository has **no connection to, dependency on, or shared
-infrastructure with `app.humangarage.net`** — that product was used only as
-a functional/structural reference during planning, never as code, content,
-or a live integration.
+A standalone, independently-deployable wellness/community platform. This
+repository has **no connection to, dependency on, or shared infrastructure
+with `app.humangarage.net`** — that product was used only as a
+functional/structural reference during planning, never as code, content, or
+a live integration.
 
-This is the **Foundation Phase**: authentication, users, roles, a basic
-admin dashboard, a reusable design system, and a billing/Stripe foundation
-(test mode, no real payments yet). Discussions, Courses, Events,
-Membership, Donations UI, and Notifications are intentionally **not** built
-yet — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for what's next.
+The app is bilingual (Bulgarian default, English) throughout, and organized
+around four sections: **Home**, **Practices**, **Community**, and
+**Account**.
+
+## What's been accomplished
+
+**Foundation** — authentication (NextAuth, credentials + JWT sessions),
+role-based access (Member / Moderator / Admin), an admin dashboard (users,
+membership plans, site settings), and a reusable Tailwind design system with
+full dark-mode support.
+
+**Practices** — a "Start Here" onboarding track, a "Feel Better Now" quick-
+relief section, 7/14/28-day guided programs, a searchable/filterable
+practice Library, a Free Videos section (real YouTube embeds), and per-user
+progress tracking that persists real completions (not fixed demo data) both
+for signed-in members and locally on-device.
+
+**Community** — Discussions (create threads, reply), Courses (modules →
+lessons, with progress), Meetings, and a Blog, all wired to real seeded
+content and reachable from the primary nav.
+
+**Membership & payments** — Stripe-backed subscription checkout, a billing
+portal, and one-off donations, all in **Stripe test mode**; admin UI to
+manage membership plans. The donation flow gracefully disables itself when
+Stripe isn't configured, rather than failing.
+
+**Design & polish** — a topbar with flyout submenus and a flag-based
+language switcher (replacing an earlier sidebar-based layout), a full-width
+photo hero on Home with a real KUKO WAY philosophy quote for signed-out
+visitors, and a site-wide typography pass (larger base font, with the
+responsive nav breakpoints re-tuned to match).
+
+**Testing** — Vitest unit tests for framework-agnostic logic (permissions,
+validation, auth, billing/webhook idempotency), plus a full Playwright
+end-to-end suite: accessibility (axe-core, single-heading/contrast rules),
+theme/dark-mode, responsive/no-horizontal-overflow checks at a real mobile
+viewport, and functional coverage of auth, navigation, practices,
+discussions, courses, meetings, blog, payments, protected routes, and
+localization.
+
+## What lies ahead
+
+- **Notifications module** — still an empty placeholder (`modules/notifications`);
+  no in-app or email notifications exist yet.
+- **Real KUKO WAY photography/video** — the Home hero and Explore section
+  currently use a mix of licensed stock photos and a few client-supplied
+  images (see `public/images/home/CREDITS.md`); these should be replaced by
+  real studio photography/video once available.
+- **Content authoring UI** — Blog, Discussions, Courses, and Meetings all
+  render real seeded content, but there's no admin CRUD screen yet to create
+  or edit that content without touching the database directly.
+- **Production billing** — Stripe is wired end-to-end but only in test mode;
+  going live needs real API keys, a production webhook endpoint, and a
+  final review of the checkout/donation flows.
+- **SEO & performance pass, real-device QA** — the app has been verified via
+  Playwright at emulated breakpoints (375/768/1024/1440px) and Lighthouse-
+  style axe checks, but hasn't yet had a dedicated performance/SEO audit or
+  a pass on physical devices.
+- **Known issue**: two WebKit-only Playwright auth tests are intermittently
+  flaky (pre-existing, unrelated to app code — documented in the test file,
+  not currently blocking).
 
 ## Technology stack
 
@@ -21,8 +77,8 @@ yet — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for what's next.
 | Database       | PostgreSQL                                |
 | ORM            | Prisma                                    |
 | Auth           | NextAuth.js (credentials, JWT sessions)   |
-| Payments       | Stripe (test mode foundation only)        |
-| Testing        | Vitest                                    |
+| Payments       | Stripe (test mode)                        |
+| Testing        | Vitest (unit) + Playwright (e2e)          |
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the reasoning behind
 each choice.
@@ -51,7 +107,7 @@ Then edit `.env`:
 - `DATABASE_URL` — your PostgreSQL connection string.
 - `NEXTAUTH_SECRET` — generate with `openssl rand -base64 32`.
 - Stripe variables are optional for local development unless you're working
-  on the billing foundation (see `docs/billing.md`).
+  on membership/donations (see `docs/billing.md`, `docs/membership.md`).
 
 **Never commit `.env`.** Only `.env.example` (with placeholder values) is
 tracked in version control.
@@ -96,15 +152,23 @@ Two options:
 ## Running tests
 
 ```bash
-npm run test         # run once
-npm run test:watch   # watch mode
+npm run test              # unit tests, run once
+npm run test:watch        # unit tests, watch mode
+npm run test:e2e          # Playwright end-to-end suite
+npm run test:e2e:ui       # Playwright UI mode
+npm run test:e2e:headed   # Playwright, browser windows visible
+npm run test:e2e:report   # open the last e2e HTML report
 ```
 
-Tests cover the framework-agnostic logic that doesn't require a live
+Unit tests cover framework-agnostic logic that doesn't require a live
 database: role/permission checks, input validation, the auth service
 (password hashing, duplicate-email handling), and the billing/webhook
 foundation (idempotency, Stripe-customer de-duplication), using mocked
 Prisma/Stripe clients.
+
+The Playwright suite runs against a real running app (`npm run dev` first)
+and covers accessibility, theming, responsive layout, and the functional
+flows for every section listed above.
 
 ## Build
 
@@ -112,6 +176,9 @@ Prisma/Stripe clients.
 npm run build
 npm run start
 ```
+
+If a `next dev` server is already running on port 3000, stop it first —
+running `dev` and `build` concurrently corrupts the shared `.next` cache.
 
 ## Database migrations
 
@@ -127,46 +194,25 @@ npm run db:deploy    # apply existing migrations (production/CI)
 
 ```
 app/                 Next.js App Router pages & API routes
-  admin/              Admin dashboard (server-protected, ADMIN only)
+  (app)/               Home, Practices, Community, Account — the main app shell
+  (auth)/              Login / register pages
+  admin/               Admin dashboard (server-protected, ADMIN only)
   api/                 REST-style API routes, grouped by concern
-  login/, register/    Public auth pages
-  account/             Authenticated member profile page
 components/
   ui/                  Reusable design-system primitives (Button, Card, ...)
-  layout/              Navbar, Footer, AdminSidebar, Providers
-  admin/, account/, home/   Feature-specific composed components
+  layout/              Topbar, MobileDrawer, MobileBottomNav, AdminSidebar
+  admin/, account/, home/, practices/, community/   Feature-specific components
 modules/              Business logic, framework-agnostic where possible
   auth/, users/, profiles/, content/, media/, settings/   Foundation modules
-  payments/            Stripe billing foundation (test mode)
-  discussions/, courses/, events/, membership/, donations/, notifications/
-                       Reserved, empty module boundaries — see their README.md
+  kuko-way/            Practices/programs domain logic + demo progress
+  courses/, discussions/, events/     Community feature modules
+  membership/, payments/              Billing foundation + subscriptions (Stripe)
+  donations/, notifications/          Reserved module boundaries — see "What lies ahead"
 lib/                  Cross-cutting utilities (prisma client, logger,
-                       permissions, api-response, rate-limit, validations)
+                       permissions, api-response, rate-limit, validations,
+                       i18n dictionaries)
 prisma/               schema.prisma, migrations, seed.ts
 tests/                Vitest unit tests
+tests/e2e/            Playwright end-to-end tests
 docs/                 Architecture and billing documentation
 ```
-
-## What is intentionally NOT implemented yet
-
-Per the Foundation Phase scope, this repository does **not** yet include:
-
-- Discussions / forum
-- Courses / lessons / progress tracking
-- Meetings / Events
-- Membership purchase UI, course purchase UI, donation UI
-- Notifications
-- Advanced search, advanced analytics, gamification
-
-The architecture (modular `/modules` boundary, admin nav placeholders,
-billing service abstraction) is deliberately shaped so each of these can be
-added as its own module without restructuring the core.
-
-## Recommended next module
-
-**Content / Blog module** — the Content foundation (`ContentItem` model,
-`modules/content`) already powers the Home page's featured/latest sections;
-extending it into a full CMS (categories, tags, admin CRUD UI, scheduling)
-is the most natural next step and unlocks real content quickly. After that,
-**Discussions** and **Membership** (which can now reuse the billing
-foundation) are the next highest-value modules.
