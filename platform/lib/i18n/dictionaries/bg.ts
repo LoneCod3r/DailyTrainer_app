@@ -39,6 +39,8 @@ const bg = {
     accountBilling: 'Плащания',
     accountDonation: 'Дарение',
     menu: 'Меню',
+    expand: 'Покажи',
+    collapse: 'Скрий',
   },
   topbar: {
     searchPlaceholder: 'Търси практики, статии…',

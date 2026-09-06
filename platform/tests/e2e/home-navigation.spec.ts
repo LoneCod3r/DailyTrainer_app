@@ -59,6 +59,33 @@ test.describe('Home / public navigation', () => {
     await expect(page.getByRole('heading', { name: 'Welcome to your space' })).toBeVisible();
   });
 
+  test('sidebar arrow shows/hides the Practices and Community submenus independently of the active page', async ({ page }) => {
+    await page.goto('/');
+    const nav = page.getByRole('navigation', { name: 'Main' });
+
+    // Neither section is the active page here, so both start collapsed.
+    await expect(nav.getByRole('button', { name: 'Practices: Show' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Start Here' })).toBeHidden();
+
+    // Clicking the arrow toggles the submenu without navigating away.
+    await nav.getByRole('button', { name: 'Practices: Show' }).click();
+    await expect(nav.getByRole('link', { name: 'Start Here' })).toBeVisible();
+    await expect(page).toHaveURL('/');
+
+    await nav.getByRole('button', { name: 'Practices: Hide' }).click();
+    await expect(nav.getByRole('link', { name: 'Start Here' })).toBeHidden();
+
+    // Community auto-expands while its page is active...
+    await nav.getByRole('link', { name: 'Community' }).click();
+    await expect(page).toHaveURL('/community');
+    await expect(nav.getByRole('link', { name: 'Discussions' })).toBeVisible();
+
+    // ...but the arrow can still collapse it even though the page is active.
+    await nav.getByRole('button', { name: 'Community: Hide' }).click();
+    await expect(nav.getByRole('link', { name: 'Discussions' })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Community' })).toBeVisible();
+  });
+
   test('locale persists after navigation and reload', async ({ page }) => {
     await page.goto('/');
     await switchLanguage(page, 'en', 'bg');

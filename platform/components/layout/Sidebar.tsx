@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from '@/lib/clsx';
@@ -17,6 +18,11 @@ const ICONS = {
 export function Sidebar({ appName }: { appName: string }) {
   const pathname = usePathname();
   const t = useT();
+  // Sections with children default to expanded while you're inside them
+  // (`active`) and collapsed otherwise. Once you click the arrow, that
+  // explicit choice wins regardless of which page you're on, until you
+  // click it again.
+  const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-sand-200 bg-surface md:flex">
@@ -31,20 +37,32 @@ export function Sidebar({ appName }: { appName: string }) {
         {PRIMARY_NAV.map((item) => {
           const Icon = ICONS[item.icon];
           const active = isActive(pathname, item.href);
+          const isOpen = openOverrides[item.href] ?? active;
           return (
             <div key={item.href}>
-              <Link
-                href={item.href}
+              <div
                 className={clsx(
-                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-1 rounded-lg text-sm font-medium transition-colors',
                   active ? 'bg-brand-tint text-link' : 'text-ink-700 hover:bg-sand-100',
                 )}
               >
-                <Icon className="shrink-0" />
-                <span className="flex-1">{t(item.labelKey)}</span>
-                {item.children && <ChevronIcon className={clsx('shrink-0 transition-transform', active ? '-rotate-180' : '')} />}
-              </Link>
-              {item.children && active && (
+                <Link href={item.href} className="flex flex-1 items-center gap-2.5 px-3 py-2">
+                  <Icon className="shrink-0" />
+                  <span className="flex-1">{t(item.labelKey)}</span>
+                </Link>
+                {item.children && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenOverrides((prev) => ({ ...prev, [item.href]: !isOpen }))}
+                    aria-expanded={isOpen}
+                    aria-label={`${t(item.labelKey)}: ${isOpen ? t('nav.collapse') : t('nav.expand')}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-sand-200/60"
+                  >
+                    <ChevronIcon className={clsx('shrink-0 transition-transform', isOpen ? '-rotate-180' : '')} />
+                  </button>
+                )}
+              </div>
+              {item.children && isOpen && (
                 <div className="ml-[1.85rem] mt-1 flex flex-col gap-0.5 border-l border-sand-200 pl-3">
                   {item.children.map((child) => {
                     const childActive = pathname === child.href;

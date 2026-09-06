@@ -41,6 +41,8 @@ const en: typeof bg = {
     accountBilling: 'Billing',
     accountDonation: 'Donation',
     menu: 'Menu',
+    expand: 'Show',
+    collapse: 'Hide',
   },
   topbar: {
     searchPlaceholder: 'Search practices, articles…',
