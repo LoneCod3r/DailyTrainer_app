@@ -64,7 +64,11 @@ export default async function HomePage() {
             {activeProgram ? (
               <>
                 <p className="text-sm text-ink-500">{localize(activeProgram.title, locale).value}</p>
-                <ProgressBar value={demoProgress.currentDay} max={activeProgram.length} />
+                <ProgressBar
+                  value={demoProgress.currentDay}
+                  max={activeProgram.length}
+                  label={t('home.dayOf', { current: demoProgress.currentDay, total: activeProgram.length })}
+                />
                 <p className="text-xs text-ink-500">
                   {t('home.dayOf', { current: demoProgress.currentDay, total: activeProgram.length })}
                 </p>

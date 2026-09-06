@@ -44,8 +44,11 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      // A hard navigation, not router.push()+refresh() — see the same
+      // comment in login/page.tsx: a soft navigation right after
+      // authenticating can render the (auth) layout's prefetched,
+      // pre-session cache entry for "/" instead of the new session.
+      window.location.href = '/';
     } catch {
       setError(t('auth.registerGenericError'));
       setLoading(false);

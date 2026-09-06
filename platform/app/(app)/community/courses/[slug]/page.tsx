@@ -44,7 +44,11 @@ export default async function CourseDetailPage({ params }: { params: { slug: str
 
       {totalCount > 0 && (
         <div className="flex flex-col gap-1.5">
-          <CourseProgress completed={completedCount} total={totalCount} />
+          <CourseProgress
+            completed={completedCount}
+            total={totalCount}
+            label={t('courses.progressLabel', { completed: completedCount, total: totalCount })}
+          />
           <p className="text-xs text-ink-500">{t('courses.progressLabel', { completed: completedCount, total: totalCount })}</p>
         </div>
       )}

@@ -36,7 +36,7 @@ export function ProgramOverview({ slug }: { slug: string }) {
               <span className="text-sm font-medium text-ink-900">{t('programs.yourProgress')}</span>
               <span className="text-sm text-ink-500">{t('home.dayOf', { current: currentDay, total: program.length })}</span>
             </div>
-            <ProgressBar value={currentDay} max={program.length} />
+            <ProgressBar value={currentDay} max={program.length} label={t('home.dayOf', { current: currentDay, total: program.length })} />
             <div className="pt-1">
               <Button size="sm">{t('programs.continueProgram')}</Button>
             </div>

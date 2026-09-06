@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { isAdmin } from '@/lib/permissions';
@@ -17,6 +18,15 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
   const { data: session } = useSession();
   const t = useT();
 
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
@@ -24,7 +34,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
       <div className="absolute inset-0 bg-ink-900/40" onClick={onClose} aria-hidden="true" />
       <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-surface p-4 shadow-soft">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-semibold uppercase tracking-wide text-ink-300">{t('nav.menu')}</span>
+          <span className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('nav.menu')}</span>
           <button
             type="button"
             onClick={onClose}
@@ -61,7 +71,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
         ))}
 
         <div className="mt-auto border-t border-sand-200 pt-4">
-          <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-ink-300">{t('nav.account')}</p>
+          <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">{t('nav.account')}</p>
           <div className="flex flex-col gap-0.5">
             {ACCOUNT_NAV.map((item) => (
               <Link

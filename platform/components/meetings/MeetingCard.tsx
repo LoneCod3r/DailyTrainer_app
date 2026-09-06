@@ -25,7 +25,7 @@ export function MeetingCard({
   const status = getMeetingStatus(meeting);
 
   return (
-    <Card className={emphasize ? undefined : 'opacity-90'}>
+    <Card data-testid={`meeting-card-${meeting.slug}`} className={emphasize ? undefined : 'opacity-90'}>
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <MeetingStatusBadge status={status} t={t} />

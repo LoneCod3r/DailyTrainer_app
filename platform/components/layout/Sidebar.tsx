@@ -27,7 +27,7 @@ export function Sidebar({ appName }: { appName: string }) {
         <span className="truncate">{appName}</span>
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+      <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
         {PRIMARY_NAV.map((item) => {
           const Icon = ICONS[item.icon];
           const active = isActive(pathname, item.href);
@@ -71,7 +71,7 @@ export function Sidebar({ appName }: { appName: string }) {
       {/* Account is a secondary/supporting area — kept visually quieter than
           the Practices/Community experience above. */}
       <div className="border-t border-sand-200 px-3 py-4">
-        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ink-300">{t('nav.account')}</p>
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">{t('nav.account')}</p>
         <div className="flex flex-col gap-0.5">
           {ACCOUNT_NAV.map((item) => {
             const active = pathname === item.href;

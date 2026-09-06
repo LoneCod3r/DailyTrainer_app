@@ -38,7 +38,13 @@ export function CourseCard({
         <p className="text-xs text-ink-300">{t('courses.lessonCount', { count: lessonCount })}</p>
 
         <div className="mt-auto flex flex-col gap-2 pt-2">
-          {progress && progress.totalCount > 0 && <CourseProgress completed={progress.completedCount} total={progress.totalCount} />}
+          {progress && progress.totalCount > 0 && (
+            <CourseProgress
+              completed={progress.completedCount}
+              total={progress.totalCount}
+              label={t('courses.progressLabel', { completed: progress.completedCount, total: progress.totalCount })}
+            />
+          )}
           <span className="text-sm font-medium text-link">
             {started ? t('courses.continueCourse') : t('courses.startCourse')} →
           </span>

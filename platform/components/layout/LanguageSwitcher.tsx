@@ -21,7 +21,9 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         aria-label={`${t('language.switchTo')}: ${label}`}
         className={clsx(
           'rounded-md px-1.5 py-1 text-xs font-semibold transition-colors',
-          active ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900',
+          // text-ink-500 on this pill's bg-sand-100 measured 4.36:1 (fails
+          // WCAG AA's 4.5:1) — ink-700 clears it comfortably.
+          active ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-700 hover:text-ink-900',
         )}
       >
         {label}

@@ -2,13 +2,12 @@
 
 import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Container, Card, CardContent, Input, Button, Alert } from '@/components/ui';
 import { useT } from '@/lib/i18n/LocaleProvider';
 
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const t = useT();
   const [email, setEmail] = useState('');
@@ -34,8 +33,11 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(searchParams.get('callbackUrl') ?? '/');
-    router.refresh();
+    // A hard navigation, not router.push()+refresh(): the (auth) layout's
+    // logo link to "/" gets prefetched while this page is open, so a soft
+    // navigation right after signing in can render that stale,
+    // pre-authentication cache entry instead of picking up the new session.
+    window.location.href = searchParams.get('callbackUrl') ?? '/';
   }
 
   return (

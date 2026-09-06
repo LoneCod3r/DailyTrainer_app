@@ -9,7 +9,11 @@
     --ink-900: 28 31 29;
     --ink-700: 58 63 59;
     --ink-500: 107 113 108;
-    --ink-300: 164 170 165;
+    /* Was 164 170 165 — measured at 2.36:1 against white (fails WCAG AA's
+       4.5:1 for normal text, axe rule color-contrast). Darkened to clear
+       4.5:1; ends up close to --ink-500 since AA leaves little headroom
+       for a tier lighter than that at normal text sizes. */
+    --ink-300: 108 114 109;
     --sand-50: 251 249 246;
     --sand-100: 244 239 231;
     --sand-200: 231 220 203;
@@ -27,7 +31,9 @@
     --ink-900: 244 246 243;
     --ink-700: 209 213 208;
     --ink-500: 154 163 156;
-    --ink-300: 91 98 92;
+    /* Was 91 98 92 — measured at 2.46:1 against --surface (fails WCAG AA's
+       4.5:1); raised to comfortably clear it against --surface/--page. */
+    --ink-300: 142 148 144;
     --sand-50: 35 38 35;
     --sand-100: 44 48 44;
     --sand-200: 58 63 58;

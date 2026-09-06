@@ -36,7 +36,7 @@ export function ProgramCard({
 
         {isActive && currentDay ? (
           <div className="mt-auto flex flex-col gap-1.5 pt-2">
-            <ProgressBar value={currentDay} max={program.length} />
+            <ProgressBar value={currentDay} max={program.length} label={t('home.dayOf', { current: currentDay, total: program.length })} />
             <p className="text-xs text-ink-500">{t('home.dayOf', { current: currentDay, total: program.length })}</p>
           </div>
         ) : (
