@@ -16,7 +16,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const t = useT();
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-sand-200 bg-surface/90 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-20 grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-sand-200 bg-surface/90 px-4 backdrop-blur sm:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
@@ -26,7 +26,13 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         <MenuIcon />
       </button>
 
-      <div className="relative hidden flex-1 max-w-sm sm:block">
+      {/* Flanked by two equal (1fr) columns, so this stays centered in the
+          header regardless of how wide the left/right content actually is.
+          Pinned to col-start-2 explicitly: the menu button above is
+          display:none on desktop (md:hidden), so it drops out of grid
+          auto-placement entirely — without an explicit column, this would
+          get placed in column 1 instead of 2. */}
+      <div className="relative col-start-2 hidden w-72 max-w-full sm:block">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-300" />
         <input
           type="search"
@@ -36,8 +42,8 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         />
       </div>
 
-      <div className="flex flex-1 justify-end gap-2 sm:flex-none">
-        <LanguageSwitcher className="hidden sm:inline-flex" />
+      <div className="col-start-3 flex items-center justify-end gap-2">
+        <LanguageSwitcher />
         <ThemeToggle />
 
         {status === 'loading' ? null : session?.user ? (

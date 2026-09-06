@@ -1,44 +1,91 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { clsx } from '@/lib/clsx';
 import { useLocale } from '@/lib/i18n/LocaleProvider';
 import type { Locale } from '@/lib/i18n/locale';
+import { BulgariaFlag, UKFlag } from './flags';
+import { ChevronIcon } from './icons';
 
-// Compact BG/EN pill — visually secondary, sits next to ThemeToggle in the
-// desktop topbar and inside the mobile drawer. Switching preserves the
-// current route, theme and auth state (see LocaleProvider).
+const OPTIONS: { value: Locale; Flag: typeof BulgariaFlag }[] = [
+  { value: 'bg', Flag: BulgariaFlag },
+  { value: 'en', Flag: UKFlag },
+];
+
+// Compact flag dropdown — small enough to stay visible everywhere it's
+// used (desktop topbar, mobile topbar, mobile drawer, account settings),
+// unlike the old two-button pill which had to hide below the `sm`
+// breakpoint to fit. Switching preserves the current route, theme and auth
+// state (see LocaleProvider).
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale, t } = useLocale();
+  const [open, setOpen] = useState(false);
 
-  function option(value: Locale, label: string) {
-    const active = locale === value;
-    return (
-      <button
-        key={value}
-        type="button"
-        onClick={() => setLocale(value)}
-        aria-pressed={active}
-        aria-label={`${t('language.switchTo')}: ${label}`}
-        className={clsx(
-          'rounded-md px-1.5 py-1 text-xs font-semibold transition-colors',
-          // text-ink-500 on this pill's bg-sand-100 measured 4.36:1 (fails
-          // WCAG AA's 4.5:1) — ink-700 clears it comfortably.
-          active ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-700 hover:text-ink-900',
-        )}
-      >
-        {label}
-      </button>
-    );
-  }
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  const current = OPTIONS.find((o) => o.value === locale) ?? OPTIONS[0];
+  const currentLabel = t(`language.${current.value}`);
 
   return (
-    <div
-      role="group"
-      aria-label={t('language.label')}
-      className={clsx('inline-flex items-center gap-0.5 rounded-lg bg-sand-100 p-0.5', className)}
-    >
-      {option('bg', t('language.bg'))}
-      {option('en', t('language.en'))}
+    <div className={clsx('relative', className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`${t('language.label')}: ${currentLabel}`}
+        className="flex h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-ink-700 transition-colors hover:bg-sand-100"
+      >
+        <span className="shrink-0 overflow-hidden rounded-[2px]">
+          <current.Flag />
+        </span>
+        {currentLabel}
+        <ChevronIcon className={clsx('h-3.5 w-3.5 shrink-0 transition-transform', open && '-rotate-180')} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div
+            role="listbox"
+            aria-label={t('language.label')}
+            className="absolute right-0 z-20 mt-1 w-32 rounded-xl border border-sand-200 bg-surface p-1 shadow-soft"
+          >
+            {OPTIONS.map(({ value, Flag }) => {
+              const active = locale === value;
+              const label = t(`language.${value}`);
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  onClick={() => {
+                    setLocale(value);
+                    setOpen(false);
+                  }}
+                  className={clsx(
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors',
+                    active ? 'bg-brand-tint font-medium text-link' : 'text-ink-700 hover:bg-sand-100',
+                  )}
+                >
+                  <span className="shrink-0 overflow-hidden rounded-[2px]">
+                    <Flag />
+                  </span>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

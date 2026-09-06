@@ -5,6 +5,7 @@
 import { test, expect } from '@playwright/test';
 import { DEMO_USER } from './fixtures/data';
 import { loginViaUi } from './fixtures/auth-helpers';
+import { switchLanguage } from './fixtures/language-helpers';
 
 test('BG (default) -> EN -> BG preserves route and authentication across reloads', async ({ page }) => {
   await page.goto('/');
@@ -15,9 +16,8 @@ test('BG (default) -> EN -> BG preserves route and authentication across reloads
   await loginViaUi(page, DEMO_USER, { labels: { email: 'Имейл', password: 'Парола', submit: 'Вход' } });
   await expect(page.getByRole('button', { name: /demo member/i })).toBeVisible();
 
-  // BG -> EN (the switcher's own aria-label is translated by the *current*
-  // locale, so while still in Bulgarian it reads "Смени езика: EN").
-  await page.getByRole('button', { name: 'Смени езика: EN' }).click();
+  // BG -> EN
+  await switchLanguage(page, 'bg', 'en');
   await expect(page.getByRole('heading', { name: 'Welcome back, Demo' })).toBeVisible();
 
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Practices' }).click();
@@ -30,7 +30,7 @@ test('BG (default) -> EN -> BG preserves route and authentication across reloads
   await expect(page.getByRole('button', { name: /demo member/i })).toBeVisible(); // still authenticated
 
   // EN -> BG, same route
-  await page.getByRole('button', { name: 'Switch language: BG' }).click();
+  await switchLanguage(page, 'en', 'bg');
   await expect(page.getByRole('heading', { name: 'Практики' })).toBeVisible();
 
   await page.reload();

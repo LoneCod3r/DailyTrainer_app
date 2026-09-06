@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/base';
+import { switchLanguage } from './fixtures/language-helpers';
 
 test.describe('Home / public navigation', () => {
   test('@smoke home loads with visible primary navigation', async ({ page }) => {
@@ -50,19 +51,17 @@ test.describe('Home / public navigation', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Welcome to your space' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Switch language: BG' }).click();
+    await switchLanguage(page, 'en', 'bg');
     await expect(page.getByRole('heading', { name: 'Добре дошъл в твоето пространство' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Практики' })).toBeVisible();
 
-    // Now that the page itself is in Bulgarian, the switcher's own
-    // aria-label prefix is too ("Смени езика" rather than "Switch language").
-    await page.getByRole('button', { name: 'Смени езика: EN' }).click();
+    await switchLanguage(page, 'bg', 'en');
     await expect(page.getByRole('heading', { name: 'Welcome to your space' })).toBeVisible();
   });
 
   test('locale persists after navigation and reload', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Switch language: BG' }).click();
+    await switchLanguage(page, 'en', 'bg');
     await expect(page.getByRole('heading', { name: 'Добре дошъл в твоето пространство' })).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Практики' }).click();
