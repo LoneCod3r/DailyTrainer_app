@@ -2,10 +2,11 @@ import { test, expect } from './fixtures/base';
 import { PRACTICE_WITH_INSTRUCTIONS, START_HERE_FIRST_SLUG } from './fixtures/data';
 
 // KUKO WAY handbook content (practice/program/start-here titles & body text)
-// is Bulgarian-only by product decision — see modules/kuko-way. These tests
-// assert against the real Cyrillic content that actually renders, not an
-// invented English translation. Only the surrounding app chrome (page
-// titles, buttons, badges) is expected in English here.
+// is now bilingual (see modules/kuko-way) — both bg and en fields come from
+// the approved handbook docx. These tests run against the default locale and
+// only assert generic properties (visible, non-empty) of the handbook body
+// text, so they don't hardcode either language. The surrounding app chrome
+// (page titles, buttons, badges) is expected in English here.
 
 test.describe('Practices — Start Here', () => {
   test('@smoke loads, lists sections, opens one, and content is real', async ({ page }) => {
