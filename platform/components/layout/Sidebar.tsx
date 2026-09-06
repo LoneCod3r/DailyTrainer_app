@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from '@/lib/clsx';
+import { useT } from '@/lib/i18n/LocaleProvider';
 import { PRIMARY_NAV, ACCOUNT_NAV, isActive } from './nav';
 import { HomeIcon, PracticesIcon, CommunityIcon, AccountIcon, ChevronIcon } from './icons';
 
@@ -15,6 +16,7 @@ const ICONS = {
 
 export function Sidebar({ appName }: { appName: string }) {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-sand-200 bg-surface md:flex">
@@ -35,11 +37,11 @@ export function Sidebar({ appName }: { appName: string }) {
                 href={item.href}
                 className={clsx(
                   'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  active ? 'bg-brand-50 text-brand-700' : 'text-ink-700 hover:bg-sand-100',
+                  active ? 'bg-brand-tint text-link' : 'text-ink-700 hover:bg-sand-100',
                 )}
               >
                 <Icon className="shrink-0" />
-                <span className="flex-1">{item.label}</span>
+                <span className="flex-1">{t(item.labelKey)}</span>
                 {item.children && <ChevronIcon className={clsx('shrink-0 transition-transform', active ? '-rotate-180' : '')} />}
               </Link>
               {item.children && active && (
@@ -52,10 +54,10 @@ export function Sidebar({ appName }: { appName: string }) {
                         href={child.href}
                         className={clsx(
                           'rounded-lg px-2.5 py-1.5 text-sm transition-colors',
-                          childActive ? 'font-medium text-brand-700' : 'text-ink-500 hover:text-ink-900',
+                          childActive ? 'font-medium text-link' : 'text-ink-500 hover:text-ink-900',
                         )}
                       >
-                        {child.label}
+                        {t(child.labelKey)}
                       </Link>
                     );
                   })}
@@ -69,7 +71,7 @@ export function Sidebar({ appName }: { appName: string }) {
       {/* Account is a secondary/supporting area — kept visually quieter than
           the Practices/Community experience above. */}
       <div className="border-t border-sand-200 px-3 py-4">
-        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ink-300">Account</p>
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ink-300">{t('nav.account')}</p>
         <div className="flex flex-col gap-0.5">
           {ACCOUNT_NAV.map((item) => {
             const active = pathname === item.href;
@@ -79,10 +81,10 @@ export function Sidebar({ appName }: { appName: string }) {
                 href={item.href}
                 className={clsx(
                   'rounded-lg px-3 py-1.5 text-sm transition-colors',
-                  active ? 'font-medium text-brand-700' : 'text-ink-500 hover:bg-sand-100 hover:text-ink-900',
+                  active ? 'font-medium text-link' : 'text-ink-500 hover:bg-sand-100 hover:text-ink-900',
                 )}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}

@@ -42,6 +42,11 @@ const config: Config = {
         },
         surface: 'rgb(var(--surface) / <alpha-value>)',
         page: 'rgb(var(--page) / <alpha-value>)',
+        // Dark-mode-aware brand accents — see globals.css. Use these
+        // instead of the static brand-50/100/700 shades for active states,
+        // soft badges and links so they stay legible in dark mode.
+        'brand-tint': 'rgb(var(--brand-tint) / <alpha-value>)',
+        link: 'rgb(var(--link) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],

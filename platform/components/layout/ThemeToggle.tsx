@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { clsx } from '@/lib/clsx';
+import { useT } from '@/lib/i18n/LocaleProvider';
 import { SunIcon, MoonIcon } from './icons';
 
 export function ThemeToggle({ className }: { className?: string }) {
+  const t = useT();
   // null until mounted — avoids guessing the theme during SSR/hydration.
   const [dark, setDark] = useState<boolean | null>(null);
 
@@ -27,8 +29,8 @@ export function ThemeToggle({ className }: { className?: string }) {
     <button
       type="button"
       onClick={toggle}
-      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={dark ? t('theme.toLight') : t('theme.toDark')}
+      title={dark ? t('theme.toLight') : t('theme.toDark')}
       className={clsx(
         'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-700 hover:bg-sand-100',
         className,

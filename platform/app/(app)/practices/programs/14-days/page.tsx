@@ -1,5 +1,5 @@
 import { ProgramOverview } from '@/components/practices/ProgramOverview';
 
 export default function FourteenDayProgramPage() {
-  return <ProgramOverview days={14} />;
+  return <ProgramOverview slug="14-days" />;
 }

@@ -14,6 +14,11 @@
     --sand-100: 244 239 231;
     --sand-200: 231 220 203;
     --sand-300: 214 195 165;
+    /* Soft brand-tinted surface/text used for active nav states, badges and
+       links — kept separate from the static `brand` Tailwind scale because
+       those hexes don't adapt for dark mode on their own. */
+    --brand-tint: 244 247 244;
+    --link: 55 81 60;
   }
 
   :root.dark {
@@ -27,6 +32,8 @@
     --sand-100: 44 48 44;
     --sand-200: 58 63 58;
     --sand-300: 75 82 75;
+    --brand-tint: 42 54 44;
+    --link: 163 193 165;
   }
 
   html {

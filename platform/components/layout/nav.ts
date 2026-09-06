@@ -1,54 +1,57 @@
+import type { DictKey } from '@/lib/i18n/dictionaries';
+
 // Central information-architecture config for the app shell. Sidebar,
 // mobile bottom nav, and the mobile drawer all render from this list rather
-// than each hard-coding their own route tree.
-export type NavChild = { href: string; label: string };
+// than each hard-coding their own route tree. Labels are dictionary keys so
+// the same config renders in whichever locale is active.
+export type NavChild = { href: string; labelKey: DictKey };
 export type NavItem = {
   href: string;
-  label: string;
+  labelKey: DictKey;
   icon: 'home' | 'practices' | 'community' | 'account';
   children?: NavChild[];
 };
 
 export const PRIMARY_NAV: NavItem[] = [
-  { href: '/', label: 'Home', icon: 'home' },
+  { href: '/', labelKey: 'nav.home', icon: 'home' },
   {
     href: '/practices',
-    label: 'Practices',
+    labelKey: 'nav.practices',
     icon: 'practices',
     children: [
-      { href: '/practices/start-here', label: 'Start Here' },
-      { href: '/practices/feel-better-now', label: 'Feel Better Now' },
-      { href: '/practices/programs/7-days', label: '7 Days' },
-      { href: '/practices/programs/14-days', label: '14 Days' },
-      { href: '/practices/programs/28-days', label: '28 Days' },
-      { href: '/practices/library', label: 'Library' },
+      { href: '/practices/start-here', labelKey: 'nav.startHere' },
+      { href: '/practices/feel-better-now', labelKey: 'nav.feelBetterNow' },
+      { href: '/practices/programs/7-days', labelKey: 'nav.days7' },
+      { href: '/practices/programs/14-days', labelKey: 'nav.days14' },
+      { href: '/practices/programs/28-days', labelKey: 'nav.days28' },
+      { href: '/practices/library', labelKey: 'nav.library' },
     ],
   },
   {
     href: '/community',
-    label: 'Community',
+    labelKey: 'nav.community',
     icon: 'community',
     children: [
-      { href: '/community/discussions', label: 'Discussions' },
-      { href: '/community/courses', label: 'Courses' },
-      { href: '/community/meetings', label: 'Member Meetings' },
+      { href: '/community/discussions', labelKey: 'nav.discussions' },
+      { href: '/community/courses', labelKey: 'nav.courses' },
+      { href: '/community/meetings', labelKey: 'nav.meetings' },
     ],
   },
 ];
 
 export const ACCOUNT_NAV: NavChild[] = [
-  { href: '/account', label: 'Overview' },
-  { href: '/account/settings', label: 'Profile & Settings' },
-  { href: '/account/membership', label: 'Membership' },
-  { href: '/account/billing', label: 'Billing' },
-  { href: '/account/donation', label: 'Donation' },
+  { href: '/account', labelKey: 'nav.accountOverview' },
+  { href: '/account/settings', labelKey: 'nav.accountSettings' },
+  { href: '/account/membership', labelKey: 'nav.accountMembership' },
+  { href: '/account/billing', labelKey: 'nav.accountBilling' },
+  { href: '/account/donation', labelKey: 'nav.accountDonation' },
 ];
 
 export const BOTTOM_NAV: NavItem[] = [
-  { href: '/', label: 'Home', icon: 'home' },
-  { href: '/practices', label: 'Practices', icon: 'practices' },
-  { href: '/community', label: 'Community', icon: 'community' },
-  { href: '/account', label: 'Account', icon: 'account' },
+  { href: '/', labelKey: 'nav.home', icon: 'home' },
+  { href: '/practices', labelKey: 'nav.practices', icon: 'practices' },
+  { href: '/community', labelKey: 'nav.community', icon: 'community' },
+  { href: '/account', labelKey: 'nav.account', icon: 'account' },
 ];
 
 export function isActive(pathname: string | null, href: string): boolean {

@@ -5,19 +5,22 @@ import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { isAdmin } from '@/lib/permissions';
 import { Button } from '@/components/ui';
+import { useT } from '@/lib/i18n/LocaleProvider';
 import { ThemeToggle } from './ThemeToggle';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { MenuIcon, SearchIcon, ShieldIcon, LogOutIcon, AccountIcon } from './icons';
 
 export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const t = useT();
 
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-sand-200 bg-surface/90 px-4 backdrop-blur sm:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
-        aria-label="Open menu"
+        aria-label={t('topbar.openMenu')}
         className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-700 hover:bg-sand-100 md:hidden"
       >
         <MenuIcon />
@@ -27,13 +30,14 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-300" />
         <input
           type="search"
-          placeholder="Search practices, articles…"
+          placeholder={t('topbar.searchPlaceholder')}
           disabled
           className="w-full cursor-not-allowed rounded-xl border border-sand-200 bg-page py-2 pl-9 pr-3 text-sm text-ink-500 placeholder:text-ink-300"
         />
       </div>
 
       <div className="flex flex-1 justify-end gap-2 sm:flex-none">
+        <LanguageSwitcher className="hidden sm:inline-flex" />
         <ThemeToggle />
 
         {status === 'loading' ? null : session?.user ? (
@@ -43,10 +47,10 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
               onClick={() => setMenuOpen((v) => !v)}
               className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-900 hover:bg-sand-100"
             >
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
                 <AccountIcon width={16} height={16} />
               </span>
-              <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? 'Account'}</span>
+              <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
             </button>
 
             {menuOpen && (
@@ -59,7 +63,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-700 hover:bg-sand-100"
                   >
-                    <AccountIcon width={16} height={16} /> Account
+                    <AccountIcon width={16} height={16} /> {t('topbar.account')}
                   </Link>
                   {isAdmin(session.user.role) && (
                     <Link
@@ -67,7 +71,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-700 hover:bg-sand-100"
                     >
-                      <ShieldIcon width={16} height={16} /> Admin
+                      <ShieldIcon width={16} height={16} /> {t('topbar.admin')}
                     </Link>
                   )}
                   <button
@@ -75,7 +79,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
                     onClick={() => signOut({ callbackUrl: '/' })}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-700 hover:bg-sand-100"
                   >
-                    <LogOutIcon width={16} height={16} /> Sign out
+                    <LogOutIcon width={16} height={16} /> {t('topbar.signOut')}
                   </button>
                 </div>
               </>
@@ -85,12 +89,12 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
           <div className="flex items-center gap-2">
             <Link href="/login">
               <Button variant="ghost" size="sm">
-                Log in
+                {t('topbar.login')}
               </Button>
             </Link>
             <Link href="/register">
               <Button variant="primary" size="sm">
-                Join
+                {t('topbar.join')}
               </Button>
             </Link>
           </div>
