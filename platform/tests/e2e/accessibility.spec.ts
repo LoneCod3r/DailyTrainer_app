@@ -49,6 +49,8 @@ test.describe('Accessibility smoke checks', () => {
     await page.keyboard.type('DevPassword123!');
     await expect(page.getByLabel('Password')).toBeFocused();
     await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Log in' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL('/');

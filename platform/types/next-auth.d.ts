@@ -9,6 +9,7 @@ declare module 'next-auth' {
       id: string;
       role: Role;
       status: UserStatus;
+      emailVerified: Date | null;
     } & DefaultSession['user'];
   }
 
@@ -16,6 +17,7 @@ declare module 'next-auth' {
     id: string;
     role: Role;
     status: UserStatus;
+    emailVerified: Date | null;
   }
 }
 
@@ -24,5 +26,6 @@ declare module 'next-auth/jwt' {
     id: string;
     role: Role;
     status: UserStatus;
+    emailVerified: Date | null;
   }
 }

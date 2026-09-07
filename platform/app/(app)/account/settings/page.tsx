@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getProfileByUserId } from '@/modules/profiles/profiles.service';
 import { ProfileForm } from '@/components/account/ProfileForm';
-import { Container, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { ResendVerificationForm } from '@/components/auth/ResendVerificationForm';
+import { Container, Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
@@ -37,10 +38,27 @@ export default async function AccountSettingsPage() {
           </div>
           <div>
             <p className="text-ink-500">{t('account.settings.emailLabel')}</p>
-            <p className="text-ink-900">{session.user.email}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-ink-900">{session.user.email}</p>
+              <Badge tone={session.user.emailVerified ? 'success' : 'warning'}>
+                {session.user.emailVerified ? t('auth.verifiedBadge') : t('auth.unverifiedBadge')}
+              </Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {!session.user.emailVerified && (
+        <Card className="max-w-xl">
+          <CardHeader>
+            <CardTitle>{t('auth.unverifiedBadge')}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-ink-500">{t('auth.bannerUnverified')}</p>
+            <ResendVerificationForm initialEmail={session.user.email ?? ''} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="max-w-xl">
         <h2 className="mb-3 text-base font-semibold text-ink-900">{t('account.settings.profileSectionTitle')}</h2>

@@ -6,6 +6,12 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Container, Card, CardContent, Input, Button, Alert } from '@/components/ui';
 import { useT } from '@/lib/i18n/LocaleProvider';
+import type { DictKey } from '@/lib/i18n/dictionaries';
+
+const ERROR_KEY: Record<string, DictKey> = {
+  RATE_LIMITED: 'auth.loginRateLimited',
+  ACCOUNT_LOCKED: 'auth.loginAccountLocked',
+};
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -29,7 +35,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError(t('auth.loginError'));
+      setError(t(ERROR_KEY[result.error] ?? 'auth.loginError'));
       return;
     }
 
@@ -61,15 +67,20 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <Input
-              label={t('auth.passwordLabel')}
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="flex flex-col gap-1.5">
+              <Input
+                label={t('auth.passwordLabel')}
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Link href="/forgot-password" className="self-end text-xs font-medium text-brand-700 hover:underline">
+                {t('auth.forgotPassword')}
+              </Link>
+            </div>
             <Button type="submit" loading={loading} className="w-full">
               {t('auth.loginButton')}
             </Button>

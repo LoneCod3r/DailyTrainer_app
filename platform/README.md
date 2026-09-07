@@ -17,6 +17,16 @@ role-based access (Member / Moderator / Admin), an admin dashboard (users,
 membership plans, site settings), and a reusable Tailwind design system with
 full dark-mode support.
 
+**Registration security** — Google reCAPTCHA v3 (verified
+server-side) plus an invisible honeypot field, a minimum-fill-time check,
+and a randomly-generated arithmetic challenge (the expected answer never
+leaves the server) on registration; mandatory email verification (signed, single-use,
+time-limited tokens) before a member action (posting, replying, editing a
+profile) is allowed; a self-service "forgot password" flow gated on the same
+verified-link mechanism; per-account login lockout after repeated failed
+attempts, alongside IP-based rate limiting on register/login/verification/
+password-reset endpoints. See `docs/auth-security.md` for the full design.
+
 **Practices** — a "Start Here" onboarding track, a "Feel Better Now" quick-
 relief section, 7/14/28-day guided programs, a searchable/filterable
 practice Library, a Free Videos section (real YouTube embeds), and per-user
@@ -39,12 +49,14 @@ visitors, and a site-wide typography pass (larger base font, with the
 responsive nav breakpoints re-tuned to match).
 
 **Testing** — Vitest unit tests for framework-agnostic logic (permissions,
-validation, auth, billing/webhook idempotency), plus a full Playwright
-end-to-end suite: accessibility (axe-core, single-heading/contrast rules),
-theme/dark-mode, responsive/no-horizontal-overflow checks at a real mobile
-viewport, and functional coverage of auth, navigation, practices,
-discussions, courses, meetings, blog, payments, protected routes, and
-localization.
+validation, auth, rate limiting, CAPTCHA verification, email
+verification/password-reset token lifecycle, billing/webhook idempotency),
+plus a full Playwright end-to-end suite: accessibility (axe-core,
+single-heading/contrast rules), theme/dark-mode, responsive/no-horizontal-
+overflow checks at a real mobile viewport, and functional coverage of auth
+(including CAPTCHA, honeypot, email verification, resend, login lockout, and
+direct-API bypass attempts), navigation, practices, discussions, courses,
+meetings, blog, payments, protected routes, and localization.
 
 ## What lies ahead
 
@@ -64,8 +76,9 @@ localization.
   Playwright at emulated breakpoints (375/768/1024/1440px) and Lighthouse-
   style axe checks, but hasn't yet had a dedicated performance/SEO audit or
   a pass on physical devices.
-- **Known issue**: two WebKit-only Playwright auth tests are intermittently
-  flaky (pre-existing, unrelated to app code — documented in the test file,
+- **Known issue**: a handful of WebKit/Firefox-only Playwright auth tests are
+  intermittently flaky (pre-existing `next dev`-only React Strict Mode/CSRF
+  race, unrelated to app code — documented in the test file,
   not currently blocking).
 
 ## Technology stack
@@ -77,6 +90,8 @@ localization.
 | Database       | PostgreSQL                                |
 | ORM            | Prisma                                    |
 | Auth           | NextAuth.js (credentials, JWT sessions)   |
+| Bot protection | Google reCAPTCHA v3                       |
+| Email          | Nodemailer (any SMTP provider)            |
 | Payments       | Stripe (test mode)                        |
 | Testing        | Vitest (unit) + Playwright (e2e)          |
 
@@ -106,6 +121,17 @@ Then edit `.env`:
 
 - `DATABASE_URL` — your PostgreSQL connection string.
 - `NEXTAUTH_SECRET` — generate with `openssl rand -base64 32`.
+- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` — Google
+  reCAPTCHA v3 keys. Left empty in the example file — with no key
+  configured, both the client and server sides fall back to a dev-only
+  bypass outside production (see `docs/auth-security.md`) — but get real
+  keys for production.
+- `SMTP_*` / `EMAIL_FROM` — outbound email for verification/password-reset
+  links. Optional for local dev (emails are logged instead of sent when
+  `SMTP_HOST` is unset — point these at a free Ethereal/Mailtrap sandbox
+  inbox instead to see real rendered emails locally) but **required** in
+  production, where an unset `SMTP_HOST` makes registration fail outright
+  rather than silently skip sending — see `docs/auth-security.md`.
 - Stripe variables are optional for local development unless you're working
   on membership/donations (see `docs/billing.md`, `docs/membership.md`).
 

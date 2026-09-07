@@ -11,12 +11,18 @@ async function upsertUser(email: string, name: string, role: 'ADMIN' | 'MODERATO
   const passwordHash = await bcrypt.hash(DEV_PASSWORD, 12);
   return prisma.user.upsert({
     where: { email },
-    update: {},
+    // Re-verify on every reseed, in case a previous test run consumed this
+    // demo account's verification (e.g. the reset-password e2e flow).
+    update: { emailVerified: new Date() },
     create: {
       email,
       name,
       role,
       status: 'ACTIVE',
+      // Seeded demo accounts are trusted dev fixtures, not real signups —
+      // grandfathered in as already verified so they can log in immediately
+      // (see lib/auth.ts, which refuses login until emailVerified is set).
+      emailVerified: new Date(),
       passwordHash,
       profile: { create: { bio: `Demo ${role.toLowerCase()} account — development seed data.` } },
     },

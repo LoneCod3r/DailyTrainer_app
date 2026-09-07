@@ -4,11 +4,13 @@ import { createReply } from '@/modules/discussions/discussions.service';
 import { createReplySchema } from '@/lib/validations/discussions';
 import { withErrorHandling, jsonOk, Errors } from '@/lib/api-response';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { requireVerifiedUser } from '@/lib/auth-guards';
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   return withErrorHandling(async () => {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw Errors.unauthorized();
+    requireVerifiedUser(session.user);
 
     if (!checkRateLimit(`reply:create:${session.user.id}`, 20, 60_000)) {
       throw Errors.tooManyRequests();

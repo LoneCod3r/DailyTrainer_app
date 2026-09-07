@@ -52,6 +52,26 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
+  // Proof of control over the email address — set only when the
+  // verification-link flow completes (modules/auth/auth.service.ts
+  // verifyEmail), or, failing that, when a password reset link is completed
+  // (equally strong proof of control). Independent of `status`, which is an
+  // admin-controlled account state. Login itself is still allowed while this
+  // is null — session-holding but unverified users are blocked from
+  // member-only actions server-side instead (see lib/auth-guards.ts) so a
+  // signed-in user always has a route to the "please verify" prompt and a
+  // resend link rather than being locked out entirely.
+  emailVerified DateTime?
+
+  // Server-side brute-force protection for the credentials login, in
+  // addition to the IP-based rate limit in lib/auth.ts — this is per
+  // account and survives across IPs/restarts (the in-memory rate limiter
+  // does not).
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  verificationTokens VerificationToken[]
+
   profile Profile?
 
   // Billing foundation (see modules/payments) — every user maps to at most
@@ -105,6 +125,50 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("settings")
+}
+
+// Email-verification and password-reset tokens. Only a SHA-256 hash of the
+// token is ever stored — the raw token exists solely in the emailed link —
+// so a database dump alone can't be replayed. Single-use (`usedAt`) and
+// time-limited (`expiresAt`); a new token invalidates any earlier unused
+// token of the same type for the same user (see auth.service.ts).
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String                @unique
+  type      VerificationTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  @@index([userId, type])
+  @@map("verification_tokens")
+}
+
+// Simple arithmetic anti-bot challenge on registration (see
+// lib/math-challenge.ts) — one more layer alongside CAPTCHA/honeypot/rate
+// limiting, not a replacement for any of them. Not tied to a User (it exists
+// before any account does). `answer` is a small plaintext integer — hashing
+// it would add no real protection (the answer space for a two-digit sum is
+// tiny) — the actual guarantee is that it's never sent to the client;
+// `attempts` caps brute-force guessing against a single challenge, and
+// `consumedAt` makes a solved challenge single-use.
+model MathChallenge {
+  id         String    @id @default(cuid())
+  answer     Int
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+
+  @@index([expiresAt])
+  @@map("math_challenges")
 }
 
 // -----------------------------------------------------------------------------

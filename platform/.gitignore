@@ -10,6 +10,7 @@
 /blob-report/
 /playwright/.cache/
 /tests/e2e/.auth/
+/tests/.mail-outbox/
 
 # next.js
 /.next/

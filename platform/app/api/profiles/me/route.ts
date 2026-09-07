@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth';
 import { getProfileByUserId, upsertProfile } from '@/modules/profiles/profiles.service';
 import { withErrorHandling, jsonOk, Errors } from '@/lib/api-response';
 import { updateProfileSchema } from '@/lib/validations/users';
+import { requireVerifiedUser } from '@/lib/auth-guards';
 
 export async function GET() {
   return withErrorHandling(async () => {
@@ -18,6 +19,7 @@ export async function PATCH(req: Request) {
   return withErrorHandling(async () => {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw Errors.unauthorized();
+    requireVerifiedUser(session.user);
 
     const body = await req.json();
     const input = updateProfileSchema.parse(body);

@@ -1,6 +1,12 @@
 import { test, expect } from './fixtures/base';
 import { AUTH_STORAGE_STATE, DEMO_USER } from './fixtures/data';
-import { loginViaUi, loginViaUiExpectingRejection } from './fixtures/auth-helpers';
+import {
+  loginViaUi,
+  loginViaUiExpectingRejection,
+  waitForRecaptchaToken,
+  solveMathChallenge,
+  ensureMinHumanFillTime,
+} from './fixtures/auth-helpers';
 
 test.describe('Register', () => {
   test('@smoke register page loads, validates, and a new account signs in', async ({ page }) => {
@@ -13,11 +19,23 @@ test.describe('Register', () => {
 
     const uniqueEmail = `e2e.register.${Date.now()}@example.dev`;
     const password = 'PlaywrightPass123!';
+    // Wait for the CAPTCHA (and the hydration it implies — see
+    // email-verification.spec.ts's registerFreshUser) before filling, so a
+    // fill during hydration can't get silently reset to empty.
+    await waitForRecaptchaToken(page);
     await page.getByLabel('Name').fill('Playwright Test User');
     await page.getByLabel('Email').fill(uniqueEmail);
     await page.getByLabel('Password').fill(password);
+    await solveMathChallenge(page);
+    await ensureMinHumanFillTime(page);
     await page.getByRole('button', { name: 'Create account' }).click();
-    await expect(page).toHaveURL('/');
+
+    // Registration no longer auto-navigates straight to "/" — it shows a
+    // "check your email" state first (the account is unverified until the
+    // link is clicked) with a link to continue into the app right away.
+    await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(uniqueEmail)).toBeVisible();
+    await page.getByRole('link', { name: 'Continue to the app' }).click();
 
     // The account now exists either way; if the post-register auto-signin
     // hit the same known dev-mode race described in fixtures/auth-helpers.ts,
@@ -30,6 +48,10 @@ test.describe('Register', () => {
       await loginViaUi(page, { email: uniqueEmail, password });
     }
     await expect(page.getByRole('button', { name: /playwright test user/i })).toBeVisible();
+
+    // Unverified but signed in: the persistent verification banner should
+    // be visible somewhere on the page.
+    await expect(page.getByText('Please verify your email address to unlock all features.')).toBeVisible();
   });
 });
 

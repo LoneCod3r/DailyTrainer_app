@@ -1,6 +1,56 @@
 import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
+// The register page disables "Create account" until the reCAPTCHA widget's
+// onVerify callback fires (see app/(auth)/register/page.tsx and
+// components/auth/Recaptcha.tsx). Local dev/test runs have no
+// NEXT_PUBLIC_RECAPTCHA_SITE_KEY configured — Google publishes no universal
+// "always passes" test key pair that works on an unregistered domain — so
+// the component synthesizes a placeholder token immediately instead of
+// loading the real widget (see lib/recaptcha.ts for the matching
+// server-side dev fallback). The button still becomes enabled
+// asynchronously (a tick after mount), so this still needs to be awaited.
+export async function waitForRecaptchaToken(page: Page, buttonName: string = 'Create account'): Promise<void> {
+  await expect(page.getByRole('button', { name: buttonName })).toBeEnabled({ timeout: 20_000 });
+}
+
+// Reads the server-generated "a + b" question (see components/auth/
+// MathChallenge.tsx) and fills in the correct sum — the answer is never
+// present in the page/response, so the test computes it itself rather than
+// reading it. Call after waitForRecaptchaToken: the "Create account" button
+// only enables once the challenge has loaded, and filling the answer input
+// before then would race the same `next dev` hydration issue documented
+// where Name/Email/Password are filled.
+export async function solveMathChallenge(page: Page): Promise<void> {
+  const questionText = (await page.getByTestId('math-question').textContent()) ?? '';
+  const match = questionText.match(/(\d+)\s*\+\s*(\d+)/);
+  if (!match) throw new Error(`Could not parse math challenge question: "${questionText}"`);
+  const [, a, b] = match;
+  await page.getByLabel('Quick security check').fill(String(Number(a) + Number(b)));
+}
+
+// The minimum-fill-time anti-bot check (modules/auth/auth.service.ts,
+// MIN_HUMAN_SUBMIT_MS = 1500ms) rejects a registration submitted implausibly
+// soon after the form rendered. Previously the real CAPTCHA widget's script
+// load provided that delay "for free" in tests; the dev-mode reCAPTCHA
+// fallback (no site key configured — see waitForRecaptchaToken above)
+// resolves near-instantly, so a fast test run can now finish filling the
+// form before that floor.
+//
+// This deliberately does NOT try to compute "remaining time since the form
+// rendered" from a timestamp captured in the test: the form's own
+// `formRenderedAt` is captured client-side at React mount, which happens
+// *after* page.goto() resolves (navigation + hydration), not before it —
+// using a Node-side "before goto" timestamp as that anchor undercounts the
+// real gap and can still trip the floor. A flat wait immediately before
+// submitting is simpler and correct regardless: by the time this is called
+// (after the CAPTCHA/math challenge are ready), the component has
+// definitely already mounted, so waiting minMs from *here* guarantees more
+// than minMs has elapsed since the real, earlier mount time.
+export async function ensureMinHumanFillTime(page: Page, minMs = 1700): Promise<void> {
+  await page.waitForTimeout(minMs);
+}
+
 // `npm run dev` only: React 18 Strict Mode double-invokes effects, so
 // <SessionProvider> fires two concurrent initial `/api/auth/session`
 // requests on mount. Each one causes NextAuth's core handler to reissue the

@@ -4,11 +4,13 @@ import { createDiscussion } from '@/modules/discussions/discussions.service';
 import { createDiscussionSchema } from '@/lib/validations/discussions';
 import { withErrorHandling, jsonOk, Errors } from '@/lib/api-response';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { requireVerifiedUser } from '@/lib/auth-guards';
 
 export async function POST(req: Request) {
   return withErrorHandling(async () => {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw Errors.unauthorized();
+    requireVerifiedUser(session.user);
 
     if (!checkRateLimit(`discussion:create:${session.user.id}`, 5, 60_000)) {
       throw Errors.tooManyRequests();

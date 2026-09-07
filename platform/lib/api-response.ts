@@ -24,6 +24,8 @@ export const Errors = {
   unauthorized: (message = 'Authentication required') => new ApiError(401, 'UNAUTHORIZED', message),
   forbidden: (message = 'You do not have permission to perform this action') =>
     new ApiError(403, 'FORBIDDEN', message),
+  emailNotVerified: (message = 'Please verify your email address to do this.') =>
+    new ApiError(403, 'EMAIL_NOT_VERIFIED', message),
   notFound: (message = 'Resource not found') => new ApiError(404, 'NOT_FOUND', message),
   conflict: (message = 'Resource already exists') => new ApiError(409, 'CONFLICT', message),
   badRequest: (message = 'Invalid request', details?: unknown) =>
