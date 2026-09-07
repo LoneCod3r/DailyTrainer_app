@@ -113,7 +113,30 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.status = user.status;
         token.emailVerified = user.emailVerified;
+        return token;
       }
+
+      // No `user` means this is a follow-up request reusing an
+      // already-issued JWT, not a fresh sign-in — re-read the current
+      // values from the database so a change made mid-session (most
+      // notably: verifying the email, which registration's auto-sign-in
+      // means happens *after* the JWT already exists) is reflected without
+      // requiring the user to sign out and back in. A cheap, indexed
+      // lookup by id; only skipped if the account was deleted, in which
+      // case the stale token is left as-is (the user is no longer
+      // resolvable, so there's nothing fresher to apply).
+      if (token.id) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { role: true, status: true, emailVerified: true },
+        });
+        if (current) {
+          token.role = current.role;
+          token.status = current.status;
+          token.emailVerified = current.emailVerified;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
