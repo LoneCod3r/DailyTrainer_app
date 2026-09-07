@@ -11,6 +11,7 @@ import { JoinMeetingButton } from '@/components/meetings/JoinMeetingButton';
 import { listPublishedContent } from '@/modules/content/content.service';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
+import { toBulgarianCyrillic } from '@/lib/i18n/transliterate';
 import { getPracticeById, getProgramBySlug, getStartHereSectionBySlug } from '@/modules/kuko-way/service';
 import { demoProgress } from '@/modules/kuko-way/demo-progress';
 import { localize } from '@/modules/kuko-way/types';
@@ -60,6 +61,7 @@ export default async function HomePage() {
   const nextMeeting = getNextUpcomingMeeting();
 
   const firstName = session?.user?.name?.split(' ')[0];
+  const greetingName = firstName && locale === 'bg' ? toBulgarianCyrillic(firstName) : firstName;
   const todaysPractice = getPracticeById('body-scan-1');
   const activeProgram = getProgramBySlug(demoProgress.activeProgramSlug);
 
@@ -95,7 +97,7 @@ export default async function HomePage() {
             below remains the <h1> in that state instead. */}
         {session && (
           <h1 className="mx-auto mb-4 w-full max-w-[90rem] text-xl font-serif text-ink-900 sm:mb-6 sm:text-2xl lg:text-3xl">
-            {firstName ? t('home.welcomeBack', { name: firstName }) : t('home.welcome')}
+            {greetingName ? t('home.welcomeBack', { name: greetingName }) : t('home.welcome')}
           </h1>
         )}
         <div className="relative isolate mx-auto aspect-video w-full max-w-[90rem] overflow-hidden rounded-2xl bg-ink-900">
