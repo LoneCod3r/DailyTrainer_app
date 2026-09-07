@@ -116,7 +116,7 @@ export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: (
                   {item.children && (
                     <button
                       type="button"
-                      onClick={() => setOpenOverrides((prev) => ({ ...prev, [item.href]: !isOpen }))}
+                      onClick={() => setOpenOverrides(isOpen ? {} : { [item.href]: true })}
                       aria-expanded={isOpen}
                       aria-label={`${t(item.labelKey)}: ${isOpen ? t('nav.collapse') : t('nav.expand')}`}
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg hover:bg-sand-200/60"
@@ -132,7 +132,7 @@ export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: (
                       <Link
                         key={child.href}
                         href={child.href}
-                        onClick={() => setOpenOverrides((prev) => ({ ...prev, [item.href]: false }))}
+                        onClick={() => setOpenOverrides({})}
                         className={clsx(
                           'rounded-lg px-3 py-1.5 text-base transition-colors',
                           pathname === child.href ? 'font-medium text-link' : 'text-ink-700 hover:bg-sand-100',
