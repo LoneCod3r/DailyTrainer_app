@@ -15,10 +15,13 @@ export function generateMetadata(): Metadata {
 // practice/program → practice session. This page is the "category" level —
 // it deliberately does not attempt any recommendation logic yet.
 //
-// Redesigned (per design/UX audit) from a flat 6-card grid into three
-// weighted zones so Start Here reads as the entry point, 7/14/28 read as one
-// ascending journey rather than independent plans, and Library reads as a
-// quieter reference destination — instead of six visually identical cards.
+// Redesigned (per design/UX audit) from a flat 6-card grid into two weighted
+// zones so Start Here reads as the entry point and 7/14/28 read as one
+// ascending journey rather than independent plans — instead of six visually
+// identical cards. Library isn't previewed here: it's already one tap away
+// via the Practices dropdown in the global nav and has its own
+// `/practices/library` page, so a third zone on this page would just repeat
+// that entry point.
 export default function PracticesPage() {
   const locale = getLocale();
   const t = getT(locale);
@@ -93,26 +96,6 @@ export default function PracticesPage() {
           <p className="mt-1 max-w-lg text-sm text-ink-500 sm:text-base">{t('practices.programsDesc')}</p>
         </div>
         <ProgramTrail />
-      </section>
-
-      {/* Library — deliberately the quietest zone: a plain text row, no
-          photo, no card, signaling "reference shelf" rather than featured
-          content. */}
-      <section className="border-t border-sand-200 pt-10 sm:pt-14">
-        <Link href="/practices/library" className="group flex items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <h2 className="font-serif text-xl text-ink-900 group-hover:text-link sm:text-2xl">
-              {t('practices.libraryTitle')}
-            </h2>
-            <p className="max-w-md text-sm text-ink-500">{t('practices.libraryDesc')}</p>
-          </div>
-          <span
-            aria-hidden="true"
-            className="shrink-0 text-lg font-medium text-link motion-safe:transition-transform motion-safe:group-hover:translate-x-1"
-          >
-            →
-          </span>
-        </Link>
       </section>
     </Container>
   );
