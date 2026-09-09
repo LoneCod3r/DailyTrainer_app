@@ -12,13 +12,21 @@ import { VerificationBanner } from './VerificationBanner';
 // sidebar — Home/Practices/Community live in the topbar itself. Auth pages
 // and the admin panel intentionally use their own lighter chrome, not this
 // shell.
-export function AppShell({ appName, children }: { appName: string; children: ReactNode }) {
+export function AppShell({
+  appName,
+  planName,
+  children,
+}: {
+  appName: string;
+  planName?: string | null;
+  children: ReactNode;
+}) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-page">
       <div className="flex min-h-screen flex-col">
-        <Topbar appName={appName} onOpenMenu={() => setDrawerOpen(true)} />
+        <Topbar appName={appName} planName={planName ?? null} onOpenMenu={() => setDrawerOpen(true)} />
         <VerificationBanner />
         <main className="flex-1 pb-20 lg:pb-0">{children}</main>
       </div>

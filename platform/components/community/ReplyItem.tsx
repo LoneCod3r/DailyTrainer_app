@@ -1,5 +1,6 @@
 import { ModerationBadge } from './ModerationBadge';
 import { UserProfilePreview, type PreviewAuthor } from './UserProfilePreview';
+import { ReportButton } from './ReportButton';
 import { formatDateTime } from '@/lib/format-date';
 import type { Locale } from '@/lib/i18n/locale';
 import type { DictKey } from '@/lib/i18n/dictionaries';
@@ -11,7 +12,7 @@ export function ReplyItem({
   locale,
   t,
 }: {
-  reply: { id: string; body: string; createdAt: Date | string; status: ModerationStatus; author: PreviewAuthor };
+  reply: { id: string; body: string; createdAt: Date | string; status: ModerationStatus; authorId: string; author: PreviewAuthor };
   viewer: { id: string } | null;
   locale: Locale;
   t: (key: DictKey, vars?: Record<string, string | number>) => string;
@@ -26,6 +27,7 @@ export function ReplyItem({
         </div>
       </div>
       <p className="whitespace-pre-wrap text-sm text-ink-700">{reply.body}</p>
+      {viewer && viewer.id !== reply.authorId && <ReportButton targetType="DISCUSSION_REPLY" targetId={reply.id} />}
     </div>
   );
 }

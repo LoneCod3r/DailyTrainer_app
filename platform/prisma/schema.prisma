@@ -90,6 +90,9 @@ model User {
   discussionReplies DiscussionReply[] @relation("DiscussionReplyAuthor")
   lessonProgress    LessonProgress[]
 
+  reportsFiled   Report[] @relation("ReportReporter")
+  reportsHandled Report[] @relation("ReportHandler")
+
   @@index([role])
   @@index([status])
   @@map("users")
@@ -449,6 +452,69 @@ model Discussion {
   @@index([category, status])
   @@index([status])
   @@map("discussions")
+}
+
+// -----------------------------------------------------------------------------
+// Moderation: member-filed reports against Discussions/Replies.
+// Discussion.status/DiscussionReply.status (ModerationStatus) already track
+// the *content's* visibility; Report is the queue that gets a moderator to
+// look at it and the record of what they decided — separate concepts, one
+// content can be reported without ever changing its ModerationStatus (e.g.
+// dismissed as not-a-violation).
+// -----------------------------------------------------------------------------
+enum ReportTargetType {
+  DISCUSSION
+  DISCUSSION_REPLY
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+// The action a moderator recorded when closing a report. Only HIDDEN/REMOVED/
+// SUSPENDED correspond to a real state change elsewhere (ModerationStatus /
+// UserStatus) — WARNED and NONE just record the moderator's decision, since
+// there is no notification system yet to actually deliver a warning.
+enum ReportResolution {
+  NONE
+  WARNED
+  CONTENT_HIDDEN
+  CONTENT_REMOVED
+  USER_SUSPENDED
+}
+
+model Report {
+  id         String           @id @default(cuid())
+  targetType ReportTargetType
+  targetId   String
+  reason     ReportReason
+  note       String?
+
+  reporterId String
+  reporter   User   @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  status ReportStatus @default(OPEN)
+
+  handledById String?
+  handledBy   User?             @relation("ReportHandler", fields: [handledById], references: [id])
+  resolution  ReportResolution?
+  resolutionNote String?
+  handledAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([targetType, targetId])
+  @@map("reports")
 }
 
 model DiscussionReply {

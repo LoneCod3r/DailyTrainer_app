@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { clsx } from '@/lib/clsx';
-import { isAdmin } from '@/lib/permissions';
-import { Button } from '@/components/ui';
+import { isAdmin, isModerator } from '@/lib/permissions';
+import { Button, Badge } from '@/components/ui';
 import { useT } from '@/lib/i18n/LocaleProvider';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { ThemeToggle } from './ThemeToggle';
@@ -30,7 +30,15 @@ import {
 // used on the account hub page (app/(app)/account/page.tsx).
 const ACCOUNT_ICONS = [AccountIcon, SettingsIcon, MembershipIcon, BillingIcon, DonationIcon];
 
-export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: () => void }) {
+export function Topbar({
+  appName,
+  planName,
+  onOpenMenu,
+}: {
+  appName: string;
+  planName?: string | null;
+  onOpenMenu: () => void;
+}) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -166,20 +174,49 @@ export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: (
 
           {status === 'loading' ? null : session?.user ? (
             <div className="relative" ref={accountMenuRef}>
-              <button
-                type="button"
-                onClick={() => setMenuOpen((v) => !v)}
-                className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-900 hover:bg-sand-100"
-              >
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
-                  <AccountIcon width={16} height={16} />
-                </span>
-                <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
-              </button>
+              {isAdmin(session.user.role) ? (
+                // Admins go straight to the Admin panel on click — no
+                // dropdown to choose from, since there's nothing else here
+                // for them to pick (Moderator/member account links don't
+                // apply once you're managing the admin panel).
+                <Link
+                  href="/admin"
+                  className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-900 hover:bg-sand-100"
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
+                    <AccountIcon width={16} height={16} />
+                  </span>
+                  <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-900 hover:bg-sand-100"
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
+                    <AccountIcon width={16} height={16} />
+                  </span>
+                  <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
+                  {/* Subtle, tasteful plan indicator — visible app-wide (not
+                      just /account), same restrained brand-tone badge used
+                      elsewhere, never a different color system. */}
+                  {planName && (
+                    <Badge tone="brand" className="hidden sm:inline-flex">
+                      {planName}
+                    </Badge>
+                  )}
+                </button>
+              )}
 
-              {menuOpen && (
+              {!isAdmin(session.user.role) && menuOpen && (
                 <div className="absolute right-0 z-20 mt-2 w-60 rounded-xl border border-sand-200 bg-surface p-1.5 shadow-soft">
                   <p className="truncate px-3 py-2 text-xs text-ink-500">{session.user.email}</p>
+                  {planName && (
+                    <p className="px-3 pb-2">
+                      <Badge tone="brand">{planName}</Badge>
+                    </p>
+                  )}
                   {ACCOUNT_NAV.map((item, i) => {
                     const Icon = ACCOUNT_ICONS[i];
                     return (
@@ -200,6 +237,15 @@ export function Topbar({ appName, onOpenMenu }: { appName: string; onOpenMenu: (
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-700 hover:bg-sand-100"
                     >
                       <ShieldIcon width={16} height={16} /> {t('topbar.admin')}
+                    </Link>
+                  )}
+                  {isModerator(session.user.role) && (
+                    <Link
+                      href="/moderation"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-700 hover:bg-sand-100"
+                    >
+                      <ShieldIcon width={16} height={16} /> {t('topbar.moderation')}
                     </Link>
                   )}
                   <button

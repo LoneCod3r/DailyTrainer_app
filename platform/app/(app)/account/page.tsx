@@ -38,15 +38,35 @@ export default async function AccountPage() {
             <p className="font-medium text-ink-900">{session.user.name ?? session.user.email}</p>
             <p className="text-sm text-ink-500">{session.user.email}</p>
           </div>
-          {/* A plain "Member" role badge here read as paid-membership status
-              (right above the actual Membership card, which correctly says
-              "None") — only call out Moderator/Admin, same as
-              UserProfilePreview does for community-visible role badges. */}
-          {session.user.role !== 'USER' && (
-            <Badge tone="brand">{t(ROLE_KEY[session.user.role] ?? 'profile.roleUser')}</Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Restrained premium visual treatment (Part 2 §"Paid user visual
+                treatment") — reuses the same brand badge tone as the role
+                badge below, just naming the real plan instead of a role. */}
+            {subscription && <Badge tone="brand">{subscription.membershipPlan.name}</Badge>}
+            {/* A plain "Member" role badge here read as paid-membership status
+                (right above the actual Membership card, which correctly says
+                "None") — only call out Moderator/Admin, same as
+                UserProfilePreview does for community-visible role badges. */}
+            {session.user.role !== 'USER' && (
+              <Badge tone="brand">{t(ROLE_KEY[session.user.role] ?? 'profile.roleUser')}</Badge>
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      {!subscription && (
+        <Card className="border-dashed bg-sand-50/50">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-ink-900">{t('account.hub.supportTitle')}</p>
+              <p className="mt-0.5 text-sm text-ink-500">{t('account.hub.supportDesc')}</p>
+            </div>
+            <Link href="/account/membership" className="shrink-0 text-sm font-medium text-link hover:underline">
+              {t('account.hub.supportCta')}
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Link href="/account/settings">

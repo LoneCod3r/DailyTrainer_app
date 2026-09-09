@@ -1,4 +1,6 @@
+import type { Role } from '@prisma/client';
 import { Errors } from '@/lib/api-response';
+import { hasRole } from '@/lib/permissions';
 
 // Central, backend-enforced email-verification gate — mirrors the shape of
 // lib/permissions.ts's role gate. A signed-in-but-unverified user still has
@@ -9,5 +11,15 @@ import { Errors } from '@/lib/api-response';
 export function requireVerifiedUser(user: { emailVerified?: Date | null } | null | undefined) {
   if (!user?.emailVerified) {
     throw Errors.emailNotVerified();
+  }
+}
+
+// Throwing counterpart to lib/permissions.ts's hasRole — every API route
+// that is Moderator+/Admin-only should call this instead of hand-rolling
+// `if (!isX(role)) throw Errors.forbidden()`, so the check (and its error
+// shape) stays identical everywhere it's used.
+export function requireRole(role: Role | null | undefined, required: Role) {
+  if (!hasRole(role, required)) {
+    throw Errors.forbidden();
   }
 }

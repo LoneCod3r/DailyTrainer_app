@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Container, Card, CardContent, Input, Button, Alert } from '@/components/ui';
@@ -39,11 +39,23 @@ export default function LoginPage() {
       return;
     }
 
+    // An explicit callbackUrl (set when a protected route redirected here,
+    // e.g. app/admin/layout.tsx's redirect('/login?callbackUrl=/admin'))
+    // always wins — the user was headed somewhere specific. Only the
+    // "plain /login, no destination in mind" case falls back to a
+    // role-based landing page instead of always defaulting to "/".
+    let destination = searchParams.get('callbackUrl');
+    if (!destination) {
+      const session = await getSession();
+      const role = session?.user?.role;
+      destination = role === 'ADMIN' ? '/admin' : role === 'MODERATOR' ? '/moderation' : '/';
+    }
+
     // A hard navigation, not router.push()+refresh(): the (auth) layout's
     // logo link to "/" gets prefetched while this page is open, so a soft
     // navigation right after signing in can render that stale,
     // pre-authentication cache entry instead of picking up the new session.
-    window.location.href = searchParams.get('callbackUrl') ?? '/';
+    window.location.href = destination;
   }
 
   return (

@@ -234,6 +234,25 @@ export function PanelIcon(props: IconProps) {
   );
 }
 
+export function FlagIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 17V3.8" />
+      <path d="M5 4c1.6-.9 3.2-.9 4.8 0 1.6.9 3.2.9 4.8 0v6.4c-1.6.9-3.2.9-4.8 0-1.6-.9-3.2-.9-4.8 0" />
+    </svg>
+  );
+}
+
+export function HistoryIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10" cy="10.5" r="6.5" />
+      <path d="M10 7v3.5l2.6 1.6" />
+      <path d="M6.2 3.4 4 5.2" />
+    </svg>
+  );
+}
+
 export function TrendUpIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

@@ -8,6 +8,7 @@ import { ModerationBadge, LockedBadge } from '@/components/community/ModerationB
 import { UserProfilePreview } from '@/components/community/UserProfilePreview';
 import { ReplyItem } from '@/components/community/ReplyItem';
 import { ReplyForm } from '@/components/community/ReplyForm';
+import { ReportButton } from '@/components/community/ReportButton';
 import { getDiscussionBySlug } from '@/modules/discussions/discussions.service';
 import { formatDateTime } from '@/lib/format-date';
 import { getLocale } from '@/lib/i18n/get-locale';
@@ -51,6 +52,12 @@ export default async function DiscussionThreadPage({ params }: { params: { slug:
           <p className="text-xs text-ink-300">{t('discussions.posted', { date: formatDateTime(discussion.createdAt, locale) })}</p>
 
           <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink-700">{discussion.body}</p>
+
+          {viewer && viewer.id !== discussion.authorId && (
+            <div>
+              <ReportButton targetType="DISCUSSION" targetId={discussion.id} />
+            </div>
+          )}
         </CardContent>
       </Card>
 

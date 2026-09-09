@@ -8,7 +8,9 @@ import { ProgramDayProgress } from '@/components/practices/ProgramDayProgress';
 import { YourProgressStats } from '@/components/practices/YourProgressStats';
 import { MeetingStatusBadge } from '@/components/meetings/MeetingStatusBadge';
 import { JoinMeetingButton } from '@/components/meetings/JoinMeetingButton';
+import { MembershipStrip } from '@/components/account/MembershipStrip';
 import { listPublishedContent } from '@/modules/content/content.service';
+import { getActiveSubscriptionForUser } from '@/modules/membership/membership.service';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { toBulgarianCyrillic } from '@/lib/i18n/transliterate';
@@ -59,6 +61,7 @@ export default async function HomePage() {
   const t = getT(locale);
   const latest = await listPublishedContent({ type: 'ARTICLE', limit: 3 });
   const nextMeeting = getNextUpcomingMeeting();
+  const subscription = session?.user ? await getActiveSubscriptionForUser(session.user.id) : null;
 
   const firstName = session?.user?.name?.split(' ')[0];
   const greetingName = firstName && locale === 'bg' ? toBulgarianCyrillic(firstName) : firstName;
@@ -246,6 +249,8 @@ export default async function HomePage() {
             <YourProgressStats />
           </div>
         </section>
+
+        {session && <MembershipStrip subscription={subscription} locale={locale} t={t} />}
 
         {/* Latest information — an editorial list, not a card grid. */}
         <section className="flex flex-col gap-6 border-t border-sand-200 pt-14">
