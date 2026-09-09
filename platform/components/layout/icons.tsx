@@ -158,3 +158,87 @@ export function ShieldIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function DashboardIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="3" width="6.2" height="6.2" rx="1.2" />
+      <rect x="10.8" y="3" width="6.2" height="4" rx="1.2" />
+      <rect x="10.8" y="9.2" width="6.2" height="7.8" rx="1.2" />
+      <rect x="3" y="11.2" width="6.2" height="5.8" rx="1.2" />
+    </svg>
+  );
+}
+
+export function UsersIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="7.2" cy="7" r="2.6" />
+      <path d="M2.5 16.2c.6-3 2.3-4.6 4.7-4.6s4.1 1.6 4.7 4.6" />
+      <circle cx="14" cy="7.4" r="2" />
+      <path d="M12.6 11.9c1.9.2 3.1 1.6 3.6 4" />
+    </svg>
+  );
+}
+
+export function ContentIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="4" y="2.8" width="12" height="14.4" rx="1.4" />
+      <path d="M6.8 6.6h6.4M6.8 9.6h6.4M6.8 12.6h4" />
+    </svg>
+  );
+}
+
+export function CoursesIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 4.6c1.6-.8 3.6-.8 5.2 0 .4.2.8.2 1.2 0 1.6-.8 3.6-.8 5.2 0v9.6c-1.6-.8-3.6-.8-5.2 0-.4.2-.8.2-1.2 0-1.6-.8-3.6-.8-5.2 0V4.6Z" />
+      <path d="M8.6 4.6v9.6" />
+    </svg>
+  );
+}
+
+export function DiscussionsIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 4.6h9.4c1 0 1.8.8 1.8 1.8v4.4c0 1-.8 1.8-1.8 1.8H8.4L5 15.8v-3.2H4c-1 0-1.8-.8-1.8-1.8V6.4c0-1 .8-1.8 1.8-1.8Z" />
+    </svg>
+  );
+}
+
+export function MeetingsIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4" width="14" height="12.5" rx="1.6" />
+      <path d="M3 7.6h14M6.5 2.5v3M13.5 2.5v3" />
+    </svg>
+  );
+}
+
+export function BellIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M10 3.2c-2 0-3.6 1.6-3.6 3.6v2.4c0 .9-.35 1.7-1 2.4l-.6.6h10.4l-.6-.6c-.65-.7-1-1.5-1-2.4V6.8c0-2-1.6-3.6-3.6-3.6Z" />
+      <path d="M8.3 15.4a1.7 1.7 0 0 0 3.4 0" />
+    </svg>
+  );
+}
+
+export function PanelIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="3.5" width="14" height="13" rx="1.8" />
+      <path d="M8 3.5v13" />
+    </svg>
+  );
+}
+
+export function TrendUpIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m3.5 13 4.4-4.4 2.6 2.6L16.5 5" />
+      <path d="M12.6 5h3.9v3.9" />
+    </svg>
+  );
+}

@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
-import { Container } from '@/components/ui';
-import { AdminSidebar } from '@/components/layout/AdminSidebar';
-import { ThemeToggle } from '@/components/layout/ThemeToggle';
+import { AdminShell } from '@/components/admin/AdminShell';
+import { getSettings } from '@/modules/settings/settings.service';
 
 // Server-side admin route protection (Prompt2 §3/§12): this check runs on
 // the server for every request under /admin, so it cannot be bypassed by
@@ -20,18 +18,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/');
   }
 
+  const { appName } = await getSettings();
+
   return (
-    <div className="min-h-screen bg-page">
-      <header className="flex h-14 items-center justify-between border-b border-sand-200 px-4 sm:px-6">
-        <Link href="/" className="text-sm font-medium text-ink-700 hover:text-ink-900">
-          ← Back to app
-        </Link>
-        <ThemeToggle />
-      </header>
-      <Container className="flex flex-col gap-8 py-8 md:flex-row md:gap-10">
-        <AdminSidebar />
-        <div className="min-w-0 flex-1">{children}</div>
-      </Container>
-    </div>
+    <AdminShell
+      appName={appName}
+      user={{ name: session.user.name ?? null, email: session.user.email ?? null, role: session.user.role }}
+    >
+      {children}
+    </AdminShell>
   );
 }

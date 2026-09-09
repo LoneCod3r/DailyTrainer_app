@@ -24,6 +24,29 @@ export async function listAllPlans() {
   return prisma.membershipPlan.findMany({ orderBy: { createdAt: 'asc' } });
 }
 
+// Per-plan subscriber breakdown for the admin dashboard's Membership
+// Overview panel — each plan's count of currently-in-effect subscriptions
+// (same ACTIVE/TRIALING/PAST_DUE definition as getActiveSubscriptionForUser),
+// plus a "Free" bucket for users with no such subscription. A user has at
+// most one in-effect subscription, so these buckets partition all users.
+export async function getMembershipOverview() {
+  const [totalUsers, plans, subsByPlan] = await Promise.all([
+    prisma.user.count(),
+    listAllPlans(),
+    prisma.subscription.groupBy({
+      by: ['membershipPlanId'],
+      where: { status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] } },
+      _count: true,
+    }),
+  ]);
+
+  const countByPlan = new Map(subsByPlan.map((s) => [s.membershipPlanId, s._count]));
+  const withMembers = plans.map((plan) => ({ ...plan, members: countByPlan.get(plan.id) ?? 0 }));
+  const freeMembers = Math.max(totalUsers - withMembers.reduce((sum, p) => sum + p.members, 0), 0);
+
+  return { totalUsers, plans: withMembers, freeMembers };
+}
+
 export async function getPlanById(id: string) {
   const plan = await prisma.membershipPlan.findUnique({ where: { id } });
   if (!plan) throw Errors.notFound('Membership plan not found');
