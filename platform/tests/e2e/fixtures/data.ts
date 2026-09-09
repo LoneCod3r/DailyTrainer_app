@@ -11,6 +11,25 @@ export const DEMO_USER = {
 
 export const AUTH_STORAGE_STATE = 'tests/e2e/.auth/member.json';
 
+// Seeded MODERATOR account (prisma/seed.ts) — used only by
+// moderator-boundary.spec.ts to verify the Moderator vs Admin permission
+// boundary. Logs in fresh in that spec rather than via a shared storageState
+// setup project, since it's the only spec that needs this identity.
+export const MODERATOR_USER = {
+  email: 'moderator@example.dev',
+  password: 'DevPassword123!',
+  name: 'Demo Moderator',
+};
+
+// Seeded ADMIN account (prisma/seed.ts) — used only by
+// moderator-boundary.spec.ts to confirm Admin's financial/admin access is
+// unaffected by the Moderator boundary.
+export const ADMIN_USER = {
+  email: 'admin@example.dev',
+  password: 'DevPassword123!',
+  name: 'Demo Admin',
+};
+
 // Discussion moderation states (prisma/seed.ts) — one of each state the app
 // actually renders differently for.
 export const SEEDED_DISCUSSIONS = {

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createDonationCheckout } from '@/modules/payments/billing.service';
 import { withErrorHandling, jsonOk, Errors } from '@/lib/api-response';
+import { forbidModeratorFinancialAccess } from '@/lib/auth-guards';
 import { donationCheckoutRequestSchema } from '@/lib/validations/billing';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
   return withErrorHandling(async () => {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw Errors.unauthorized();
+    forbidModeratorFinancialAccess(session.user.role);
 
     if (!checkRateLimit(`donation:checkout:${session.user.id}`, 10, 60_000)) {
       throw Errors.tooManyRequests();

@@ -25,3 +25,13 @@ export function isAdmin(role: Role | null | undefined): boolean {
 export function isModerator(role: Role | null | undefined): boolean {
   return hasRole(role, 'MODERATOR');
 }
+
+// Exact-role check (not hierarchical like hasRole/isModerator above).
+// Moderator is project/community staff, not a paying-customer identity — the
+// role must never grant the normal-customer financial self-service surface
+// (billing, donations, membership subscribe/manage), even though the
+// hierarchy otherwise treats Moderator as USER+. Deliberately excludes
+// Admin, whose financial access is unrestricted.
+export function isModeratorOnly(role: Role | null | undefined): boolean {
+  return role === 'MODERATOR';
+}

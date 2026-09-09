@@ -8,6 +8,8 @@ import { JoinButton } from '@/components/membership/JoinButton';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { formatCurrency } from '@/lib/format-currency';
+import { isModeratorOnly } from '@/lib/permissions';
+import { redirect } from 'next/navigation';
 
 const BENEFIT_KEYS = [
   'account.membership.benefit1',
@@ -18,6 +20,10 @@ const BENEFIT_KEYS = [
 
 export default async function MembershipPage({ searchParams }: { searchParams: { checkout?: string } }) {
   const session = await getServerSession(authOptions);
+  // Page is publicly browsable (plan pricing is public info) — only a
+  // signed-in Moderator is redirected away, since they're project staff and
+  // never get the "join/manage membership" self-service surface.
+  if (session?.user && isModeratorOnly(session.user.role)) redirect('/account');
   const locale = getLocale();
   const t = getT(locale);
 

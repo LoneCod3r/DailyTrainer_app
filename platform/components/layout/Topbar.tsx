@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { clsx } from '@/lib/clsx';
-import { isAdmin, isModerator } from '@/lib/permissions';
+import { isAdmin, isModerator, isModeratorOnly } from '@/lib/permissions';
 import { Button, Badge } from '@/components/ui';
 import { useT } from '@/lib/i18n/LocaleProvider';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -25,10 +25,23 @@ import {
   ChevronIcon,
 } from './icons';
 
-// One icon per Account sub-page, in the same order as ACCOUNT_NAV (Overview,
-// Profile & Settings, Membership, Billing, Donation) — same icons already
-// used on the account hub page (app/(app)/account/page.tsx).
-const ACCOUNT_ICONS = [AccountIcon, SettingsIcon, MembershipIcon, BillingIcon, DonationIcon];
+// One icon per Account sub-page (Overview, Profile & Settings, Membership,
+// Billing, Donation) — same icons already used on the account hub page
+// (app/(app)/account/page.tsx). Keyed by href (not positional) since the
+// rendered list below is filtered per-role.
+const ACCOUNT_ICONS: Record<string, typeof AccountIcon> = {
+  '/account': AccountIcon,
+  '/account/settings': SettingsIcon,
+  '/account/membership': MembershipIcon,
+  '/account/billing': BillingIcon,
+  '/account/donation': DonationIcon,
+};
+
+// Moderator is project/community staff, not a customer — never gets the
+// normal-customer financial self-service links (see lib/permissions.ts's
+// isModeratorOnly and lib/auth-guards.ts's forbidModeratorFinancialAccess,
+// which enforce the same boundary server-side).
+const FINANCIAL_ACCOUNT_HREFS = new Set(['/account/membership', '/account/billing', '/account/donation']);
 
 export function Topbar({
   appName,
@@ -217,8 +230,10 @@ export function Topbar({
                       <Badge tone="brand">{planName}</Badge>
                     </p>
                   )}
-                  {ACCOUNT_NAV.map((item, i) => {
-                    const Icon = ACCOUNT_ICONS[i];
+                  {ACCOUNT_NAV.filter(
+                    (item) => !isModeratorOnly(session.user.role) || !FINANCIAL_ACCOUNT_HREFS.has(item.href),
+                  ).map((item) => {
+                    const Icon = ACCOUNT_ICONS[item.href];
                     return (
                       <Link
                         key={item.href}

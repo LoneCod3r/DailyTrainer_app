@@ -10,6 +10,7 @@ import { DonationForm } from '@/components/donation/DonationForm';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { formatCurrency } from '@/lib/format-currency';
+import { isModeratorOnly } from '@/lib/permissions';
 
 type Confirmation = {
   tone: 'success' | 'warning' | 'danger';
@@ -30,6 +31,9 @@ export default async function DonationPage({
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login?callbackUrl=/account/donation');
+  // Moderator is project staff, not a donor — never gets this self-service
+  // surface, even by typing the URL directly.
+  if (isModeratorOnly(session.user.role)) redirect('/account');
 
   const locale = getLocale();
   const t = getT(locale);

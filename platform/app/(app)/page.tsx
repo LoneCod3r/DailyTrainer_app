@@ -19,6 +19,7 @@ import { demoProgress } from '@/modules/kuko-way/demo-progress';
 import { localize } from '@/modules/kuko-way/types';
 import { getNextUpcomingMeeting, getMeetingStatus } from '@/modules/events/service';
 import { formatDateTime } from '@/lib/format-date';
+import { isModeratorOnly } from '@/lib/permissions';
 
 // Home v2 — moves away from "sidebar + topbar + cards + progress widget"
 // toward an editorial, movement/body-oriented composition (visual/UX
@@ -61,7 +62,10 @@ export default async function HomePage() {
   const t = getT(locale);
   const latest = await listPublishedContent({ type: 'ARTICLE', limit: 3 });
   const nextMeeting = getNextUpcomingMeeting();
-  const subscription = session?.user ? await getActiveSubscriptionForUser(session.user.id) : null;
+  // Moderator is project staff, not a customer — never gets the
+  // membership join/manage CTA (see lib/permissions.ts's isModeratorOnly).
+  const isStaffModerator = Boolean(session?.user && isModeratorOnly(session.user.role));
+  const subscription = session?.user && !isStaffModerator ? await getActiveSubscriptionForUser(session.user.id) : null;
 
   const firstName = session?.user?.name?.split(' ')[0];
   const greetingName = firstName && locale === 'bg' ? toBulgarianCyrillic(firstName) : firstName;
@@ -250,7 +254,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {session && <MembershipStrip subscription={subscription} locale={locale} t={t} />}
+        {session && !isStaffModerator && <MembershipStrip subscription={subscription} locale={locale} t={t} />}
 
         {/* Latest information — an editorial list, not a card grid. */}
         <section className="flex flex-col gap-6 border-t border-sand-200 pt-14">

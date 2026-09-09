@@ -13,14 +13,18 @@ import { PaymentMethodSummary } from '@/components/account/PaymentMethodSummary'
 import { InvoiceHistory } from '@/components/account/InvoiceHistory';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
+import { isModeratorOnly } from '@/lib/permissions';
 
 // Billing = "what am I paying for, how am I paying, and where can I manage
 // it?" — payment method and invoices are read live from Stripe (never
 // persisted/faked locally); management itself is delegated to Stripe's
-// Customer Portal rather than rebuilt here (Day 4 §9).
+// Customer Portal rather than rebuilt here (Day 4 §9). Moderator is project
+// staff, not a customer — never gets this self-service surface, even by
+// typing the URL directly (see lib/permissions.ts's isModeratorOnly).
 export default async function BillingPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login?callbackUrl=/account/billing');
+  if (isModeratorOnly(session.user.role)) redirect('/account');
 
   const locale = getLocale();
   const t = getT(locale);
