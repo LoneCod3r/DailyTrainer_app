@@ -44,13 +44,21 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${t('language.label')}: ${currentLabel}`}
-        className="flex h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-ink-700 transition-colors hover:bg-sand-100"
+        className="flex h-9 items-center gap-1 rounded-lg px-1.5 text-xs font-semibold text-ink-700 transition-colors hover:bg-sand-100 sm:gap-1.5 sm:px-2"
       >
         <span className="shrink-0 overflow-hidden rounded-[2px]">
           <current.Flag />
         </span>
-        {currentLabel}
-        <ChevronIcon className={clsx('h-3.5 w-3.5 shrink-0 transition-transform', open && '-rotate-180')} />
+        {/* Text label and chevron hidden below sm — the flag alone stays a
+            clear, tappable control at narrow mobile widths where the full
+            topbar (utility controls + login/join) needs the room; the
+            dropdown itself still shows each option's full label, and the
+            same affordance-by-icon-only pattern is already used by the
+            adjacent ThemeToggle/hamburger buttons. */}
+        <span className="hidden sm:inline">{currentLabel}</span>
+        <ChevronIcon
+          className={clsx('hidden h-3.5 w-3.5 shrink-0 transition-transform sm:block', open && '-rotate-180')}
+        />
       </button>
 
       {open && (

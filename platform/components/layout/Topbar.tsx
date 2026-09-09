@@ -91,7 +91,7 @@ export function Topbar({
 
   return (
     <header className="sticky top-0 z-20 border-b border-sand-200 bg-surface/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[100rem] items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-10">
+      <div className="mx-auto flex h-16 max-w-[100rem] items-center gap-1 px-2 sm:gap-3 sm:px-6 lg:px-10">
         <button
           type="button"
           onClick={onOpenMenu}
@@ -181,7 +181,7 @@ export function Topbar({
         </form>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
 
@@ -274,14 +274,17 @@ export function Topbar({
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link href="/login" className="hidden lg:block">
-                <Button variant="ghost" size="sm">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Link href="/login">
+                {/* Tighter horizontal padding below sm — !-prefixed so it
+                    reliably wins over the Button component's own built-in
+                    size padding regardless of Tailwind's class ordering. */}
+                <Button variant="ghost" size="sm" className="!px-2 sm:!px-3">
                   {t('topbar.login')}
                 </Button>
               </Link>
               <Link href="/register">
-                <Button variant="primary" size="sm">
+                <Button variant="primary" size="sm" className="!px-2 sm:!px-3">
                   {t('topbar.join')}
                 </Button>
               </Link>

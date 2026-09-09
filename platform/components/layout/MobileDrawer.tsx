@@ -6,14 +6,13 @@ import { signOut, useSession } from 'next-auth/react';
 import { isAdmin } from '@/lib/permissions';
 import { useT } from '@/lib/i18n/LocaleProvider';
 import { PRIMARY_NAV } from './nav';
-import { LanguageSwitcher } from './LanguageSwitcher';
-import { ThemeToggle } from './ThemeToggle';
 import { CloseIcon, ShieldIcon, LogOutIcon } from './icons';
 
 // Secondary navigation surface for mobile — the bottom nav only carries the
-// four primary destinations, so Practices/Community sub-items, the language
-// switcher and the Account sub-pages live here instead of being crammed
-// into the bottom bar.
+// four primary destinations, so Practices/Community sub-items and the
+// Account sub-pages live here instead of being crammed into the bottom bar.
+// Language/theme are NOT duplicated here — Topbar shows them directly at
+// every width now, so a second copy in the drawer would just be clutter.
 export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: session } = useSession();
   const t = useT();
@@ -43,11 +42,6 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
           >
             <CloseIcon />
           </button>
-        </div>
-
-        <div className="mb-4 flex items-center gap-2">
-          <LanguageSwitcher />
-          <ThemeToggle />
         </div>
 
         {PRIMARY_NAV.filter((item) => item.children).map((item) => (
