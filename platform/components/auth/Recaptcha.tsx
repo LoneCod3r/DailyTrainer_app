@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useT } from '@/lib/i18n/LocaleProvider';
+import { useLocale } from '@/lib/i18n/LocaleProvider';
 
 declare global {
   interface Window {
@@ -15,14 +15,20 @@ declare global {
 const SCRIPT_SRC = 'https://www.google.com/recaptcha/api.js';
 const ACTION = 'register';
 let scriptLoadPromise: Promise<void> | null = null;
+let scriptLoadLocale: string | null = null;
 
-function loadRecaptchaScript(siteKey: string): Promise<void> {
-  if (window.grecaptcha) return Promise.resolve();
-  if (scriptLoadPromise) return scriptLoadPromise;
+// Google renders its "protected by reCAPTCHA" badge in the language given
+// by the script's `hl` param, falling back to the browser's locale (not the
+// site's) when it's omitted — pass the app's current locale explicitly so
+// the badge always matches the page it's shown on.
+function loadRecaptchaScript(siteKey: string, hl: string): Promise<void> {
+  if (window.grecaptcha && scriptLoadLocale === hl) return Promise.resolve();
+  if (scriptLoadPromise && scriptLoadLocale === hl) return scriptLoadPromise;
 
+  scriptLoadLocale = hl;
   scriptLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `${SCRIPT_SRC}?render=${siteKey}`;
+    script.src = `${SCRIPT_SRC}?render=${siteKey}&hl=${hl}`;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
@@ -41,7 +47,7 @@ function loadRecaptchaScript(siteKey: string): Promise<void> {
 // action, so the parent form remounts this component (via a changing `key`)
 // after a failed submit — see app/(auth)/register/page.tsx.
 export function Recaptcha({ onVerify }: { onVerify: (token: string) => void }) {
-  const t = useT();
+  const { locale, t } = useLocale();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
@@ -62,7 +68,7 @@ export function Recaptcha({ onVerify }: { onVerify: (token: string) => void }) {
 
     let cancelled = false;
 
-    loadRecaptchaScript(siteKey)
+    loadRecaptchaScript(siteKey, locale)
       .then(() => {
         if (cancelled || !window.grecaptcha) return;
         window.grecaptcha.ready(() => {
