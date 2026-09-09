@@ -261,3 +261,22 @@ export function TrendUpIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function EyeIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M2 10s2.8-5.5 8-5.5S18 10 18 10s-2.8 5.5-8 5.5S2 10 2 10Z" />
+      <circle cx="10" cy="10" r="2.3" />
+    </svg>
+  );
+}
+
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M2.9 2.9l14.2 14.2" />
+      <path d="M8.3 4.8c.55-.2 1.13-.3 1.7-.3 5.2 0 8 5.5 8 5.5a13.9 13.9 0 0 1-3.1 3.9M5.9 5.9C4 7 2 10 2 10s2.8 5.5 8 5.5c1.05 0 2-.22 2.85-.6" />
+      <path d="M7.9 8c-.3.45-.4.95-.4 1.5A2.5 2.5 0 0 0 10 12c.55 0 1.05-.15 1.5-.4" />
+    </svg>
+  );
+}

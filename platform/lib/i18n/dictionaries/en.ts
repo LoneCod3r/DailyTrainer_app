@@ -84,6 +84,8 @@ const en: typeof bg = {
     emailLabel: 'Email',
     passwordLabel: 'Password',
     passwordHint: 'At least 8 characters',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     captchaRequired: 'Please complete the verification challenge.',
     recaptchaNotice: 'This form is protected by reCAPTCHA.',
     recaptchaError: "Couldn't load the verification check — please refresh and try again.",

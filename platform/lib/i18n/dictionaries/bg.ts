@@ -82,6 +82,8 @@ const bg = {
     emailLabel: 'Имейл',
     passwordLabel: 'Парола',
     passwordHint: 'Поне 8 символа',
+    showPassword: 'Покажи паролата',
+    hidePassword: 'Скрий паролата',
     captchaRequired: 'Моля, премини проверката, че не си робот.',
     recaptchaNotice: 'Тази форма е защитена от reCAPTCHA.',
     recaptchaError: 'Проверката не се зареди — моля, презареди страницата и опитай отново.',
