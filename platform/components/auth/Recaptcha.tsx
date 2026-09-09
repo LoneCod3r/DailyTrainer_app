@@ -9,6 +9,7 @@ declare global {
       ready: (cb: () => void) => void;
       execute: (siteKey: string, options: { action: string }) => Promise<string>;
     };
+    ___grecaptcha_cfg?: unknown;
   }
 }
 
@@ -17,13 +18,32 @@ const ACTION = 'register';
 let scriptLoadPromise: Promise<void> | null = null;
 let scriptLoadLocale: string | null = null;
 
+// Google's api.js bootstraps once and no-ops on a second `<script>` load as
+// long as `window.grecaptcha` (and its internal `___grecaptcha_cfg`
+// registry) are still set — so simply appending a new script tag with a
+// different `hl` does nothing once a badge is already up. To actually
+// change the badge's language at runtime we have to remove that instance
+// entirely (script tag, injected badge/iframe, and the globals Google uses
+// to detect "already loaded") before loading a fresh copy.
+function teardownRecaptcha() {
+  document.querySelectorAll(`script[src^="${SCRIPT_SRC}"]`).forEach((el) => el.remove());
+  document.querySelectorAll('.grecaptcha-badge').forEach((el) => el.remove());
+  delete window.grecaptcha;
+  delete window.___grecaptcha_cfg;
+}
+
 // Google renders its "protected by reCAPTCHA" badge in the language given
 // by the script's `hl` param, falling back to the browser's locale (not the
 // site's) when it's omitted — pass the app's current locale explicitly so
-// the badge always matches the page it's shown on.
+// the badge always matches the page it's shown on. Reloading for a *new*
+// locale requires tearing down the previous instance first (see above); a
+// remount at the *same* locale (e.g. retrying after a failed submit) keeps
+// reusing the already-loaded script for a fast, network-free reload.
 function loadRecaptchaScript(siteKey: string, hl: string): Promise<void> {
   if (window.grecaptcha && scriptLoadLocale === hl) return Promise.resolve();
   if (scriptLoadPromise && scriptLoadLocale === hl) return scriptLoadPromise;
+
+  if (scriptLoadLocale !== null) teardownRecaptcha();
 
   scriptLoadLocale = hl;
   scriptLoadPromise = new Promise((resolve, reject) => {
@@ -93,7 +113,7 @@ export function Recaptcha({ onVerify }: { onVerify: (token: string) => void }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [locale]);
 
   return (
     <p className="text-xs text-ink-500" aria-live="polite">
