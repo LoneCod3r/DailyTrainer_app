@@ -125,17 +125,17 @@ test.describe('Practices — Library', () => {
 });
 
 test.describe('Practices — Free Videos', () => {
-  test('lists the real YouTube embeds with working watch-on-YouTube links', async ({ page }) => {
+  test('lists videos with thumbnails and working watch-on-YouTube links, no inline player', async ({ page }) => {
     await page.goto('/practices/free-videos');
     await expect(page.getByRole('heading', { name: 'Free Videos' })).toBeVisible();
 
-    // Checking the rendered src/href (not waiting on YouTube's own player to
-    // finish loading) keeps this test scoped to our code, not YouTube's.
+    // No inline YouTube player — videos link out to YouTube instead.
+    await expect(page.locator('iframe[src*="youtube.com/embed/"]')).toHaveCount(0);
+
     const expectedIds = ['3FtN_xW-qDg', 'CoAToeX8z8c', 'VDyDyBqiHF4'];
-    await expect(page.locator('iframe[src*="youtube.com/embed/"]')).toHaveCount(expectedIds.length);
     for (const id of expectedIds) {
-      await expect(page.locator(`iframe[src*="${id}"]`)).toHaveCount(1);
-      await expect(page.locator(`a[href*="watch?v=${id}"]`)).toHaveCount(1);
+      await expect(page.locator(`img[src*="img.youtube.com/vi/${id}/"]`)).toHaveCount(1);
+      await expect(page.locator(`a[href*="watch?v=${id}"][target="_blank"]`)).toHaveCount(2);
     }
   });
 
