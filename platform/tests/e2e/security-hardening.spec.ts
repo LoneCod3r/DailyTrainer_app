@@ -121,7 +121,7 @@ test.describe('Login brute-force protection', () => {
     await waitForRecaptchaToken(page);
     await page.getByLabel('Name').fill('Lockout Test User');
     await page.getByLabel('Email').fill(email);
-    await page.getByLabel('Password').fill(password);
+    await page.getByLabel('Password', { exact: true }).fill(password);
     await solveMathChallenge(page);
     await ensureMinHumanFillTime(page);
     await page.getByRole('button', { name: 'Create account' }).click();
@@ -130,7 +130,7 @@ test.describe('Login brute-force protection', () => {
     for (let i = 0; i < 5; i++) {
       await page.goto('/login');
       await page.getByLabel('Email').fill(email);
-      await page.getByLabel('Password').fill('the-wrong-password');
+      await page.getByLabel('Password', { exact: true }).fill('the-wrong-password');
       await page.getByRole('button', { name: 'Log in' }).click();
       await expect(page.getByText('Invalid email or password.')).toBeVisible();
     }
@@ -139,7 +139,7 @@ test.describe('Login brute-force protection', () => {
     // not just this one bad password.
     await page.goto('/login');
     await page.getByLabel('Email').fill(email);
-    await page.getByLabel('Password').fill(password);
+    await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page.getByText(/temporarily locked/i)).toBeVisible();
   });

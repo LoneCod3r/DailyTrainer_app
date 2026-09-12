@@ -25,7 +25,7 @@ test.describe('Register', () => {
     await waitForRecaptchaToken(page);
     await page.getByLabel('Name').fill('Playwright Test User');
     await page.getByLabel('Email').fill(uniqueEmail);
-    await page.getByLabel('Password').fill(password);
+    await page.getByLabel('Password', { exact: true }).fill(password);
     await solveMathChallenge(page);
     await ensureMinHumanFillTime(page);
     await page.getByRole('button', { name: 'Create account' }).click();

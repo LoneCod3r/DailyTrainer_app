@@ -86,7 +86,9 @@ export async function loginViaUi(
   async function attempt(): Promise<boolean> {
     await page.goto(path);
     await page.getByLabel(labels.email).fill(creds.email);
-    await page.getByLabel(labels.password).fill(creds.password);
+    // exact: true — a substring match on "Password" also picks up the
+    // password-visibility toggle button (aria-label "Show/Hide password").
+    await page.getByLabel(labels.password, { exact: true }).fill(creds.password);
     await page.getByRole('button', { name: labels.submit }).click();
     try {
       // Generous: on a freshly-started `next dev`, this whole chain
@@ -135,7 +137,7 @@ export async function loginViaUiExpectingRejection(
   async function attempt(): Promise<boolean> {
     await page.goto('/login');
     await page.getByLabel(labels.email).fill(creds.email);
-    await page.getByLabel(labels.password).fill(creds.password);
+    await page.getByLabel(labels.password, { exact: true }).fill(creds.password);
     await page.getByRole('button', { name: labels.submit }).click();
     try {
       await expect(page.getByText(errorText)).toBeVisible({ timeout: 10_000 });

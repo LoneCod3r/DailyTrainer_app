@@ -18,7 +18,7 @@ async function registerFreshUser(page: import('@playwright/test').Page) {
   await waitForRecaptchaToken(page);
   await page.getByLabel('Name').fill('Verify Flow User');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(password);
   await solveMathChallenge(page);
   await ensureMinHumanFillTime(page);
   await page.getByRole('button', { name: 'Create account' }).click();
