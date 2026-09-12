@@ -25,6 +25,7 @@ export default function RegisterPage() {
   // tokens the server would (correctly) reject a second time.
   const [challengeAttempt, setChallengeAttempt] = useState(0);
   const formRenderedAt = useRef(Date.now());
+  const autoRedirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,7 +79,7 @@ export default function RegisterPage() {
       setRegistered(true);
 
       if (!result?.error) {
-        setTimeout(() => {
+        autoRedirectTimeout.current = setTimeout(() => {
           window.location.href = '/';
         }, 4000);
       }
@@ -96,7 +97,13 @@ export default function RegisterPage() {
             <div className="flex flex-col gap-4 text-center">
               <h1 className="text-xl font-semibold text-ink-900">{t('auth.checkEmailTitle')}</h1>
               <Alert tone="success">{t('auth.checkEmailDesc', { email })}</Alert>
-              <Link href="/" className="text-sm font-medium text-brand-700 hover:underline">
+              <Link
+                href="/"
+                className="text-sm font-medium text-brand-700 hover:underline"
+                onClick={() => {
+                  if (autoRedirectTimeout.current) clearTimeout(autoRedirectTimeout.current);
+                }}
+              >
                 {t('auth.continueToApp')}
               </Link>
             </div>

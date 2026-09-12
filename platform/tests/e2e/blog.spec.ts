@@ -16,7 +16,9 @@ test.describe('Blog', () => {
 
     await expect(page).toHaveURL(`/blog/${BLOG.featured}`);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Getting started with the community');
-    await expect(page.getByRole('main').getByText('Community', { exact: true })).toBeVisible();
+    // Scoped to the article itself, not `main` — related-content cards below
+    // it can carry the same "Community" category badge.
+    await expect(page.locator('article').getByText('Community', { exact: true })).toBeVisible();
     await expect(page.getByText(/Lorem ipsum/)).toBeVisible();
 
     await expect(page.getByRole('heading', { name: 'Related content' })).toBeVisible();

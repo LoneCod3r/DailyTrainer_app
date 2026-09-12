@@ -49,6 +49,9 @@ test.describe('Accessibility smoke checks', () => {
     await page.keyboard.type('DevPassword123!');
     await expect(page.getByLabel('Password', { exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
+    // The password-visibility toggle button sits right after the field.
+    await expect(page.getByRole('button', { name: 'Show password' })).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Log in' })).toBeFocused();

@@ -36,6 +36,10 @@ test.describe('Register', () => {
     await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(uniqueEmail)).toBeVisible();
     await page.getByRole('link', { name: 'Continue to the app' }).click();
+    // Wait for this click's own navigation to settle before checking
+    // sign-in state below — otherwise the fallback loginViaUi's page.goto
+    // can race an in-flight navigation from the click and get interrupted.
+    await page.waitForURL('/', { timeout: 10_000 }).catch(() => {});
 
     // The account now exists either way; if the post-register auto-signin
     // hit the same known dev-mode race described in fixtures/auth-helpers.ts,
