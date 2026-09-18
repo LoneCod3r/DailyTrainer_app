@@ -46,6 +46,35 @@ function stripeSubStatus(status: Stripe.Subscription.Status): SubscriptionStatus
   return map[status] ?? SubscriptionStatus.INCOMPLETE;
 }
 
+// Newer Stripe API versions (confirmed against a real webhook event: this
+// account is on `2026-08-26.dahlia`) no longer populate the billing period
+// on the top-level Subscription object — `current_period_start`/`_end` come
+// back `undefined` there. The period now lives per subscription item
+// instead (Stripe's "flexible billing periods" change), at
+// `items.data[0].current_period_start`/`_end`. The installed `stripe` SDK's
+// types haven't caught up with this shape (SubscriptionItem isn't typed
+// with these fields yet), so they're read defensively here rather than cast
+// through the stale type. Every checkout this app creates has exactly one
+// line item (see createSubscriptionCheckout), so the first item is
+// authoritative. Never fabricates a date: if neither shape has a valid
+// timestamp, the (nullable) column is left `null` instead of storing an
+// invalid or made-up date.
+type SubscriptionItemWithPeriod = Stripe.SubscriptionItem & {
+  current_period_start?: number;
+  current_period_end?: number;
+};
+
+function subscriptionPeriod(sub: Stripe.Subscription): { start: Date | null; end: Date | null } {
+  const item = sub.items?.data?.[0] as SubscriptionItemWithPeriod | undefined;
+  const startSeconds = sub.current_period_start ?? item?.current_period_start;
+  const endSeconds = sub.current_period_end ?? item?.current_period_end;
+
+  return {
+    start: Number.isFinite(startSeconds) ? new Date(startSeconds! * 1000) : null,
+    end: Number.isFinite(endSeconds) ? new Date(endSeconds! * 1000) : null,
+  };
+}
+
 // --- Customer ----------------------------------------------------------------
 
 // Ensures the given user has exactly one Stripe Customer, creating it lazily
@@ -467,6 +496,7 @@ async function processStripeEvent(event: Stripe.Event) {
       const membershipPlanId = sub.metadata?.membershipPlanId;
 
       if (userId && membershipPlanId) {
+        const { start, end } = subscriptionPeriod(sub);
         await prisma.subscription.upsert({
           where: { stripeSubscriptionId: sub.id },
           create: {
@@ -475,14 +505,14 @@ async function processStripeEvent(event: Stripe.Event) {
             stripeCustomerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
             stripeSubscriptionId: sub.id,
             status: stripeSubStatus(sub.status),
-            currentPeriodStart: new Date(sub.current_period_start * 1000),
-            currentPeriodEnd: new Date(sub.current_period_end * 1000),
+            currentPeriodStart: start,
+            currentPeriodEnd: end,
             cancelAtPeriodEnd: sub.cancel_at_period_end,
           },
           update: {
             status: stripeSubStatus(sub.status),
-            currentPeriodStart: new Date(sub.current_period_start * 1000),
-            currentPeriodEnd: new Date(sub.current_period_end * 1000),
+            currentPeriodStart: start,
+            currentPeriodEnd: end,
             cancelAtPeriodEnd: sub.cancel_at_period_end,
           },
         });
