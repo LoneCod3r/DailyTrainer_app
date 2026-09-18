@@ -422,39 +422,98 @@ export async function cancelSubscription(subscriptionId: string) {
 
 // --- Webhook processing --------------------------------------------------------
 
+// Prisma's error shape for a unique-constraint violation (P2002) — checked
+// structurally rather than via `instanceof Prisma.PrismaClientKnownRequestError`
+// so tests can simulate it with a plain object, and so this file doesn't need
+// an extra import just for the error class.
+function isUniqueConstraintError(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002';
+}
+
+// Writes the outcome of a processing attempt for `eventId`, without ever
+// downgrading a row that's already `processed` back to `error` — a failing
+// concurrent delivery must not stomp on a delivery that already succeeded.
+// Tries `updateMany` first (works whether the row already exists as
+// `error`, a stale `processing`-less first attempt, or not at all — the
+// `not: 'processed'` guard makes the no-op case explicit via `count === 0`).
+// If no row existed yet, falls back to `create`; if that races against a
+// concurrent winner (P2002), makes one more guarded `updateMany` attempt so
+// this delivery's outcome still lands unless the row is already `processed`.
+async function recordWebhookOutcome(
+  eventId: string,
+  eventType: string,
+  outcome: { status: 'processed' | 'error'; errorMessage?: string },
+) {
+  const data = {
+    status: outcome.status,
+    errorMessage: outcome.status === 'processed' ? null : outcome.errorMessage ?? null,
+    processedAt: new Date(),
+  };
+
+  const updated = await prisma.paymentEvent.updateMany({
+    where: { eventId, status: { not: 'processed' } },
+    data,
+  });
+  if (updated.count > 0) return;
+
+  try {
+    await prisma.paymentEvent.create({ data: { eventId, eventType, ...data } });
+  } catch (err) {
+    if (!isUniqueConstraintError(err)) throw err;
+    // A concurrent delivery created the row between our updateMany and this
+    // create — apply our outcome once more, still guarded against
+    // downgrading an already-`processed` row.
+    await prisma.paymentEvent.updateMany({ where: { eventId, status: { not: 'processed' } }, data });
+  }
+}
+
 // The backend/database is the source of truth (Prompt3 §6): a checkout
 // success redirect NEVER marks anything paid by itself — only a verified
-// webhook event does. `handleWebhook` is idempotent: each Stripe event id is
-// recorded exactly once in PaymentEvent, so retried/duplicate deliveries are
-// safe to replay.
+// webhook event does. `handleWebhook` is idempotent: a `processed`
+// PaymentEvent is never reprocessed, but a prior `error` (a failed first
+// attempt) IS retried on the next delivery of the same event id — Stripe
+// redelivers failed events using the same id, so treating any existing row
+// as "already handled" regardless of status would permanently swallow a
+// failed event's retries. `processStripeEvent`'s handlers are all
+// idempotent single-write operations (upsert/updateMany keyed on Stripe
+// ids), so it's safe for two concurrent deliveries of a brand-new event to
+// both run it — recordWebhookOutcome's guarded writes ensure the bookkeeping
+// itself never corrupts or downgrades either outcome.
 export async function handleWebhook(event: Stripe.Event) {
   const already = await prisma.paymentEvent.findUnique({ where: { eventId: event.id } });
-  if (already) {
+
+  if (already?.status === 'processed') {
     log.info('duplicate webhook event ignored', { eventId: event.id, type: event.type });
     return { duplicate: true };
+  }
+  if (already?.status === 'error') {
+    log.info('retrying previously errored webhook event', { eventId: event.id, type: event.type });
   }
 
   try {
     await processStripeEvent(event);
-    await prisma.paymentEvent.create({
-      data: {
-        eventId: event.id,
-        eventType: event.type,
-        status: 'processed',
-        processedAt: new Date(),
-      },
-    });
+    await recordWebhookOutcome(event.id, event.type, { status: 'processed' });
     return { duplicate: false };
   } catch (err) {
-    await prisma.paymentEvent.create({
-      data: {
-        eventId: event.id,
-        eventType: event.type,
-        status: 'error',
-        errorMessage: (err as Error)?.message?.slice(0, 500),
-        processedAt: new Date(),
-      },
+    await recordWebhookOutcome(event.id, event.type, {
+      status: 'error',
+      errorMessage: (err as Error)?.message?.slice(0, 500),
     });
+
+    // A concurrent delivery of the same event may have already succeeded
+    // while this attempt was failing — recordWebhookOutcome's guard means
+    // that success was preserved, not overwritten. Don't report a false
+    // failure (and don't have the route return 500, which would make Stripe
+    // keep retrying an event that's genuinely already handled) in that case.
+    const current = await prisma.paymentEvent.findUnique({ where: { eventId: event.id } });
+    if (current?.status === 'processed') {
+      log.info('webhook processing failed locally but the event already succeeded via a concurrent delivery', {
+        eventId: event.id,
+        type: event.type,
+      });
+      return { duplicate: true };
+    }
+
     throw err;
   }
 }
