@@ -305,6 +305,9 @@ const en: typeof bg = {
       perMonth: '/ month',
       perYear: '/ year',
       join: 'Join',
+      activated: 'Activated',
+      premiumDescription:
+        'A structured training program designed to help you move better and feel better in everyday life. Build consistency through guided practices, progressive training, and a clear path forward.',
       notYetAvailable: 'Not yet available',
       checkoutError: 'Failed to start checkout',
       benefitsTitle: "What's included",
