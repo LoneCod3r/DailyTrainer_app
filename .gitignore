@@ -1,1 +1,9 @@
 *.docx
+
+# Local media / reference material - not tracked in repo
+*.png
+*.webm
+*.mp4
+Website-цена.txt
+platform/Videos/
+platform/KUKO_WAY_Legal_Documents/
