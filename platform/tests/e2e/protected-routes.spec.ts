@@ -24,7 +24,11 @@ test.describe('Protected routes — unauthenticated', () => {
   test('/account/membership renders publicly (only joining a plan requires login)', async ({ page }) => {
     await page.goto('/account/membership');
     await expect(page).toHaveURL('/account/membership');
-    await expect(page.getByRole('heading', { name: 'Membership', exact: true })).toBeVisible();
+    // The page's own generic "Membership" header was intentionally removed
+    // (see app/(app)/account/membership/page.tsx) — "Available plans" is
+    // the stable heading that proves the real, public page rendered rather
+    // than a redirect or protected/blocked state.
+    await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
   });
 });
 

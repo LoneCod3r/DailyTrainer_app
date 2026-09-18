@@ -13,7 +13,11 @@ test.describe('Membership, Billing and Donation (authenticated)', () => {
 
   test('membership page loads and shows the no-plans-yet empty state', async ({ page }) => {
     await page.goto('/account/membership');
-    await expect(page.getByRole('heading', { name: 'Membership', exact: true })).toBeVisible();
+    // The page's own generic "Membership" header was intentionally removed
+    // (see app/(app)/account/membership/page.tsx) — the "Available plans"
+    // panel heading is the stable element confirming the page itself
+    // rendered before checking the actual no-plans empty state below.
+    await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
     await expect(page.getByText('No membership plans available yet')).toBeVisible();
     await expect(page.getByText("You don't have an active membership yet")).toBeVisible();
   });
@@ -53,8 +57,13 @@ test.describe('Membership, Billing and Donation (unauthenticated)', () => {
       await page.goto(path);
       if (path === '/account/membership') {
         // Membership plans are publicly browsable; only Billing/Donation are
-        // fully gated. Confirm it renders (not protected data) instead.
-        await expect(page.getByRole('heading', { name: 'Membership', exact: true })).toBeVisible();
+        // fully gated. Confirm it renders (not protected data) instead — no
+        // redirect to /login, and the page's own content is visible. The
+        // generic "Membership" header was intentionally removed (see
+        // app/(app)/account/membership/page.tsx), so "Available plans" is
+        // the stable heading that proves the real page rendered.
+        await expect(page).toHaveURL('/account/membership');
+        await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
         return;
       }
       await expect(page).toHaveURL(new RegExp(`/login\\?callbackUrl=${path}`));
