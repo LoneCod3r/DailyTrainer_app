@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures/base';
 import { waitForRecaptchaToken, solveMathChallenge, ensureMinHumanFillTime } from './fixtures/auth-helpers';
+import { AUTH_STORAGE_STATE } from './fixtures/data';
 
 // Fetches a real challenge and solves it, for tests that need a *valid* one
 // so they isolate the specific thing they're actually testing (e.g. a
@@ -161,5 +162,29 @@ test.describe('Verification resend rate limiting', () => {
     // address exists, so a non-200 here can only be the rate limit.
     expect(results.slice(0, 3).every((status) => status === 200)).toBe(true);
     expect(results[3]).toBe(429);
+  });
+});
+
+test.describe('Membership subscribe rate limiting', () => {
+  test.use({ storageState: AUTH_STORAGE_STATE });
+
+  test('the 11th subscribe request within a minute is rate limited', async ({ page }) => {
+    // No MembershipPlan needs to exist for this: checkRateLimit runs before
+    // the request body is even parsed (see app/api/membership/subscribe/route.ts),
+    // so every one of these 11 authenticated requests is counted toward the
+    // limit regardless of what membershipPlanId resolves to. A well-formed
+    // but nonexistent cuid keeps the pre-limit requests failing for a
+    // different, unambiguous reason (404 plan-not-found) than the limit
+    // itself, so the 429 on request 11 can only be the rate limit.
+    const results: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      const res = await page.request.post('/api/membership/subscribe', {
+        data: { membershipPlanId: 'cnonexistentplaceholder123' },
+      });
+      results.push(res.status());
+    }
+
+    expect(results.slice(0, 10).every((status) => status !== 429)).toBe(true);
+    expect(results[10]).toBe(429);
   });
 });
