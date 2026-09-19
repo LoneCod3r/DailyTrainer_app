@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { PaymentStatus, SubscriptionStatus } from '@prisma/client';
+import { PaymentStatus, SubscriptionStatus, type Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getStripeClient } from '@/lib/stripe';
 import { createLogger } from '@/lib/logger';
@@ -384,6 +384,66 @@ export async function getDonationForUserBySession(userId: string, stripeCheckout
   return prisma.donation.findFirst({ where: { userId, stripeCheckoutSessionId } });
 }
 
+// The one place a donation is marked SUCCEEDED — shared by the verified
+// webhook (checkout.session.completed) and the confirmation page's fallback
+// below, so both apply identical write semantics. `updateMany` keyed on the
+// Stripe session id is naturally idempotent: repeating it (or running it
+// concurrently from both paths) just re-writes the same values.
+async function markDonationSucceeded(where: Prisma.DonationWhereInput, stripePaymentIntentId: string | undefined) {
+  return prisma.donation.updateMany({
+    where,
+    data: { status: PaymentStatus.SUCCEEDED, stripePaymentIntentId },
+  });
+}
+
+const UNSETTLED_DONATION_STATUSES = [PaymentStatus.PENDING, PaymentStatus.PROCESSING, PaymentStatus.REQUIRES_ACTION];
+
+// Fallback for when the webhook is delayed or never arrives: called by the
+// donation confirmation page, it returns the signed-in user's donation for
+// this Checkout Session and — only if that row is still unsettled — asks
+// Stripe directly whether the session was actually paid. The redirect/URL is
+// never proof of payment: only a server-side Stripe response that matches the
+// stored row (same session, this user, same amount/currency) can flip it.
+// The webhook stays the primary path; this never throws, so a Stripe outage
+// or missing configuration just leaves the row as-is ("confirming" state).
+export async function reconcileDonationFromCheckoutSession(userId: string, stripeCheckoutSessionId: string) {
+  // Scoped to the user first: another member's session id finds nothing here,
+  // so nothing below can inspect or modify their donation.
+  const donation = await getDonationForUserBySession(userId, stripeCheckoutSessionId);
+  if (!donation || !UNSETTLED_DONATION_STATUSES.includes(donation.status as never)) return donation;
+
+  try {
+    const session = await getStripeClient().checkout.sessions.retrieve(stripeCheckoutSessionId);
+
+    const matchesDonation =
+      session.id === stripeCheckoutSessionId &&
+      session.mode === 'payment' &&
+      session.metadata?.kind === 'donation' &&
+      session.metadata?.userId === userId &&
+      session.amount_total === donation.amount &&
+      session.currency?.toLowerCase() === donation.currency.toLowerCase();
+
+    if (session.payment_status !== 'paid') return donation;
+    if (!matchesDonation) {
+      log.warn('donation reconcile skipped: paid Stripe session does not match the stored donation', {
+        donationId: donation.id,
+      });
+      return donation;
+    }
+
+    await markDonationSucceeded(
+      { stripeCheckoutSessionId, userId, status: { in: UNSETTLED_DONATION_STATUSES } },
+      typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+    );
+    log.info('donation reconciled from Stripe Checkout Session', { donationId: donation.id });
+
+    return (await getDonationForUserBySession(userId, stripeCheckoutSessionId)) ?? donation;
+  } catch (err) {
+    log.warn('donation reconcile failed; keeping local status', { donationId: donation.id, message: (err as Error).message });
+    return donation;
+  }
+}
+
 export async function createCustomerPortalSession(userId: string) {
   const customerId = await getOrCreateStripeCustomer(userId);
   const stripe = getStripeClient();
@@ -525,14 +585,10 @@ async function processStripeEvent(event: Stripe.Event) {
       const kind = session.metadata?.kind;
 
       if (kind === 'donation') {
-        await prisma.donation.updateMany({
-          where: { stripeCheckoutSessionId: session.id },
-          data: {
-            status: PaymentStatus.SUCCEEDED,
-            stripePaymentIntentId:
-              typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
-          },
-        });
+        await markDonationSucceeded(
+          { stripeCheckoutSessionId: session.id },
+          typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+        );
       } else if (kind === 'course') {
         await prisma.purchase.updateMany({
           where: { stripeCheckoutSessionId: session.id },

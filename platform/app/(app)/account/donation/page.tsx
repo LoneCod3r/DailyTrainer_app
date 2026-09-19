@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getDonationForUserBySession } from '@/modules/payments/billing.service';
+import { reconcileDonationFromCheckoutSession } from '@/modules/payments/billing.service';
 import { isStripeConfigured } from '@/lib/stripe';
 import { Container, Card, CardContent, Button, Alert } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -47,8 +47,10 @@ export default async function DonationPage({
       description: t('account.donation.cancelledDesc'),
     };
   } else if (searchParams.donation === 'success') {
+    // Looks the donation up scoped to this user and, if the webhook hasn't
+    // settled it yet, double-checks with Stripe server-side (never throws).
     const donation = searchParams.session_id
-      ? await getDonationForUserBySession(session.user.id, searchParams.session_id)
+      ? await reconcileDonationFromCheckoutSession(session.user.id, searchParams.session_id)
       : null;
 
     if (!donation) {

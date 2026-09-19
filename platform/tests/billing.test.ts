@@ -17,7 +17,7 @@ vi.mock('@/lib/prisma', () => ({
 // Mock the Stripe client so no real network call is ever made in tests.
 const stripeMock = {
   customers: { create: vi.fn(), del: vi.fn(), retrieve: vi.fn() },
-  checkout: { sessions: { create: vi.fn() } },
+  checkout: { sessions: { create: vi.fn(), retrieve: vi.fn() } },
   subscriptions: { update: vi.fn() },
   billingPortal: { sessions: { create: vi.fn() } },
   paymentMethods: { list: vi.fn() },
@@ -35,6 +35,7 @@ const {
   getPaymentMethodForUser,
   listInvoicesForUser,
   getDonationForUserBySession,
+  reconcileDonationFromCheckoutSession,
 } = await import('@/modules/payments/billing.service');
 
 beforeEach(() => {
@@ -324,5 +325,138 @@ describe('getDonationForUserBySession', () => {
     expect(prisma.donation.findFirst).toHaveBeenCalledWith({
       where: { userId: 'u1', stripeCheckoutSessionId: 'cs_123' },
     });
+  });
+});
+
+describe('reconcileDonationFromCheckoutSession (webhook-delay fallback)', () => {
+  const pendingDonation = {
+    id: 'd1',
+    userId: 'u1',
+    amount: 2500,
+    currency: 'eur',
+    status: 'PENDING',
+    stripeCheckoutSessionId: 'cs_1',
+  };
+  const paidSession = {
+    id: 'cs_1',
+    mode: 'payment',
+    payment_status: 'paid',
+    amount_total: 2500,
+    currency: 'eur',
+    payment_intent: 'pi_1',
+    metadata: { kind: 'donation', userId: 'u1' },
+  };
+
+  it('marks a PENDING donation SUCCEEDED when Stripe confirms the session is paid', async () => {
+    (prisma.donation.findFirst as any)
+      .mockResolvedValueOnce(pendingDonation)
+      .mockResolvedValueOnce({ ...pendingDonation, status: 'SUCCEEDED' });
+    stripeMock.checkout.sessions.retrieve.mockResolvedValue(paidSession);
+    (prisma.donation.updateMany as any).mockResolvedValue({ count: 1 });
+
+    const result = await reconcileDonationFromCheckoutSession('u1', 'cs_1');
+
+    expect(result?.status).toBe('SUCCEEDED');
+    expect(prisma.donation.updateMany).toHaveBeenCalledTimes(1);
+    expect(prisma.donation.updateMany).toHaveBeenCalledWith({
+      // Same write as the webhook, additionally scoped to the owner and to
+      // unsettled rows so it can never touch another user's or a settled row.
+      where: {
+        stripeCheckoutSessionId: 'cs_1',
+        userId: 'u1',
+        status: { in: ['PENDING', 'PROCESSING', 'REQUIRES_ACTION'] },
+      },
+      data: { status: 'SUCCEEDED', stripePaymentIntentId: 'pi_1' },
+    });
+  });
+
+  it.each(['unpaid', 'no_payment_required'])(
+    'does not mark the donation successful when Stripe says %s',
+    async (payment_status) => {
+      (prisma.donation.findFirst as any).mockResolvedValue(pendingDonation);
+      stripeMock.checkout.sessions.retrieve.mockResolvedValue({ ...paidSession, payment_status });
+
+      const result = await reconcileDonationFromCheckoutSession('u1', 'cs_1');
+
+      expect(result?.status).toBe('PENDING');
+      expect(prisma.donation.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps the local status and does not throw when the Stripe request fails', async () => {
+    (prisma.donation.findFirst as any).mockResolvedValue(pendingDonation);
+    stripeMock.checkout.sessions.retrieve.mockRejectedValue(new Error('stripe unavailable'));
+
+    await expect(reconcileDonationFromCheckoutSession('u1', 'cs_1')).resolves.toMatchObject({ status: 'PENDING' });
+    expect(prisma.donation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('touches nothing when the session belongs to another user (ownership-scoped lookup finds no row)', async () => {
+    (prisma.donation.findFirst as any).mockResolvedValue(null);
+
+    const result = await reconcileDonationFromCheckoutSession('attacker', 'cs_1');
+
+    expect(result).toBeNull();
+    expect(prisma.donation.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'attacker', stripeCheckoutSessionId: 'cs_1' },
+    });
+    expect(stripeMock.checkout.sessions.retrieve).not.toHaveBeenCalled();
+    expect(prisma.donation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a different owner in the Stripe metadata', { metadata: { kind: 'donation', userId: 'someone-else' } }],
+    ['a different amount', { amount_total: 100 }],
+    ['a different currency', { currency: 'usd' }],
+    ['a non-donation session', { metadata: { kind: 'course', userId: 'u1' } }],
+    ['a subscription-mode session', { mode: 'subscription' }],
+  ])('refuses to reconcile a paid session with %s', async (_label, override) => {
+    (prisma.donation.findFirst as any).mockResolvedValue(pendingDonation);
+    stripeMock.checkout.sessions.retrieve.mockResolvedValue({ ...paidSession, ...override });
+
+    const result = await reconcileDonationFromCheckoutSession('u1', 'cs_1');
+
+    expect(result?.status).toBe('PENDING');
+    expect(prisma.donation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['SUCCEEDED', 'FAILED', 'CANCELED'])('never calls Stripe for an already %s donation', async (status) => {
+    (prisma.donation.findFirst as any).mockResolvedValue({ ...pendingDonation, status });
+
+    const result = await reconcileDonationFromCheckoutSession('u1', 'cs_1');
+
+    expect(result?.status).toBe(status);
+    expect(stripeMock.checkout.sessions.retrieve).not.toHaveBeenCalled();
+    expect(prisma.donation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('is idempotent alongside the webhook: repeated fallbacks and a later webhook all write the same SUCCEEDED state', async () => {
+    (prisma.donation.findFirst as any)
+      // First page load: still PENDING, then re-read after the write.
+      .mockResolvedValueOnce(pendingDonation)
+      .mockResolvedValueOnce({ ...pendingDonation, status: 'SUCCEEDED' })
+      // Second page load: already settled, so nothing more happens.
+      .mockResolvedValueOnce({ ...pendingDonation, status: 'SUCCEEDED' });
+    stripeMock.checkout.sessions.retrieve.mockResolvedValue(paidSession);
+    (prisma.donation.updateMany as any).mockResolvedValue({ count: 1 });
+
+    await reconcileDonationFromCheckoutSession('u1', 'cs_1');
+    const second = await reconcileDonationFromCheckoutSession('u1', 'cs_1');
+    expect(second?.status).toBe('SUCCEEDED');
+    expect(stripeMock.checkout.sessions.retrieve).toHaveBeenCalledTimes(1);
+
+    // The webhook arriving afterwards applies the very same write, harmlessly.
+    (prisma.paymentEvent.findUnique as any).mockResolvedValue(null);
+    (prisma.paymentEvent.updateMany as any).mockResolvedValue({ count: 0 });
+    (prisma.paymentEvent.create as any).mockResolvedValue({});
+    await handleWebhook({
+      id: 'evt_late',
+      type: 'checkout.session.completed',
+      data: { object: { id: 'cs_1', metadata: { kind: 'donation' }, payment_intent: 'pi_1' } },
+    } as any);
+
+    const writes = (prisma.donation.updateMany as any).mock.calls.map((c: any[]) => c[0].data);
+    expect(writes).toHaveLength(2);
+    expect(writes[0]).toEqual(writes[1]);
   });
 });
