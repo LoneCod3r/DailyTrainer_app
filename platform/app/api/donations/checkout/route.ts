@@ -5,6 +5,7 @@ import { withErrorHandling, jsonOk, Errors } from '@/lib/api-response';
 import { forbidModeratorFinancialAccess } from '@/lib/auth-guards';
 import { donationCheckoutRequestSchema } from '@/lib/validations/billing';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getLocale } from '@/lib/i18n/get-locale';
 
 // Starts a Stripe Checkout Session (mode: "payment", not "subscription") for
 // a one-off donation. The amount is validated server-side regardless of what
@@ -29,6 +30,8 @@ export async function POST(req: Request) {
       userId: session.user.id,
       amount,
       currency,
+      // Read from the app's own language cookie, never from the request body.
+      locale: getLocale(),
     });
 
     return jsonOk({ url: checkoutSession.url });

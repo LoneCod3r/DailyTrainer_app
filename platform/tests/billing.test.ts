@@ -92,6 +92,25 @@ describe('createDonationCheckout', () => {
       }),
     );
   });
+
+  it.each(['en', 'bg'] as const)('passes the app locale (%s) to Stripe Checkout', async (locale) => {
+    stripeMock.checkout.sessions.create.mockResolvedValue({ id: 'cs_loc' });
+    (prisma.donation.create as any).mockResolvedValue({});
+
+    await createDonationCheckout({ amount: 2500, currency: 'eur', locale });
+
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ locale }));
+  });
+
+  it('leaves the Checkout locale unset (Stripe auto-detect) when none is given', async () => {
+    stripeMock.checkout.sessions.create.mockResolvedValue({ id: 'cs_noloc' });
+    (prisma.donation.create as any).mockResolvedValue({});
+
+    await createDonationCheckout({ amount: 2500, currency: 'eur' });
+
+    const params = stripeMock.checkout.sessions.create.mock.calls[0][0];
+    expect(params.locale).toBeUndefined();
+  });
 });
 
 describe('handleWebhook idempotency', () => {

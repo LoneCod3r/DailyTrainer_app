@@ -270,7 +270,15 @@ export async function createOneTimeCheckout(params: {
   return session;
 }
 
-export async function createDonationCheckout(params: { userId?: string; amount: number; currency?: string }) {
+export async function createDonationCheckout(params: {
+  userId?: string;
+  amount: number;
+  currency?: string;
+  // The app's active UI language. Without it Stripe's hosted Checkout falls
+  // back to the browser's Accept-Language, so an English session could be
+  // shown in Bulgarian. Omitted => Stripe's own auto-detection, as before.
+  locale?: 'en' | 'bg';
+}) {
   const stripe = getStripeClient();
   const currency = params.currency ?? 'eur';
 
@@ -291,6 +299,7 @@ export async function createDonationCheckout(params: { userId?: string; amount: 
         quantity: 1,
       },
     ],
+    locale: params.locale,
     success_url: `${process.env.APP_URL}/account/donation?donation=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.APP_URL}/account/donation?donation=cancelled`,
     metadata: { userId: params.userId ?? '', kind: 'donation' },
