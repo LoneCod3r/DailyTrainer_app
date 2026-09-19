@@ -152,3 +152,32 @@ export async function loginViaUiExpectingRejection(
     true,
   );
 }
+
+// Registers a brand-new account through the real UI and leaves the page
+// signed in as it. For scenarios that need an account guaranteed to have no
+// Stripe customer, subscription, invoices or donations — the shared demo
+// member (member@example.dev) can't be used for that, since manual Stripe
+// test-mode activity on it is expected and must never be reset by tests.
+// A new user only gets a Stripe customer once it actually starts a checkout
+// (billing.service getOrCreateStripeCustomer), so this account stays clean.
+// Same flow as email-verification.spec.ts's registerFreshUser (kept there
+// untouched); the account is left unverified, which none of the pages this
+// is used for require.
+export async function registerCleanUser(page: Page, label: string): Promise<{ email: string; password: string }> {
+  const email = `e2e.${label}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.dev`;
+  const password = 'PlaywrightPass123!';
+  await page.goto('/register');
+  await waitForRecaptchaToken(page);
+  await page.getByLabel('Name').fill('Clean E2E User');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await solveMathChallenge(page);
+  await ensureMinHumanFillTime(page);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('link', { name: 'Continue to the app' }).click();
+  await expect
+    .poll(() => page.evaluate(() => fetch('/api/auth/session').then((r) => r.json())).then((s) => s?.user?.email))
+    .toBe(email);
+  return { email, password };
+}

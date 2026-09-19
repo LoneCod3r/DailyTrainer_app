@@ -1,12 +1,17 @@
 import { test, expect } from './fixtures/base';
 import { AUTH_STORAGE_STATE } from './fixtures/data';
+import { registerCleanUser } from './fixtures/auth-helpers';
 
-// Stripe is intentionally NOT configured in this local environment
-// (.env has the placeholder STRIPE_SECRET_KEY=sk_test_replace_me), so these
-// tests exercise the real "unavailable/unconfigured" product behavior —
-// never a fabricated successful payment. See the final report for what this
-// means could not be executed (amount-selection UI only renders once Stripe
-// is configured).
+// Stripe may or may not be configured in the environment these run against
+// (a real test-mode STRIPE_SECRET_KEY vs. the placeholder sk_test_replace_me),
+// and the amount-selection UI only renders once it is. The Donation tests
+// therefore skip themselves in whichever state doesn't apply rather than
+// fail, and none of them ever click Donate or create a Checkout Session.
+//
+// The clean-account Billing/Membership tests below deliberately do NOT depend
+// on the shared demo member's (member@example.dev) Stripe state: that account
+// may have manual test-mode activity (subscription, customer, saved card,
+// invoices), so they register a fresh user with none instead.
 
 test.describe('Support navigation (authenticated)', () => {
   test.use({ storageState: AUTH_STORAGE_STATE });
@@ -35,29 +40,10 @@ async function pickAmount(page: import('@playwright/test').Page, name: string) {
 test.describe('Membership, Billing and Donation (authenticated)', () => {
   test.use({ storageState: AUTH_STORAGE_STATE });
 
-  test('membership page loads and shows the no-plans-yet empty state', async ({ page }) => {
-    await page.goto('/account/membership');
-    // The page's own generic "Membership" header was intentionally removed
-    // (see app/(app)/account/membership/page.tsx) — the "Available plans"
-    // panel heading is the stable element confirming the page itself
-    // rendered before checking the actual no-plans empty state below.
-    await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
-    await expect(page.getByText('No membership plans available yet')).toBeVisible();
-    await expect(page.getByText("You don't have an active membership yet")).toBeVisible();
-  });
-
   test('a cancelled checkout query param shows the cancelled notice', async ({ page }) => {
     await page.goto('/account/membership?checkout=cancelled');
     await expect(page.getByText('Checkout cancelled')).toBeVisible();
     await expect(page.getByText('your card was not charged')).toBeVisible();
-  });
-
-  test('billing page loads with the no-billing-history empty state', async ({ page }) => {
-    await page.goto('/account/billing');
-    await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible();
-    await expect(page.getByText('No billing history yet')).toBeVisible();
-    // Does not crash or fake a subscription just because Stripe is unconfigured.
-    await expect(page.getByText('Current subscription')).toHaveCount(0);
   });
 
   test('donation page loads and shows the unavailable state instead of a fake payment form', async ({ page }) => {
@@ -155,6 +141,43 @@ test.describe('Donation amount selection (authenticated, Stripe configured)', ()
     await page.goto('/account/donation?donation=cancelled');
     await expect(page.getByText('Donation cancelled')).toBeVisible();
     await expect(page.getByRole('radio')).toHaveCount(5);
+  });
+});
+
+// A brand-new account per test (see registerCleanUser) instead of the shared
+// demo member, so these never depend on manual Stripe test-mode activity
+// (subscription, customer, saved card, invoices) done on member@example.dev.
+test.describe('Membership and Billing (new account, no Stripe activity)', () => {
+  test('a new user without a membership sees the available plan with a Join action', async ({ page }) => {
+    await registerCleanUser(page, 'membership');
+    await page.goto('/account/membership');
+    await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
+
+    // Plans are published by an admin (which also creates them in Stripe), so
+    // a database with none published has nothing to join — that is a
+    // different state from "this user has no membership", covered below.
+    const noPlans = await page.getByText('No membership plans available yet').isVisible();
+    test.skip(noPlans, 'No membership plan is published in this environment');
+
+    await expect(page.getByRole('button', { name: 'Join', exact: true })).toBeVisible();
+
+    // Not an active member: the status card says so and shows no subscription.
+    await expect(page.getByRole('heading', { name: 'Your membership', exact: true })).toBeVisible();
+    await expect(page.getByText("You don't have an active membership yet")).toBeVisible();
+    await expect(page.getByText('Renews on')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Manage billing' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Activated' })).toHaveCount(0);
+  });
+
+  test('a new user sees the empty Billing state with no subscription, card or invoices', async ({ page }) => {
+    await registerCleanUser(page, 'billing');
+    await page.goto('/account/billing');
+    await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible();
+    await expect(page.getByText('No billing history yet')).toBeVisible();
+    // Does not crash or fake a subscription/payment method for an account
+    // that never went through checkout.
+    await expect(page.getByText('Current subscription')).toHaveCount(0);
+    await expect(page.getByText('Invoice history')).toHaveCount(0);
   });
 });
 
