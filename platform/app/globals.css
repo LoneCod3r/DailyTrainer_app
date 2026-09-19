@@ -23,6 +23,11 @@
        those hexes don't adapt for dark mode on their own. */
     --brand-tint: 244 247 244;
     --link: 55 81 60;
+    /* Payment-method card face — a deliberately dark, brand-tinted surface
+       (like a physical card) that stays legible sitting on a light page.
+       See components/account/PaymentMethodCard.tsx. */
+    --card-face-from: 46 63 49;
+    --card-face-to: 22 28 23;
   }
 
   :root.dark {
@@ -40,6 +45,10 @@
     --sand-300: 75 82 75;
     --brand-tint: 42 54 44;
     --link: 163 193 165;
+    /* Slightly deeper than the light-mode face so the card still reads as
+       raised depth against the app's own dark page background. */
+    --card-face-from: 39 54 42;
+    --card-face-to: 14 18 15;
   }
 
   html {

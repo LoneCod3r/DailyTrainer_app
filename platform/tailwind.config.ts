@@ -47,6 +47,11 @@ const config: Config = {
         // soft badges and links so they stay legible in dark mode.
         'brand-tint': 'rgb(var(--brand-tint) / <alpha-value>)',
         link: 'rgb(var(--link) / <alpha-value>)',
+        // Payment-method card face gradient — see globals.css.
+        'card-face': {
+          from: 'rgb(var(--card-face-from) / <alpha-value>)',
+          to: 'rgb(var(--card-face-to) / <alpha-value>)',
+        },
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
