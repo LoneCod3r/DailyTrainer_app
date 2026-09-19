@@ -9,7 +9,7 @@ const FULLY_PROTECTED_ROUTES: { path: string; heading: string }[] = [
   { path: '/account', heading: 'Account' },
   { path: '/account/settings', heading: 'Profile & Settings' },
   { path: '/account/billing', heading: 'Billing' },
-  { path: '/account/donation', heading: 'Donation' },
+  { path: '/account/donation', heading: 'Support DailyTrainer' },
 ];
 
 test.describe('Protected routes — unauthenticated', () => {

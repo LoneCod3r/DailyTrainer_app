@@ -8,6 +8,30 @@ import { AUTH_STORAGE_STATE } from './fixtures/data';
 // means could not be executed (amount-selection UI only renders once Stripe
 // is configured).
 
+test.describe('Support navigation (authenticated)', () => {
+  test.use({ storageState: AUTH_STORAGE_STATE });
+
+  test('Support is a direct header link to /account/donation, not inside the user menu', async ({ page }) => {
+    await page.goto('/account');
+    const support = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Support', exact: true });
+    await expect(support).toBeVisible();
+    await expect(support).toHaveAttribute('href', '/account/donation');
+
+    await page.getByRole('button', { name: /demo member/i }).click();
+    await expect(page.getByRole('link', { name: 'Billing', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Donation', exact: true })).toHaveCount(0);
+
+    await support.click();
+    await expect(page).toHaveURL('/account/donation');
+  });
+});
+
+// The amount tiles are visually-hidden native radios inside a <label>, so a
+// user's click lands on the tile — mirror that instead of clicking the 1px input.
+async function pickAmount(page: import('@playwright/test').Page, name: string) {
+  await page.locator('label', { has: page.getByRole('radio', { name, exact: true }) }).click();
+}
+
 test.describe('Membership, Billing and Donation (authenticated)', () => {
   test.use({ storageState: AUTH_STORAGE_STATE });
 
@@ -38,7 +62,11 @@ test.describe('Membership, Billing and Donation (authenticated)', () => {
 
   test('donation page loads and shows the unavailable state instead of a fake payment form', async ({ page }) => {
     await page.goto('/account/donation');
-    await expect(page.getByRole('heading', { name: 'Donation', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Support DailyTrainer', exact: true })).toBeVisible();
+    test.skip(
+      (await page.getByRole('radio').count()) > 0,
+      'Stripe is configured in this environment, so the amount form renders instead',
+    );
     await expect(
       page.getByText('Donations are not available right now — payment configuration is incomplete.'),
     ).toBeVisible();
@@ -47,7 +75,86 @@ test.describe('Membership, Billing and Donation (authenticated)', () => {
     // component gates the whole form, not just the submit action.
     await expect(page.getByRole('button', { name: '€5' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '€10' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /custom amount/i })).toHaveCount(0);
+    await expect(page.getByRole('radio')).toHaveCount(0);
+  });
+});
+
+// The amount-selection UI only renders once Stripe is configured, so these
+// run only in an environment with a real (test-mode) STRIPE_SECRET_KEY and
+// skip themselves — rather than fail — against the placeholder key. They
+// never click the Donate button, so no Checkout Session is created.
+test.describe('Donation amount selection (authenticated, Stripe configured)', () => {
+  test.use({ storageState: AUTH_STORAGE_STATE });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/account/donation');
+    await expect(page.getByRole('heading', { name: 'Support DailyTrainer', exact: true })).toBeVisible();
+    const unavailable = await page
+      .getByText('Donations are not available right now — payment configuration is incomplete.')
+      .isVisible();
+    test.skip(unavailable, 'Stripe is not configured in this environment');
+  });
+
+  test('starts with no amount selected and a disabled "Choose an amount" CTA', async ({ page }) => {
+    const group = page.getByRole('radiogroup', { name: 'Choose an amount' });
+    await expect(group.getByRole('radio')).toHaveCount(5);
+    await expect(group.getByRole('radio', { checked: true })).toHaveCount(0);
+    for (const label of ['€5', '€10', '€25', '€50', 'Custom']) {
+      await expect(group.getByRole('radio', { name: label, exact: true })).toBeVisible();
+    }
+    await expect(page.getByRole('button', { name: 'Choose an amount' })).toBeDisabled();
+    await expect(page.getByText('Secure payment via Stripe')).toBeVisible();
+  });
+
+  test('selecting a fixed amount updates the CTA and the checked state', async ({ page }) => {
+    await pickAmount(page, '€5');
+    await expect(page.getByRole('radio', { name: '€5', exact: true })).toBeChecked();
+    await expect(page.getByRole('button', { name: 'Donate €5' })).toBeEnabled();
+    // Selected state is border/tint only — no checkmark or other icon on any tile.
+    await expect(page.locator('label:has(input[name="donation-amount"]) svg')).toHaveCount(0);
+
+    await pickAmount(page, '€25');
+    await expect(page.getByRole('radio', { name: '€5', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('button', { name: 'Donate €25' })).toBeEnabled();
+  });
+
+  test('Custom reveals a focused amount input and only enables the CTA for a valid amount', async ({ page }) => {
+    await pickAmount(page, 'Custom');
+    const input = page.getByRole('textbox', { name: 'Custom amount (EUR)' });
+    await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Choose an amount' })).toBeDisabled();
+
+    await input.fill('0.5');
+    await expect(page.getByText('Minimum donation is €1.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Choose an amount' })).toBeDisabled();
+
+    await input.fill('100001');
+    await expect(page.getByText('Maximum donation is €100,000.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Choose an amount' })).toBeDisabled();
+
+    await input.fill('abc');
+    await expect(page.getByText('Please enter a valid amount.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Choose an amount' })).toBeDisabled();
+
+    await input.fill('15,50');
+    await expect(page.getByRole('button', { name: 'Donate €15.50' })).toBeEnabled();
+    await input.fill('15');
+    await expect(page.getByRole('button', { name: 'Donate €15' })).toBeEnabled();
+  });
+
+  test('arrow keys move the selection through the radio group', async ({ page }) => {
+    await pickAmount(page, '€5');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('radio', { name: '€10', exact: true })).toBeChecked();
+    await expect(page.getByRole('radio', { name: '€5', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('button', { name: 'Donate €10' })).toBeEnabled();
+  });
+
+  test('a cancelled checkout returns to the page with the form still available', async ({ page }) => {
+    await page.goto('/account/donation?donation=cancelled');
+    await expect(page.getByText('Donation cancelled')).toBeVisible();
+    await expect(page.getByRole('radio')).toHaveCount(5);
   });
 });
 

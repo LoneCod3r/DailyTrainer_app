@@ -45,8 +45,12 @@ export const ACCOUNT_NAV: NavChild[] = [
   { href: '/account/settings', labelKey: 'nav.accountSettings' },
   { href: '/account/membership', labelKey: 'nav.accountMembership' },
   { href: '/account/billing', labelKey: 'nav.accountBilling' },
-  { href: '/account/donation', labelKey: 'nav.accountDonation' },
 ];
+
+// Voluntary support lives in the main header (and mobile drawer) as its own
+// destination rather than inside the account menu. Signed-in, non-Moderator
+// only — the Donation page itself enforces the same rule.
+export const SUPPORT_NAV: NavChild = { href: '/account/donation', labelKey: 'nav.support' };
 
 export const BOTTOM_NAV: NavItem[] = [
   { href: '/', labelKey: 'nav.home', icon: 'home' },

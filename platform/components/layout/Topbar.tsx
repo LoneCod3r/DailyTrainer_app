@@ -11,7 +11,7 @@ import { useT } from '@/lib/i18n/LocaleProvider';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ACCOUNT_NAV, PRIMARY_NAV, isActive } from './nav';
+import { ACCOUNT_NAV, PRIMARY_NAV, SUPPORT_NAV, isActive } from './nav';
 import {
   MenuIcon,
   SearchIcon,
@@ -21,12 +21,11 @@ import {
   SettingsIcon,
   MembershipIcon,
   BillingIcon,
-  DonationIcon,
   ChevronIcon,
 } from './icons';
 
 // One icon per Account sub-page (Overview, Profile & Settings, Membership,
-// Billing, Donation) — same icons already used on the account hub page
+// Billing) — same icons already used on the account hub page
 // (app/(app)/account/page.tsx). Keyed by href (not positional) since the
 // rendered list below is filtered per-role.
 const ACCOUNT_ICONS: Record<string, typeof AccountIcon> = {
@@ -34,14 +33,13 @@ const ACCOUNT_ICONS: Record<string, typeof AccountIcon> = {
   '/account/settings': SettingsIcon,
   '/account/membership': MembershipIcon,
   '/account/billing': BillingIcon,
-  '/account/donation': DonationIcon,
 };
 
 // Moderator is project/community staff, not a customer — never gets the
 // normal-customer financial self-service links (see lib/permissions.ts's
 // isModeratorOnly and lib/auth-guards.ts's forbidModeratorFinancialAccess,
 // which enforce the same boundary server-side).
-const FINANCIAL_ACCOUNT_HREFS = new Set(['/account/membership', '/account/billing', '/account/donation']);
+const FINANCIAL_ACCOUNT_HREFS = new Set(['/account/membership', '/account/billing']);
 
 export function Topbar({
   appName,
@@ -167,6 +165,17 @@ export function Topbar({
               </div>
             );
           })}
+          {session?.user && !isModeratorOnly(session.user.role) && (
+            <Link
+              href={SUPPORT_NAV.href}
+              className={clsx(
+                'rounded-lg px-2 py-2 text-base font-medium transition-colors',
+                isActive(pathname, SUPPORT_NAV.href) ? 'text-link' : 'text-ink-700 hover:bg-sand-100',
+              )}
+            >
+              {t(SUPPORT_NAV.labelKey)}
+            </Link>
+          )}
         </nav>
 
         <form onSubmit={handleSearchSubmit} className="relative hidden w-full max-w-xs lg:block">

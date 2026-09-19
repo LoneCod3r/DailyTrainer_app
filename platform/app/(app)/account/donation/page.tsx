@@ -88,10 +88,11 @@ export default async function DonationPage({
         eyebrow={t('nav.account')}
         title={t('account.donation.title')}
         description={t('account.donation.description')}
+        centered
       />
 
       {confirmation && (
-        <Card className="max-w-xl">
+        <Card className="mx-auto w-full max-w-xl">
           <CardContent className="flex flex-col gap-3">
             <Alert tone={confirmation.tone} title={confirmation.title}>
               <p>{confirmation.description}</p>

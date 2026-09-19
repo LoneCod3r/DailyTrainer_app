@@ -69,11 +69,51 @@ test.describe('Responsive — 375px viewport, authenticated pages', () => {
     await expect(page.getByRole('main').getByRole('link', { name: /Billing/ })).toBeVisible();
   });
 
+  test('Support is reachable from the mobile drawer without overflow', async ({ page }) => {
+    await page.goto('/account');
+    await assertNoHorizontalOverflow(page);
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    const support = page.getByRole('link', { name: 'Support', exact: true });
+    await expect(support).toBeVisible();
+    await expect(support).toHaveAttribute('href', '/account/donation');
+    await assertNoHorizontalOverflow(page);
+    await support.click();
+    await expect(page).toHaveURL('/account/donation');
+  });
+
   test('donation page has no overflow and its unavailable notice is readable', async ({ page }) => {
     await page.goto('/account/donation');
     await assertNoHorizontalOverflow(page);
+    test.skip(
+      (await page.getByRole('radio').count()) > 0,
+      'Stripe is configured in this environment, so the amount form renders instead',
+    );
     await expect(
       page.getByText('Donations are not available right now — payment configuration is incomplete.'),
     ).toBeVisible();
+  });
+
+  test('donation amount tiles form a 2x2 grid with no overflow (Stripe configured only)', async ({ page }) => {
+    await page.goto('/account/donation');
+    const unavailable = await page
+      .getByText('Donations are not available right now — payment configuration is incomplete.')
+      .isVisible();
+    test.skip(unavailable, 'Stripe is not configured in this environment');
+
+    const boxes = await Promise.all(
+      ['€5', '€10', '€25', '€50'].map((name) =>
+        page.getByRole('radio', { name, exact: true }).locator('xpath=..').boundingBox(),
+      ),
+    );
+    // 2x2: the first two share a row, the second two share the next row.
+    expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThanOrEqual(1);
+    expect(boxes[2]!.y).toBeGreaterThan(boxes[0]!.y + 1);
+    await assertNoHorizontalOverflow(page);
+
+    await page
+      .locator('label', { has: page.getByRole('radio', { name: 'Custom', exact: true }) })
+      .click();
+    await page.getByRole('textbox', { name: 'Custom amount (EUR)' }).fill('0.5');
+    await assertNoHorizontalOverflow(page);
   });
 });

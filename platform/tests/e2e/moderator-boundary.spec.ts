@@ -96,6 +96,7 @@ test.describe('Moderator permission boundary', () => {
     await expect(page.getByRole('link', { name: /membership/i })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /billing/i })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /donation/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Support', exact: true })).toHaveCount(0);
   });
 
   test('Moderator account hub does not render Membership/Billing/Donation cards', async ({ page }) => {

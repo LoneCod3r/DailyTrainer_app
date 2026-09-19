@@ -3,9 +3,9 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
-import { isAdmin } from '@/lib/permissions';
+import { isAdmin, isModeratorOnly } from '@/lib/permissions';
 import { useT } from '@/lib/i18n/LocaleProvider';
-import { PRIMARY_NAV } from './nav';
+import { PRIMARY_NAV, SUPPORT_NAV } from './nav';
 import { CloseIcon, ShieldIcon, LogOutIcon } from './icons';
 
 // Secondary navigation surface for mobile — the bottom nav only carries the
@@ -63,6 +63,14 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
             </div>
           </div>
         ))}
+
+        {session?.user && !isModeratorOnly(session.user.role) && (
+          <div className="mb-4">
+            <Link href={SUPPORT_NAV.href} onClick={onClose} className="text-sm font-semibold text-ink-900">
+              {t(SUPPORT_NAV.labelKey)}
+            </Link>
+          </div>
+        )}
 
         {/* Account sub-pages live in the Topbar's profile dropdown on
             desktop; on mobile they're reachable via the Account tab's hub
