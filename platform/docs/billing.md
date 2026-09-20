@@ -134,6 +134,38 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 - Nothing else is required for the foundation phase — no live keys, no
   production webhook endpoint yet.
 
+## Stripe Hosted Invoice Page language (known behavior, not a bug)
+
+The Billing page's invoice **View** link is Stripe's `hosted_invoice_url`,
+used exactly as returned by the Stripe API (`listInvoicesForUser()` in
+`billing.service.ts`, rendered by `components/account/InvoiceHistory.tsx`).
+DailyTrainer does not modify that URL or append any locale parameter to it.
+
+- Stripe's Hosted Invoice Page picks its language from the viewer's
+  **browser language/settings**, not from the DailyTrainer UI language.
+- The Stripe Customer's `preferred_locales` does **not** control the Hosted
+  Invoice Page language. Stripe documents it as localizing invoice and
+  receipt emails and PDFs (and credit note PDFs), so it is not a fix for this.
+- Verified in Stripe test mode: the same invoice and customer rendered in
+  English or Bulgarian purely depending on the browser locale, and changing
+  the customer's `preferred_locales` had no effect on the page. (The test
+  invoice was a manually created `send_invoice` invoice; subscription-generated
+  invoices were not separately tested, and Stripe's docs do not distinguish
+  them.)
+- So an English DailyTrainer UI can legitimately open a Bulgarian Stripe
+  invoice page when the browser language is Bulgarian. This is Stripe's
+  behavior, not a DailyTrainer localization bug.
+- There is no documented, supported Stripe mechanism for forcing the Hosted
+  Invoice Page language through `hosted_invoice_url`. Do not append
+  undocumented parameters such as `?locale=en`, do not rewrite the URL, and
+  do not sync `preferred_locales` to try to change it.
+
+Stripe references:
+
+- [Language recognition for invoices with Stripe Billing](https://support.stripe.com/questions/language-recognition-for-invoices-with-stripe-billing)
+- [Hosted invoice page](https://docs.stripe.com/invoicing/hosted-invoice-page)
+- [Customers (Invoicing), email and PDF language localization](https://docs.stripe.com/invoicing/customer)
+
 ## Production considerations (not addressed in this phase)
 
 - Switching `STRIPE_SECRET_KEY`/`STRIPE_PUBLISHABLE_KEY` to live keys, and

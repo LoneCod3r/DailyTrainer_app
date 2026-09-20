@@ -39,7 +39,7 @@ export default async function BillingPage() {
   const stripeConfigured = isStripeConfigured();
 
   return (
-    <Container className="flex flex-col gap-8 py-8">
+    <Container className="flex flex-col gap-5 py-6">
       <PageHeader eyebrow={t('nav.account')} title={t('account.billing.title')} description={t('account.billing.description')} />
 
       {!hasAnyBillingHistory ? (
@@ -53,8 +53,8 @@ export default async function BillingPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-6">
-          <Card className="max-w-xl">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          <Card>
             <CardHeader>
               <CardTitle>{t('account.billing.currentSubscription')}</CardTitle>
             </CardHeader>
@@ -63,16 +63,18 @@ export default async function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card className="max-w-xl">
-            <CardHeader>
+          <Card>
+            <CardHeader className="items-center text-center">
               <CardTitle>{t('account.billing.paymentMethod')}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <PaymentMethodSummary paymentMethod={paymentMethod} locale={locale} />
+            <CardContent className="text-center">
+              <div className="mx-auto w-full max-w-sm">
+                <PaymentMethodSummary paymentMethod={paymentMethod} locale={locale} />
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="max-w-2xl">
+          <Card>
             <CardHeader>
               <CardTitle>{t('account.billing.invoiceHistory')}</CardTitle>
             </CardHeader>
@@ -81,7 +83,7 @@ export default async function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card className="max-w-xl">
+          <Card>
             <CardContent className="flex flex-col gap-3">
               {stripeConfigured ? (
                 <>
