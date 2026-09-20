@@ -16,7 +16,7 @@ vi.mock('@/lib/prisma', () => ({
 
 // Mock the Stripe client so no real network call is ever made in tests.
 const stripeMock = {
-  customers: { create: vi.fn(), del: vi.fn(), retrieve: vi.fn() },
+  customers: { create: vi.fn(), del: vi.fn(), retrieve: vi.fn(), update: vi.fn() },
   checkout: { sessions: { create: vi.fn(), retrieve: vi.fn() } },
   subscriptions: { update: vi.fn() },
   billingPortal: { sessions: { create: vi.fn() } },
@@ -76,6 +76,81 @@ describe('getOrCreateStripeCustomer', () => {
 
     expect(id).toBe('cus_from_other_request');
     expect(stripeMock.customers.del).toHaveBeenCalledWith('cus_new');
+  });
+
+  describe('preferred_locales (invoice/receipt PDF + email language)', () => {
+    const newUser = { id: 'u1', email: 'a@b.com', name: 'A', stripeCustomerId: null };
+
+    it.each([['bg'], ['en']] as const)('creates a new customer with preferred_locales [%s]', async (locale) => {
+      (prisma.user.findUnique as any).mockResolvedValue(newUser);
+      stripeMock.customers.create.mockResolvedValue({ id: 'cus_new' });
+      (prisma.user.updateMany as any).mockResolvedValue({ count: 1 });
+
+      await getOrCreateStripeCustomer('u1', locale);
+
+      expect(stripeMock.customers.create).toHaveBeenCalledWith({
+        email: 'a@b.com',
+        name: 'A',
+        metadata: { userId: 'u1' },
+        preferred_locales: [locale],
+      });
+    });
+
+    it('does not send preferred_locales when no locale is given', async () => {
+      (prisma.user.findUnique as any).mockResolvedValue(newUser);
+      stripeMock.customers.create.mockResolvedValue({ id: 'cus_new' });
+      (prisma.user.updateMany as any).mockResolvedValue({ count: 1 });
+
+      await getOrCreateStripeCustomer('u1');
+
+      expect(stripeMock.customers.create.mock.calls[0][0]).not.toHaveProperty('preferred_locales');
+    });
+
+    it('updates an existing customer whose locale is unset, without creating a duplicate', async () => {
+      (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_existing' });
+      stripeMock.customers.retrieve.mockResolvedValue({ id: 'cus_existing', preferred_locales: [], metadata: { keep: 'me' } });
+
+      const id = await getOrCreateStripeCustomer('u1', 'bg');
+
+      expect(id).toBe('cus_existing');
+      expect(stripeMock.customers.create).not.toHaveBeenCalled();
+      // Only preferred_locales is sent, so email/name/metadata are untouched.
+      expect(stripeMock.customers.update).toHaveBeenCalledWith('cus_existing', { preferred_locales: ['bg'] });
+    });
+
+    it('updates the customer when the app language changed (bg -> en)', async () => {
+      (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_existing' });
+      stripeMock.customers.retrieve.mockResolvedValue({ id: 'cus_existing', preferred_locales: ['bg'] });
+
+      await getOrCreateStripeCustomer('u1', 'en');
+
+      expect(stripeMock.customers.update).toHaveBeenCalledWith('cus_existing', { preferred_locales: ['en'] });
+    });
+
+    it('does not update Stripe when the customer locale already matches', async () => {
+      (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_existing' });
+      stripeMock.customers.retrieve.mockResolvedValue({ id: 'cus_existing', preferred_locales: ['bg'] });
+
+      await getOrCreateStripeCustomer('u1', 'bg');
+
+      expect(stripeMock.customers.update).not.toHaveBeenCalled();
+    });
+
+    it('still returns the customer id if the locale sync fails', async () => {
+      (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_existing' });
+      stripeMock.customers.retrieve.mockRejectedValue(new Error('stripe down'));
+
+      await expect(getOrCreateStripeCustomer('u1', 'bg')).resolves.toBe('cus_existing');
+    });
+
+    it('does not touch an existing customer when no locale is given', async () => {
+      (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_existing' });
+
+      await getOrCreateStripeCustomer('u1');
+
+      expect(stripeMock.customers.retrieve).not.toHaveBeenCalled();
+      expect(stripeMock.customers.update).not.toHaveBeenCalled();
+    });
   });
 });
 

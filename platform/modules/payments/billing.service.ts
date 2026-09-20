@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getStripeClient } from '@/lib/stripe';
 import { createLogger } from '@/lib/logger';
 import { Errors } from '@/lib/api-response';
+import type { Locale } from '@/lib/i18n/locale';
 
 const log = createLogger('billing');
 
@@ -81,16 +82,39 @@ function subscriptionPeriod(sub: Stripe.Subscription): { start: Date | null; end
 // on first use. Guards against the double-customer bug (Prompt3 §8) by
 // re-reading the user row inside the same call and short-circuiting if a
 // concurrent request already set stripeCustomerId.
-export async function getOrCreateStripeCustomer(userId: string): Promise<string> {
+//
+// `locale` is the app's active language ('bg' | 'en', already valid Stripe
+// language tags). Stripe uses the Customer's `preferred_locales` to localize
+// invoice/receipt PDFs and emails (not the hosted invoice page, which follows
+// the browser). New customers are created with it; existing ones are synced
+// only when it actually differs, and a failed sync never blocks the caller.
+// Omitted => the Customer's language is left untouched.
+async function syncCustomerLocale(stripe: Stripe, customerId: string, locale: Locale) {
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.deleted) return;
+    const current = customer.preferred_locales ?? [];
+    if (current.length === 1 && current[0] === locale) return;
+    await stripe.customers.update(customerId, { preferred_locales: [locale] });
+  } catch (err) {
+    log.warn('stripe customer locale sync failed', { stripeCustomerId: customerId, message: (err as Error).message });
+  }
+}
+
+export async function getOrCreateStripeCustomer(userId: string, locale?: Locale): Promise<string> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw Errors.notFound('User not found');
-  if (user.stripeCustomerId) return user.stripeCustomerId;
+  if (user.stripeCustomerId) {
+    if (locale) await syncCustomerLocale(getStripeClient(), user.stripeCustomerId, locale);
+    return user.stripeCustomerId;
+  }
 
   const stripe = getStripeClient();
   const customer = await stripe.customers.create({
     email: user.email,
     name: user.name ?? undefined,
     metadata: { userId: user.id },
+    ...(locale ? { preferred_locales: [locale] } : {}),
   });
 
   // Use a conditional update so two concurrent requests can't both "win" and
@@ -194,14 +218,14 @@ export async function setMembershipPlanProductActive(stripeProductId: string, ac
 
 // --- Checkout sessions ---------------------------------------------------------
 
-export async function createSubscriptionCheckout(params: { userId: string; membershipPlanId: string }) {
+export async function createSubscriptionCheckout(params: { userId: string; membershipPlanId: string; locale?: Locale }) {
   const plan = await prisma.membershipPlan.findUnique({ where: { id: params.membershipPlanId } });
   if (!plan || !plan.active) throw Errors.notFound('Membership plan not found or inactive');
   if (!plan.stripePriceId) {
     throw Errors.badRequest('This membership plan is not yet connected to a Stripe Price');
   }
 
-  const customerId = await getOrCreateStripeCustomer(params.userId);
+  const customerId = await getOrCreateStripeCustomer(params.userId, params.locale);
   const stripe = getStripeClient();
 
   const session = await stripe.checkout.sessions.create({
@@ -282,7 +306,7 @@ export async function createDonationCheckout(params: {
   const stripe = getStripeClient();
   const currency = params.currency ?? 'eur';
 
-  const customerId = params.userId ? await getOrCreateStripeCustomer(params.userId) : undefined;
+  const customerId = params.userId ? await getOrCreateStripeCustomer(params.userId, params.locale) : undefined;
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -453,8 +477,8 @@ export async function reconcileDonationFromCheckoutSession(userId: string, strip
   }
 }
 
-export async function createCustomerPortalSession(userId: string) {
-  const customerId = await getOrCreateStripeCustomer(userId);
+export async function createCustomerPortalSession(userId: string, locale?: Locale) {
+  const customerId = await getOrCreateStripeCustomer(userId, locale);
   const stripe = getStripeClient();
 
   return stripe.billingPortal.sessions.create({

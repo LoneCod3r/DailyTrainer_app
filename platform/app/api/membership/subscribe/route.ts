@@ -5,6 +5,7 @@ import { withErrorHandling, jsonOk, Errors } from '@/lib/api-response';
 import { forbidModeratorFinancialAccess } from '@/lib/auth-guards';
 import { subscribeToMembershipSchema } from '@/lib/validations/membership';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getLocale } from '@/lib/i18n/get-locale';
 
 // Starts a Stripe Checkout Session for the given plan. The redirect back to
 // success_url never marks anything paid by itself — only the verified
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
     const checkoutSession = await createSubscriptionCheckout({
       userId: session.user.id,
       membershipPlanId,
+      locale: getLocale(),
     });
 
     return jsonOk({ url: checkoutSession.url });
