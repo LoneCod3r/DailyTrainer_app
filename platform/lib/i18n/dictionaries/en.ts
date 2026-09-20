@@ -354,6 +354,13 @@ const en: typeof bg = {
       invoiceDate: 'Date',
       invoiceAmount: 'Amount',
       invoiceStatus: 'Status',
+      invoiceStatuses: {
+        draft: 'Draft',
+        open: 'Open',
+        paid: 'Paid',
+        uncollectible: 'Uncollectible',
+        void: 'Void',
+      },
       invoiceReceipt: 'Receipt',
       viewReceipt: 'View',
       manageDescription:

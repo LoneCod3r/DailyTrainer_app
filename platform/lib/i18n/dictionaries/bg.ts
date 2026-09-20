@@ -353,6 +353,13 @@ const bg = {
       invoiceDate: 'Дата',
       invoiceAmount: 'Сума',
       invoiceStatus: 'Статус',
+      invoiceStatuses: {
+        draft: 'Чернова',
+        open: 'Очаква плащане',
+        paid: 'Платена',
+        uncollectible: 'Несъбираема',
+        void: 'Анулирана',
+      },
       invoiceReceipt: 'Разписка',
       viewReceipt: 'Виж',
       manageDescription:
