@@ -110,6 +110,44 @@ protected routes, and localization.
   React Strict Mode/CSRF race unrelated to app code (documented in the test
   file itself, not currently blocking).
 
+## Stripe Billing Localization
+
+The app supports Bulgarian (`bg`) and English (`en`). Stripe localizes
+different billing surfaces from different inputs, so they can legitimately
+show different languages for the same invoice:
+
+| Surface | Language comes from | Controlled by DailyTrainer? |
+| --- | --- | --- |
+| DailyTrainer UI | the `ptd_locale` cookie (`bg` / `en`) | Yes |
+| Invoice PDF, receipt PDF, invoice/receipt emails | the Stripe Customer's `preferred_locales` | Yes (synced from the app language) |
+| Stripe Hosted Invoice Page (the invoice **Review** link, `hosted_invoice_url`) | the viewer's **browser language** | **No** |
+
+**Customer sync.** The app mirrors the selected app language onto the user's
+*existing* Stripe Customer as `preferred_locales: ['bg']` or `['en']`. It runs
+on subscription checkout, Billing Portal access, donation checkout, and when a
+logged-in user switches language (`POST /api/account/locale`). It only updates
+when the value differs, never creates a Customer, and a Stripe failure never
+blocks the user.
+
+**Hosted Invoice Page.** Stripe determines its language from the customer's
+browser settings; it is not controlled by the DailyTrainer locale or by
+`preferred_locales`. Stripe documents that the hosted invoice payment page
+checks the browser's language settings (and that browser language takes
+priority there, while the PDF and email keep the language set on the
+Customer). See
+[Language recognition for invoices with Stripe Billing](https://support.stripe.com/questions/language-recognition-for-invoices-with-stripe-billing).
+
+Verified examples:
+
+- DailyTrainer in English + browser language English → Hosted Invoice Page in English.
+- DailyTrainer in English + browser language Bulgarian → Hosted Invoice Page in Bulgarian.
+- With a Bulgarian browser, the invoice PDF can be English (Customer
+  `preferred_locales: ['en']`) while the Hosted Invoice Page is Bulgarian.
+
+This is expected Stripe behavior, not a DailyTrainer bug. Stripe documents no
+supported way for an application to set the Hosted Invoice Page language, so
+none is used here.
+
 ## Getting started
 
 Full setup instructions (prerequisites, environment variables, database
