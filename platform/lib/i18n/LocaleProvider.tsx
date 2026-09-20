@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { getT, type DictKey } from './dictionaries';
 import { LOCALE_COOKIE, type Locale } from './locale';
 
@@ -21,14 +22,21 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 // untouched.
 export function LocaleProvider({ initialLocale, children }: { initialLocale: Locale; children: ReactNode }) {
   const router = useRouter();
+  const { status } = useSession();
 
   const setLocale = useCallback(
     (next: Locale) => {
       document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
       document.documentElement.lang = next;
       router.refresh();
+      // Mirror the new language onto the user's Stripe Customer (invoice/receipt
+      // PDF + email language). Fire-and-forget: the UI has already switched and
+      // must never wait on, or fail because of, Stripe. Skipped for visitors.
+      if (status === 'authenticated') {
+        fetch('/api/account/locale', { method: 'POST', keepalive: true }).catch(() => undefined);
+      }
     },
-    [router],
+    [router, status],
   );
 
   const value = useMemo<LocaleContextValue>(

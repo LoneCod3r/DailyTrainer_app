@@ -101,6 +101,21 @@ async function syncCustomerLocale(stripe: Stripe, customerId: string, locale: Lo
   }
 }
 
+// Mirrors the app language onto a user's EXISTING Stripe Customer (used when
+// they switch language). Never creates a Customer: users who haven't started
+// billing yet have nothing to sync. Never throws for Stripe problems (missing
+// key included) — language switching must not depend on Stripe.
+export async function syncStripeCustomerLocaleForUser(userId: string, locale: Locale): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { stripeCustomerId: true } });
+  if (!user?.stripeCustomerId) return;
+
+  try {
+    await syncCustomerLocale(getStripeClient(), user.stripeCustomerId, locale);
+  } catch (err) {
+    log.warn('stripe customer locale sync failed', { stripeCustomerId: user.stripeCustomerId, message: (err as Error).message });
+  }
+}
+
 export async function getOrCreateStripeCustomer(userId: string, locale?: Locale): Promise<string> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw Errors.notFound('User not found');
