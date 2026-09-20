@@ -24,7 +24,8 @@ export function PaymentMethodCard({ paymentMethod, locale }: { paymentMethod: Pa
     >
       <CardArtwork />
       <div className="relative z-10 flex h-full flex-col justify-between">
-        <div className="flex justify-end text-white/85">
+        <div className="flex items-center justify-between gap-3 text-white/85">
+          <span className="text-sm font-semibold tracking-wide sm:text-base">DemoBank</span>
           <ContactlessGlyph />
         </div>
 

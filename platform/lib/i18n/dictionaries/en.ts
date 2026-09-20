@@ -362,7 +362,7 @@ const en: typeof bg = {
         void: 'Void',
       },
       invoiceReceipt: 'Receipt',
-      viewReceipt: 'View',
+      viewReceipt: 'Review',
       manageDescription:
         "Manage your payment method, view invoices, and update or cancel your subscription in Stripe's secure billing portal.",
       managePortal: 'Manage billing in Stripe',

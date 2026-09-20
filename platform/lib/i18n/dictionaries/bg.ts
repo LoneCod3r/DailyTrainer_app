@@ -361,7 +361,7 @@ const bg = {
         void: 'Анулирана',
       },
       invoiceReceipt: 'Разписка',
-      viewReceipt: 'Виж',
+      viewReceipt: 'Преглед',
       manageDescription:
         'Управлявай начина си на плащане, преглеждай фактури и променяй или отменяй абонамента си в сигурния портал на Stripe.',
       managePortal: 'Управление на плащанията в Stripe',
