@@ -122,24 +122,36 @@ export const authOptions: NextAuthOptions = {
       // notably: verifying the email, which registration's auto-sign-in
       // means happens *after* the JWT already exists) is reflected without
       // requiring the user to sign out and back in. A cheap, indexed
-      // lookup by id; only skipped if the account was deleted, in which
-      // case the stale token is left as-is (the user is no longer
-      // resolvable, so there's nothing fresher to apply).
+      // lookup by id. If the account was deleted or is no longer ACTIVE the
+      // session must die: NextAuth v4 has no supported "invalid token"
+      // return value (null/{} would reach the `session` callback), but any
+      // throw from this callback is caught by the session route, which
+      // clears the cookie and makes getServerSession() resolve to null.
       if (token.id) {
         const current = await prisma.user.findUnique({
           where: { id: token.id },
           select: { role: true, status: true, emailVerified: true },
         });
-        if (current) {
-          token.role = current.role;
-          token.status = current.status;
-          token.emailVerified = current.emailVerified;
+        if (!current) {
+          log.warn('session revoked: user no longer exists', { userId: token.id });
+          throw new Error('SESSION_REVOKED');
         }
+        if (current.status !== 'ACTIVE') {
+          log.warn('session revoked: inactive/suspended account', { userId: token.id, status: current.status });
+          throw new Error('SESSION_REVOKED');
+        }
+        token.role = current.role;
+        token.status = current.status;
+        token.emailVerified = current.emailVerified;
       }
 
       return token;
     },
     async session({ session, token }) {
+      // Fail closed: never build a partially populated authenticated session.
+      if (!token?.id || !token.role) {
+        throw new Error('SESSION_INVALID');
+      }
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
