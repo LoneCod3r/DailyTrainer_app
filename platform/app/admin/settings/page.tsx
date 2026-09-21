@@ -1,7 +1,9 @@
+import { requireAdminSession } from '@/lib/require-admin-session';
 import { getSettings } from '@/modules/settings/settings.service';
 import { SettingsForm } from '@/components/admin/SettingsForm';
 
 export default async function AdminSettingsPage() {
+  await requireAdminSession();
   const settings = await getSettings();
 
   return (

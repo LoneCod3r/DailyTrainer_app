@@ -117,10 +117,12 @@ test.describe('Admin financial/admin access (regression)', () => {
     await loginViaUi(page, ADMIN_USER, { expectedUrl: '/admin' });
   });
 
-  test('Admin can reach /admin and /admin/membership', async ({ page }) => {
+  test('Admin can reach /admin, /admin/membership and /admin/settings', async ({ page }) => {
     await expect(page).toHaveURL('/admin');
     await page.goto('/admin/membership');
     await expect(page).toHaveURL('/admin/membership');
+    await page.goto('/admin/settings');
+    await expect(page).toHaveURL('/admin/settings');
   });
 
   test('Admin can load /admin/users and the users table renders', async ({ page }) => {

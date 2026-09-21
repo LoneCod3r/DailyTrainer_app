@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAdminSession } from '@/lib/require-admin-session';
 import { Card, CardContent, CardTitle, Badge, EmptyState } from '@/components/ui';
 import { UsersIcon, MembershipIcon, ShieldIcon, TrendUpIcon } from '@/components/layout/icons';
 import { getUserStats, listUsers } from '@/modules/users/users.service';
@@ -53,7 +52,7 @@ const statusTone = { ACTIVE: 'success', INACTIVE: 'neutral', SUSPENDED: 'danger'
 const BAR_SHADE = ['bg-brand-600', 'bg-brand-400', 'bg-brand-300'];
 
 export default async function AdminDashboardPage() {
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
   const [stats, { users: recentUsers }, membership] = await Promise.all([
     getUserStats(),
     listUsers({ page: 1, pageSize: 5 }),
@@ -75,7 +74,7 @@ export default async function AdminDashboardPage() {
           <div>
             <h1 className="text-2xl font-semibold text-ink-900">
               {greeting()}
-              {session?.user.name ? `, ${session.user.name}` : ''}
+              {session.user.name ? `, ${session.user.name}` : ''}
             </h1>
             <p className="mt-1 text-sm text-ink-500">Here&apos;s what&apos;s happening with your platform today.</p>
           </div>

@@ -45,6 +45,16 @@ test.describe('Admin users page — unauthenticated', () => {
   });
 });
 
+test.describe('Admin pages — unauthenticated', () => {
+  for (const path of ['/admin', '/admin/membership', '/admin/settings']) {
+    test(`${path} redirects to login before rendering admin data`, async ({ request }) => {
+      const res = await request.get(path, { maxRedirects: 0 });
+      expect(res.status()).toBe(307);
+      expect(res.headers()['location']).toMatch(/^\/login\?callbackUrl=/);
+    });
+  }
+});
+
 test.describe('Protected routes — authenticated', () => {
   test.use({ storageState: AUTH_STORAGE_STATE });
 

@@ -1,7 +1,9 @@
+import { requireAdminSession } from '@/lib/require-admin-session';
 import { listAllPlans } from '@/modules/membership/membership.service';
 import { MembershipPlansTable } from '@/components/admin/MembershipPlansTable';
 
 export default async function AdminMembershipPage() {
+  await requireAdminSession();
   const plans = await listAllPlans();
 
   return (
