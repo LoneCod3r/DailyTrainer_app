@@ -32,7 +32,19 @@ export async function listUsers(params: { page?: number; pageSize?: number } = {
 export async function getUserById(id: string) {
   const user = await prisma.user.findUnique({
     where: { id },
-    include: { profile: true },
+    // Explicit allow-list: never return the full User row (passwordHash,
+    // failedLoginAttempts, lockedUntil, stripeCustomerId, ...).
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      emailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+      profile: { select: { avatarUrl: true, bio: true, interests: true, visibility: true } },
+    },
   });
   if (!user) throw Errors.notFound('User not found');
   return user;
