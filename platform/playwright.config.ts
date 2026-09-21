@@ -80,5 +80,15 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Registration E2E specs (security-hardening.spec.ts) post the fake token
+    // 'e2e-test-recaptcha-token'. lib/recaptcha.ts only accepts that outside
+    // production when no secret is configured (dev-only fallback), so a real
+    // secret in the developer's local .env would send those tokens to Google
+    // and fail. An explicitly empty value takes precedence over .env (Next
+    // never overrides variables already present in the environment) without
+    // touching the real file. Only applies when Playwright starts the server
+    // itself — an already-running `npm run dev` (reuseExistingServer) keeps
+    // its own environment.
+    env: { RECAPTCHA_SECRET_KEY: '' },
   },
 });

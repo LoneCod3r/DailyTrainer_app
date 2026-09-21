@@ -51,6 +51,24 @@ export async function ensureMinHumanFillTime(page: Page, minMs = 1700): Promise<
   await page.waitForTimeout(minMs);
 }
 
+// React marks every DOM node it has hydrated with an internal `__reactProps$…`
+// key. `page.goto()` resolves at the `load` event, which fires BEFORE hydration
+// finishes (~50ms later in Chromium, ~200ms in WebKit against `next dev`).
+// A `fill()` in that window is wiped when hydration resets the controlled
+// inputs to their initial state, and the submit then never reaches
+// signIn(). Waiting on this marker (instead of a fixed sleep) makes each
+// attempt — and therefore the retry — start from an interactive form.
+async function waitForFormHydrated(page: Page, inputSelector: string = 'input[name="email"]'): Promise<void> {
+  await page.waitForFunction(
+    (selector) => {
+      const el = document.querySelector(selector);
+      return !!el && Object.keys(el).some((key) => key.startsWith('__reactProps'));
+    },
+    inputSelector,
+    { timeout: 20_000 },
+  );
+}
+
 // `npm run dev` only: React 18 Strict Mode double-invokes effects, so
 // <SessionProvider> fires two concurrent initial `/api/auth/session`
 // requests on mount. Each one causes NextAuth's core handler to reissue the
@@ -85,6 +103,7 @@ export async function loginViaUi(
 
   async function attempt(): Promise<boolean> {
     await page.goto(path);
+    await waitForFormHydrated(page);
     await page.getByLabel(labels.email).fill(creds.email);
     // exact: true — a substring match on "Password" also picks up the
     // password-visibility toggle button (aria-label "Show/Hide password").
@@ -136,6 +155,7 @@ export async function loginViaUiExpectingRejection(
 ): Promise<void> {
   async function attempt(): Promise<boolean> {
     await page.goto('/login');
+    await waitForFormHydrated(page);
     await page.getByLabel(labels.email).fill(creds.email);
     await page.getByLabel(labels.password, { exact: true }).fill(creds.password);
     await page.getByRole('button', { name: labels.submit }).click();
