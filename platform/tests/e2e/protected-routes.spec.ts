@@ -32,6 +32,19 @@ test.describe('Protected routes — unauthenticated', () => {
   });
 });
 
+test.describe('Admin users page — unauthenticated', () => {
+  test('/admin/users redirects to login without a server-side TypeError', async ({ page, request }) => {
+    const res = await request.get('/admin/users', { maxRedirects: 0 });
+    expect(res.status()).toBe(307);
+    expect(res.headers()['location']).toMatch(/^\/login\?callbackUrl=/);
+    // Previously the page read session!.user.id with a null session.
+    expect(await res.text()).not.toContain('Cannot read properties of null');
+
+    await page.goto('/admin/users');
+    await expect(page).toHaveURL(/\/login\?callbackUrl=/);
+  });
+});
+
 test.describe('Protected routes — authenticated', () => {
   test.use({ storageState: AUTH_STORAGE_STATE });
 

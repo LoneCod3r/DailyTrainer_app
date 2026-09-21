@@ -123,6 +123,14 @@ test.describe('Admin financial/admin access (regression)', () => {
     await expect(page).toHaveURL('/admin/membership');
   });
 
+  test('Admin can load /admin/users and the users table renders', async ({ page }) => {
+    await page.goto('/admin/users');
+    await expect(page).toHaveURL('/admin/users');
+    await expect(page.getByRole('heading', { name: 'Users', exact: true })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Email' })).toBeVisible();
+    await expect(page.getByRole('row').nth(1)).toBeVisible(); // header + at least one member row
+  });
+
   test('Admin API calls to Admin-only endpoints succeed (200), not 403', async ({ page }) => {
     const statsRes = await page.request.get('/api/admin/stats');
     expect(statsRes.status()).toBe(200);
