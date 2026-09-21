@@ -8,6 +8,9 @@ import { defineConfig, devices } from '@playwright/test';
 // the locale to English rather than relying on the bg default.
 export default defineConfig({
   testDir: './tests/e2e',
+  // Compiles cold `next dev` routes before any browser tab exists — see
+  // tests/e2e/fixtures/global-warmup.ts.
+  globalSetup: './tests/e2e/fixtures/global-warmup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
