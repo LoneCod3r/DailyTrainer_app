@@ -117,7 +117,13 @@ export async function syncStripeCustomerLocaleForUser(userId: string, locale: Lo
 }
 
 export async function getOrCreateStripeCustomer(userId: string, locale?: Locale): Promise<string> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  // Explicit allow-list: this only ever needs the customer-identity fields
+  // below, never passwordHash/failedLoginAttempts/lockedUntil/etc. (see
+  // users.service.ts's getUserById for the same pattern).
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true, stripeCustomerId: true },
+  });
   if (!user) throw Errors.notFound('User not found');
   if (user.stripeCustomerId) {
     if (locale) await syncCustomerLocale(getStripeClient(), user.stripeCustomerId, locale);
@@ -142,7 +148,7 @@ export async function getOrCreateStripeCustomer(userId: string, locale?: Locale)
   if (updated.count === 0) {
     // Someone else created it in the meantime — reuse theirs, and clean up
     // the extra Stripe customer we just created.
-    const fresh = await prisma.user.findUnique({ where: { id: userId } });
+    const fresh = await prisma.user.findUnique({ where: { id: userId }, select: { stripeCustomerId: true } });
     if (fresh?.stripeCustomerId) {
       await stripe.customers.del(customer.id).catch(() => undefined);
       return fresh.stripeCustomerId;
