@@ -331,6 +331,175 @@ describe('handleWebhook idempotency', () => {
   });
 });
 
+describe('handleWebhook — customer.subscription.* events', () => {
+  // Each test is a brand-new event (no prior PaymentEvent row) reaching
+  // processStripeEvent for the first time — same bookkeeping setup as
+  // "processes a new checkout.session.completed donation event exactly
+  // once" above, factored into a beforeEach since every test in this
+  // describe needs it and none exercise the idempotency machinery itself
+  // (already covered by the 'handleWebhook idempotency' suite above).
+  beforeEach(() => {
+    (prisma.paymentEvent.findUnique as any).mockResolvedValue(null);
+    (prisma.paymentEvent.updateMany as any).mockResolvedValue({ count: 0 });
+    (prisma.paymentEvent.create as any).mockResolvedValue({});
+  });
+
+  function subscriptionEvent(type: string, sub: Record<string, unknown>) {
+    return { id: `evt_${type}_${sub.id}`, type, data: { object: sub } } as any;
+  }
+
+  it.each(['customer.subscription.created', 'customer.subscription.updated'])(
+    '%s upserts the subscription using the mapped status, period and metadata identifiers',
+    async (type) => {
+      (prisma.subscription.upsert as any).mockResolvedValue({});
+      const sub = {
+        id: 'sub_1',
+        customer: 'cus_1',
+        status: 'active',
+        current_period_start: 1700000000,
+        current_period_end: 1702592000,
+        cancel_at_period_end: false,
+        metadata: { userId: 'u1', membershipPlanId: 'plan_1' },
+        items: { data: [] },
+      };
+
+      const result = await handleWebhook(subscriptionEvent(type, sub));
+
+      expect(result.duplicate).toBe(false);
+      const expectedFields = {
+        status: 'ACTIVE',
+        currentPeriodStart: new Date(1700000000 * 1000),
+        currentPeriodEnd: new Date(1702592000 * 1000),
+        cancelAtPeriodEnd: false,
+      };
+      expect(prisma.subscription.upsert).toHaveBeenCalledWith({
+        where: { stripeSubscriptionId: 'sub_1' },
+        create: {
+          userId: 'u1',
+          membershipPlanId: 'plan_1',
+          stripeCustomerId: 'cus_1',
+          stripeSubscriptionId: 'sub_1',
+          ...expectedFields,
+        },
+        update: expectedFields,
+      });
+    },
+  );
+
+  it.each([
+    ['active', 'ACTIVE'],
+    ['past_due', 'PAST_DUE'],
+    ['trialing', 'TRIALING'],
+  ])('maps Stripe subscription status "%s" to "%s"', async (stripeStatus, mapped) => {
+    (prisma.subscription.upsert as any).mockResolvedValue({});
+    const sub = {
+      id: 'sub_status',
+      customer: 'cus_1',
+      status: stripeStatus,
+      cancel_at_period_end: false,
+      metadata: { userId: 'u1', membershipPlanId: 'plan_1' },
+      items: { data: [] },
+    };
+
+    await handleWebhook(subscriptionEvent('customer.subscription.updated', sub));
+
+    expect(prisma.subscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.objectContaining({ status: mapped }) }),
+    );
+  });
+
+  it('resolves the customer id whether Stripe sends it as a string or an expanded Customer object', async () => {
+    (prisma.subscription.upsert as any).mockResolvedValue({});
+    const sub = {
+      id: 'sub_expanded',
+      customer: { id: 'cus_expanded' },
+      status: 'active',
+      cancel_at_period_end: false,
+      metadata: { userId: 'u1', membershipPlanId: 'plan_1' },
+      items: { data: [] },
+    };
+
+    await handleWebhook(subscriptionEvent('customer.subscription.created', sub));
+
+    expect(prisma.subscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.objectContaining({ stripeCustomerId: 'cus_expanded' }) }),
+    );
+  });
+
+  it('reads the billing period from the first subscription item when the top-level fields are absent (flexible billing periods)', async () => {
+    (prisma.subscription.upsert as any).mockResolvedValue({});
+    const sub = {
+      id: 'sub_item_period',
+      customer: 'cus_1',
+      status: 'active',
+      cancel_at_period_end: false,
+      metadata: { userId: 'u1', membershipPlanId: 'plan_1' },
+      // No top-level current_period_start/end — only the newer per-item shape.
+      items: { data: [{ current_period_start: 1710000000, current_period_end: 1712592000 }] },
+    };
+
+    await handleWebhook(subscriptionEvent('customer.subscription.updated', sub));
+
+    expect(prisma.subscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          currentPeriodStart: new Date(1710000000 * 1000),
+          currentPeriodEnd: new Date(1712592000 * 1000),
+        }),
+      }),
+    );
+  });
+
+  it('leaves the period null (never fabricated) when neither the top-level nor per-item shape has a valid timestamp', async () => {
+    (prisma.subscription.upsert as any).mockResolvedValue({});
+    const sub = {
+      id: 'sub_no_period',
+      customer: 'cus_1',
+      status: 'active',
+      cancel_at_period_end: false,
+      metadata: { userId: 'u1', membershipPlanId: 'plan_1' },
+      items: { data: [] },
+    };
+
+    await handleWebhook(subscriptionEvent('customer.subscription.created', sub));
+
+    expect(prisma.subscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ currentPeriodStart: null, currentPeriodEnd: null }),
+      }),
+    );
+  });
+
+  it('does nothing when the event is missing userId or membershipPlanId metadata (no orphaned/misattributed row)', async () => {
+    const sub = {
+      id: 'sub_no_metadata',
+      customer: 'cus_1',
+      status: 'active',
+      cancel_at_period_end: false,
+      metadata: {},
+      items: { data: [] },
+    };
+
+    const result = await handleWebhook(subscriptionEvent('customer.subscription.created', sub));
+
+    expect(result.duplicate).toBe(false);
+    expect(prisma.subscription.upsert).not.toHaveBeenCalled();
+  });
+
+  it('customer.subscription.deleted transitions the matching subscription to CANCELED, scoped by stripeSubscriptionId', async () => {
+    (prisma.subscription.updateMany as any).mockResolvedValue({ count: 1 });
+    const sub = { id: 'sub_del_1', customer: 'cus_1' };
+
+    const result = await handleWebhook(subscriptionEvent('customer.subscription.deleted', sub));
+
+    expect(result.duplicate).toBe(false);
+    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
+      where: { stripeSubscriptionId: 'sub_del_1' },
+      data: { status: 'CANCELED', canceledAt: expect.any(Date) },
+    });
+  });
+});
+
 describe('getPaymentMethodForUser', () => {
   it('returns null without calling Stripe when the user has no Stripe customer yet', async () => {
     (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: null });
