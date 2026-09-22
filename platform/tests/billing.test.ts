@@ -367,6 +367,16 @@ describe('getPaymentMethodForUser', () => {
 
     expect(result).toEqual({ brand: 'mastercard', last4: '4444', expMonth: 1, expYear: 2028 });
   });
+
+  it('returns null without listing payment methods when the Stripe customer has been deleted', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: 'cus_gone' });
+    stripeMock.customers.retrieve.mockResolvedValue({ deleted: true, id: 'cus_gone' });
+
+    const result = await getPaymentMethodForUser('u1');
+
+    expect(result).toBeNull();
+    expect(stripeMock.paymentMethods.list).not.toHaveBeenCalled();
+  });
 });
 
 describe('listInvoicesForUser', () => {
@@ -381,6 +391,7 @@ describe('listInvoicesForUser', () => {
 
   it('maps Stripe invoices to the display shape', async () => {
     (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: 'cus_1' });
+    stripeMock.customers.retrieve.mockResolvedValue({ deleted: false });
     stripeMock.invoices.list.mockResolvedValue({
       data: [
         {
@@ -407,6 +418,16 @@ describe('listInvoicesForUser', () => {
         hostedInvoiceUrl: 'https://stripe.example/in_1',
       },
     ]);
+  });
+
+  it('returns an empty list without listing invoices when the Stripe customer has been deleted', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ stripeCustomerId: 'cus_gone' });
+    stripeMock.customers.retrieve.mockResolvedValue({ deleted: true, id: 'cus_gone' });
+
+    const result = await listInvoicesForUser('u1');
+
+    expect(result).toEqual([]);
+    expect(stripeMock.invoices.list).not.toHaveBeenCalled();
   });
 });
 

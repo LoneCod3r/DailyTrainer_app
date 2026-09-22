@@ -379,16 +379,20 @@ export async function getPaymentMethodForUser(userId: string): Promise<PaymentMe
     expand: ['invoice_settings.default_payment_method'],
   });
 
-  if (!customer.deleted) {
-    const defaultPm = customer.invoice_settings?.default_payment_method;
-    if (defaultPm && typeof defaultPm === 'object' && defaultPm.card) {
-      return {
-        brand: defaultPm.card.brand,
-        last4: defaultPm.card.last4,
-        expMonth: defaultPm.card.exp_month,
-        expYear: defaultPm.card.exp_year,
-      };
-    }
+  // A Customer deleted directly in Stripe (e.g. dashboard/test-mode cleanup)
+  // while the local stripeCustomerId still points at it — treat exactly like
+  // "no Stripe customer yet" rather than falling through to
+  // paymentMethods.list, which rejects a deleted customer id.
+  if (customer.deleted) return null;
+
+  const defaultPm = customer.invoice_settings?.default_payment_method;
+  if (defaultPm && typeof defaultPm === 'object' && defaultPm.card) {
+    return {
+      brand: defaultPm.card.brand,
+      last4: defaultPm.card.last4,
+      expMonth: defaultPm.card.exp_month,
+      expYear: defaultPm.card.exp_year,
+    };
   }
 
   // No default set yet (e.g. checkout hasn't stored one) — fall back to the
@@ -413,6 +417,14 @@ export async function listInvoicesForUser(userId: string, limit = 12): Promise<I
   if (!user?.stripeCustomerId) return [];
 
   const stripe = getStripeClient();
+
+  // Same deleted-customer guard as getPaymentMethodForUser above: a stale
+  // local stripeCustomerId pointing at a Customer removed directly in
+  // Stripe must degrade to "no billing history", not throw invoices.list
+  // into an error for a customer id that no longer exists.
+  const customer = await stripe.customers.retrieve(user.stripeCustomerId);
+  if (customer.deleted) return [];
+
   const invoices = await stripe.invoices.list({ customer: user.stripeCustomerId, limit });
 
   return invoices.data.map((invoice) => ({
