@@ -150,3 +150,68 @@ describe('sendPasswordResetEmail', () => {
     expect(call.html).toContain(expectedLink);
   });
 });
+
+// The display name is chosen by whoever registers — and registration doesn't
+// require owning the address — so it must never reach email HTML as markup.
+describe('email HTML escaping', () => {
+  const HTML_NAME = '<a href="https://evil.example">x</a>';
+  const ESCAPED_HTML_NAME = '&lt;a href=&quot;https://evil.example&quot;&gt;x&lt;/a&gt;';
+
+  beforeEach(() => {
+    vi.stubEnv('SMTP_HOST', 'smtp.example.test');
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('APP_URL', 'https://kuko.example');
+    sendMailMock.mockResolvedValue({ messageId: 'esc' });
+  });
+
+  it('sendVerificationEmail escapes an HTML display name but keeps it raw in the plain-text body', async () => {
+    const { sendVerificationEmail } = await loadMail();
+    await sendVerificationEmail('user@example.dev', HTML_NAME, 'raw-token-abc123');
+
+    const call = sendMailMock.mock.calls[0][0];
+    expect(call.html).not.toContain('<a href="https://evil.example">');
+    expect(call.html).toContain(`<p>Hi ${ESCAPED_HTML_NAME},</p>`);
+    expect(call.text).toContain(`Hi ${HTML_NAME},`);
+  });
+
+  it('sendPasswordResetEmail escapes an HTML display name but keeps it raw in the plain-text body', async () => {
+    const { sendPasswordResetEmail } = await loadMail();
+    await sendPasswordResetEmail('user@example.dev', HTML_NAME, 'reset-token-xyz');
+
+    const call = sendMailMock.mock.calls[0][0];
+    expect(call.html).not.toContain('<a href="https://evil.example">');
+    expect(call.html).toContain(`<p>Hi ${ESCAPED_HTML_NAME},</p>`);
+    expect(call.text).toContain(`Hi ${HTML_NAME},`);
+  });
+
+  it('escapes all five HTML-significant characters', async () => {
+    const { sendVerificationEmail } = await loadMail();
+    await sendVerificationEmail('user@example.dev', `Tom & "Jerry" <O'Neil>`, 'raw-token-abc123');
+
+    const call = sendMailMock.mock.calls[0][0];
+    expect(call.html).toContain('<p>Hi Tom &amp; &quot;Jerry&quot; &lt;O&#39;Neil&gt;,</p>');
+  });
+
+  it.each([
+    ['Tedd', '<p>Hi Tedd,</p>'],
+    [null, '<p>Hi,</p>'],
+    ['Иван Петров', '<p>Hi Иван Петров,</p>'],
+  ])('leaves an ordinary greeting unchanged (name: %s)', async (name, expectedGreeting) => {
+    const { sendVerificationEmail } = await loadMail();
+    await sendVerificationEmail('user@example.dev', name, 'raw-token-abc123');
+
+    const call = sendMailMock.mock.calls[0][0];
+    expect(call.html).toContain(expectedGreeting);
+  });
+
+  it('escapes APP_NAME in the email header', async () => {
+    vi.stubEnv('APP_NAME', '<b>KUKO</b>');
+
+    const { sendVerificationEmail } = await loadMail();
+    await sendVerificationEmail('user@example.dev', 'Tedd', 'raw-token-abc123');
+
+    const call = sendMailMock.mock.calls[0][0];
+    expect(call.html).not.toContain('<b>KUKO</b>');
+    expect(call.html).toContain('&lt;b&gt;KUKO&lt;/b&gt;');
+  });
+});

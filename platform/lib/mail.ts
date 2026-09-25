@@ -130,24 +130,40 @@ function baseUrl(): string {
   return process.env.APP_URL ?? 'http://localhost:3000';
 }
 
+// Escapes a plain-text value for safe use in HTML element content or a
+// double/single-quoted attribute. `&` must be replaced first so the entities
+// produced by the later replacements aren't themselves re-escaped.
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Inline styles only: most email clients strip <style> blocks and external
 // stylesheets, so a button that has to render consistently in Gmail/Outlook/
 // Apple Mail needs every rule inlined on the element itself.
 function renderButton(url: string, label: string): string {
-  return `<p style="margin:24px 0;"><a href="${url}" style="display:inline-block;padding:12px 24px;background-color:#436649;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-family:sans-serif;">${label}</a></p>`;
+  return `<p style="margin:24px 0;"><a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 24px;background-color:#436649;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-family:sans-serif;">${escapeHtml(label)}</a></p>`;
 }
 
+// `greeting` is plain text (it carries the user-chosen display name), so it is
+// escaped here before entering HTML — callers must not pre-escape it.
+// `bodyHtml` is trusted template markup and is inserted as-is.
 function renderEmail(greeting: string, bodyHtml: string): string {
-  const appName = process.env.APP_NAME ?? 'KUKO WAY';
+  const appName = escapeHtml(process.env.APP_NAME ?? 'KUKO WAY');
   return `<div style="font-family:sans-serif;color:#27362a;max-width:480px;margin:0 auto;">
     <p style="font-weight:700;font-size:16px;">${appName}</p>
-    <p>${greeting}</p>
+    <p>${escapeHtml(greeting)}</p>
     ${bodyHtml}
   </div>`;
 }
 
 export async function sendVerificationEmail(to: string, name: string | null, rawToken: string): Promise<void> {
   const link = `${baseUrl()}/verify-email?token=${encodeURIComponent(rawToken)}`;
+  const safeLink = escapeHtml(link);
   const greeting = name ? `Hi ${name},` : 'Hi,';
 
   await sendMail({
@@ -158,7 +174,7 @@ export async function sendVerificationEmail(to: string, name: string | null, raw
       greeting,
       `<p>Please verify your email address to activate your account.</p>
        ${renderButton(link, 'Verify email address')}
-       <p style="font-size:13px;color:#57815c;">Or paste this link into your browser: <a href="${link}">${link}</a></p>
+       <p style="font-size:13px;color:#57815c;">Or paste this link into your browser: <a href="${safeLink}">${safeLink}</a></p>
        <p style="font-size:13px;color:#57815c;">This link expires in 24 hours. If you didn't create an account, you can ignore this email.</p>`,
     ),
   });
@@ -166,6 +182,7 @@ export async function sendVerificationEmail(to: string, name: string | null, raw
 
 export async function sendPasswordResetEmail(to: string, name: string | null, rawToken: string): Promise<void> {
   const link = `${baseUrl()}/reset-password?token=${encodeURIComponent(rawToken)}`;
+  const safeLink = escapeHtml(link);
   const greeting = name ? `Hi ${name},` : 'Hi,';
 
   await sendMail({
@@ -176,7 +193,7 @@ export async function sendPasswordResetEmail(to: string, name: string | null, ra
       greeting,
       `<p>We received a request to reset your password.</p>
        ${renderButton(link, 'Reset password')}
-       <p style="font-size:13px;color:#57815c;">Or paste this link into your browser: <a href="${link}">${link}</a></p>
+       <p style="font-size:13px;color:#57815c;">Or paste this link into your browser: <a href="${safeLink}">${safeLink}</a></p>
        <p style="font-size:13px;color:#57815c;">This link expires in 1 hour. If you didn't request this, you can ignore this email — your password will not change.</p>`,
     ),
   });
