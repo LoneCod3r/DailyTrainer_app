@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Container, Card, CardContent, Input, Button, Alert } from '@/components/ui';
 import { useT } from '@/lib/i18n/LocaleProvider';
 import type { DictKey } from '@/lib/i18n/dictionaries';
+import { safeInternalPath } from '@/lib/safe-redirect';
 
 const ERROR_KEY: Record<string, DictKey> = {
   RATE_LIMITED: 'auth.loginRateLimited',
@@ -43,8 +44,10 @@ export default function LoginPage() {
     // e.g. app/admin/layout.tsx's redirect('/login?callbackUrl=/admin'))
     // always wins — the user was headed somewhere specific. Only the
     // "plain /login, no destination in mind" case falls back to a
-    // role-based landing page instead of always defaulting to "/".
-    let destination = searchParams.get('callbackUrl');
+    // role-based landing page instead of always defaulting to "/". It comes
+    // from the URL, so anything that isn't an internal path (external URLs,
+    // "//host", "javascript:", ...) is discarded and treated as absent.
+    let destination = safeInternalPath(searchParams.get('callbackUrl'));
     if (!destination) {
       const session = await getSession();
       const role = session?.user?.role;

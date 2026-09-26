@@ -1,9 +1,11 @@
+import { requireModeratorSession } from '@/lib/require-moderator-session';
 import { listModeratableMembers } from '@/modules/moderation/moderation.service';
 import { MembersModerationTable } from '@/components/moderation/MembersModerationTable';
 import { EmptyState } from '@/components/ui';
 import { UsersIcon } from '@/components/layout/icons';
 
 export default async function ModerationUsersPage() {
+  await requireModeratorSession();
   const members = await listModeratableMembers(50);
 
   return (

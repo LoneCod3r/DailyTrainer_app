@@ -3,9 +3,20 @@
 // modules/kuko-way/content. Nothing here is invented: every slug/category
 // below exists in the current codebase's demo data.
 
+// Seeded demo accounts share one password, supplied via SEED_DEMO_PASSWORD
+// (never hard-coded — see prisma/seed.ts). playwright.config.ts loads it from
+// .env; it must match the value the database was seeded with.
+const DEMO_ACCOUNT_PASSWORD = (() => {
+  const password = process.env.SEED_DEMO_PASSWORD;
+  if (!password) {
+    throw new Error('SEED_DEMO_PASSWORD is not set — use the same value prisma/seed.ts seeded the database with.');
+  }
+  return password;
+})();
+
 export const DEMO_USER = {
   email: 'member@example.dev',
-  password: 'DevPassword123!',
+  password: DEMO_ACCOUNT_PASSWORD,
   name: 'Demo Member',
 };
 
@@ -17,7 +28,7 @@ export const AUTH_STORAGE_STATE = 'tests/e2e/.auth/member.json';
 // setup project, since it's the only spec that needs this identity.
 export const MODERATOR_USER = {
   email: 'moderator@example.dev',
-  password: 'DevPassword123!',
+  password: DEMO_ACCOUNT_PASSWORD,
   name: 'Demo Moderator',
 };
 
@@ -26,7 +37,7 @@ export const MODERATOR_USER = {
 // unaffected by the Moderator boundary.
 export const ADMIN_USER = {
   email: 'admin@example.dev',
-  password: 'DevPassword123!',
+  password: DEMO_ACCOUNT_PASSWORD,
   name: 'Demo Admin',
 };
 

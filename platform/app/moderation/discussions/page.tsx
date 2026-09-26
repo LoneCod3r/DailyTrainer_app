@@ -1,9 +1,11 @@
+import { requireModeratorSession } from '@/lib/require-moderator-session';
 import { listDiscussionsForModeration } from '@/modules/moderation/moderation.service';
 import { DiscussionsModerationTable } from '@/components/moderation/DiscussionsModerationTable';
 import { EmptyState } from '@/components/ui';
 import { DiscussionsIcon } from '@/components/layout/icons';
 
 export default async function ModerationDiscussionsPage() {
+  await requireModeratorSession();
   const discussions = await listDiscussionsForModeration(50);
 
   return (

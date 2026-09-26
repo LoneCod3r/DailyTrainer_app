@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireModeratorSession } from '@/lib/require-moderator-session';
 import { Card, CardContent, CardTitle, Badge, EmptyState } from '@/components/ui';
 import { FlagIcon, DiscussionsIcon, HistoryIcon } from '@/components/layout/icons';
 import { getModerationOverview, listOpenReports, listReportHistory } from '@/modules/moderation/moderation.service';
@@ -31,7 +30,7 @@ function MetricCard({ label, value, icon, hint }: { label: string; value: number
 }
 
 export default async function ModerationDashboardPage() {
-  const session = await getServerSession(authOptions);
+  const session = await requireModeratorSession();
   const [overview, openReports, recentHistory] = await Promise.all([
     getModerationOverview(),
     listOpenReports(),

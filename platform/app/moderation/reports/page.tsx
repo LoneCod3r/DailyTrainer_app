@@ -1,7 +1,9 @@
+import { requireModeratorSession } from '@/lib/require-moderator-session';
 import { listOpenReports } from '@/modules/moderation/moderation.service';
 import { ReportsQueue } from '@/components/moderation/ReportsQueue';
 
 export default async function ModerationReportsPage() {
+  await requireModeratorSession();
   const reports = await listOpenReports();
 
   return (

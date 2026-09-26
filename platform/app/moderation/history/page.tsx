@@ -1,3 +1,4 @@
+import { requireModeratorSession } from '@/lib/require-moderator-session';
 import Link from 'next/link';
 import { Badge, Card, CardContent, EmptyState } from '@/components/ui';
 import { HistoryIcon } from '@/components/layout/icons';
@@ -5,6 +6,7 @@ import { listReportHistory } from '@/modules/moderation/moderation.service';
 import { REASON_LABEL, RESOLUTION_LABEL } from '@/components/moderation/labels';
 
 export default async function ModerationHistoryPage() {
+  await requireModeratorSession();
   const reports = await listReportHistory(50);
 
   return (

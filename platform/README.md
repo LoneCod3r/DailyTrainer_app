@@ -145,7 +145,9 @@ npm run db:migrate   # creates the database schema
 npm run db:seed      # creates demo accounts + placeholder content
 ```
 
-This creates three demo accounts (password `DevPassword123!`):
+This creates three demo accounts, all using the password you set in
+`SEED_DEMO_PASSWORD` in `.env` (the seed refuses to run without it; the e2e
+suite logs in with the same value):
 
 - `admin@example.dev` — ADMIN
 - `moderator@example.dev` — MODERATOR

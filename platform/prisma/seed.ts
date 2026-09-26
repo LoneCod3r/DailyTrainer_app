@@ -2,18 +2,46 @@
 // every account and content item here is clearly marked as demo/dev data.
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { loadEnvConfig } from '@next/env';
+
+// `npm run db:seed` runs outside Next.js, so load .env / .env.local the same
+// way the app does (SEED_DEMO_PASSWORD and SEED_ALLOW_DEMO_ACCOUNTS below).
+loadEnvConfig(process.cwd(), process.env.NODE_ENV !== 'production');
 
 const prisma = new PrismaClient();
 
-const DEV_PASSWORD = 'DevPassword123!';
+// The demo accounts' password comes from the environment, never from source:
+// this repository is public, so a hard-coded value would be a known
+// credential on every database seeded from it. Creating demo accounts in
+// production additionally requires an explicit opt-in.
+function getDemoAccountPassword(): string {
+  if (process.env.NODE_ENV === 'production' && process.env.SEED_ALLOW_DEMO_ACCOUNTS !== 'true') {
+    throw new Error(
+      'Refusing to create demo accounts with NODE_ENV=production. Set SEED_ALLOW_DEMO_ACCOUNTS=true to opt in explicitly.',
+    );
+  }
+  const password = process.env.SEED_DEMO_PASSWORD;
+  if (!password) {
+    throw new Error(
+      'SEED_DEMO_PASSWORD is not set. Choose a password for the demo accounts and add it to .env (see .env.example).',
+    );
+  }
+  return password;
+}
 
-async function upsertUser(email: string, name: string, role: 'ADMIN' | 'MODERATOR' | 'USER') {
-  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 12);
+async function upsertUser(
+  email: string,
+  name: string,
+  role: 'ADMIN' | 'MODERATOR' | 'USER',
+  passwordHash: string,
+) {
   return prisma.user.upsert({
     where: { email },
     // Re-verify on every reseed, in case a previous test run consumed this
-    // demo account's verification (e.g. the reset-password e2e flow).
-    update: { emailVerified: new Date() },
+    // demo account's verification (e.g. the reset-password e2e flow), and
+    // re-apply the configured password so existing demo accounts always match
+    // SEED_DEMO_PASSWORD (which the e2e fixtures log in with).
+    update: { emailVerified: new Date(), passwordHash },
     create: {
       email,
       name,
@@ -30,11 +58,15 @@ async function upsertUser(email: string, name: string, role: 'ADMIN' | 'MODERATO
 }
 
 async function main() {
+  // Resolved before any database write, so a refused/misconfigured run
+  // changes nothing.
+  const passwordHash = await bcrypt.hash(getDemoAccountPassword(), 12);
+
   console.log('Seeding development data...');
 
-  const admin = await upsertUser('admin@example.dev', 'Demo Admin', 'ADMIN');
-  const moderator = await upsertUser('moderator@example.dev', 'Demo Moderator', 'MODERATOR');
-  const member = await upsertUser('member@example.dev', 'Demo Member', 'USER');
+  const admin = await upsertUser('admin@example.dev', 'Demo Admin', 'ADMIN', passwordHash);
+  const moderator = await upsertUser('moderator@example.dev', 'Demo Moderator', 'MODERATOR', passwordHash);
+  const member = await upsertUser('member@example.dev', 'Demo Member', 'USER', passwordHash);
 
   await prisma.contentItem.upsert({
     where: { slug: 'welcome-to-the-platform' },
@@ -209,7 +241,7 @@ async function main() {
   console.log('Seed complete.');
   console.log('Demo accounts (development only — do not use in production):');
   console.log('  admin@example.dev / moderator@example.dev / member@example.dev');
-  console.log(`  password: ${DEV_PASSWORD}`);
+  console.log('  password: the value of SEED_DEMO_PASSWORD');
 }
 
 main()

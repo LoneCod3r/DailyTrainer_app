@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures/base';
-import { AUTH_STORAGE_STATE } from './fixtures/data';
+import { AUTH_STORAGE_STATE, DEMO_USER } from './fixtures/data';
 
 // Smoke-level accessibility coverage, not a full audit: a handful of
 // representative pages checked with axe-core, plus a couple of manual
@@ -44,9 +44,9 @@ test.describe('Accessibility smoke checks', () => {
   test('login form is fully operable by keyboard', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel('Email').focus();
-    await page.keyboard.type('member@example.dev');
+    await page.keyboard.type(DEMO_USER.email);
     await page.keyboard.press('Tab');
-    await page.keyboard.type('DevPassword123!');
+    await page.keyboard.type(DEMO_USER.password);
     await expect(page.getByLabel('Password', { exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
     // The password-visibility toggle button sits right after the field.

@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { loadEnvConfig } from '@next/env';
+
+// Load .env / .env.local like the app and prisma/seed.ts do, so the demo
+// login fixtures see the same SEED_DEMO_PASSWORD the database was seeded with.
+loadEnvConfig(process.cwd(), true);
 
 // E2E tests run against the real Next.js dev server + local Postgres (same
 // stack `npm run dev` uses) — no separate test-only architecture. See

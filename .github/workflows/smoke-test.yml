@@ -61,6 +61,14 @@ jobs:
       - name: Apply database migrations
         run: npm run db:deploy
 
+      # Demo account password for the seed and the e2e login fixtures —
+      # random per run, so no password is ever committed to this public repo.
+      - name: Generate demo account password
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          echo "SEED_DEMO_PASSWORD=$password" >> "$GITHUB_ENV"
+
       - name: Seed database
         run: npm run db:seed
 
