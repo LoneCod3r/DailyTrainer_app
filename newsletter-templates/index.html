@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DailyTrainer Newsletter Designs</title>
+<style>
+  :root{--page:#fbf9f6;--surface:#fff;--ink:#1c1f1d;--ink7:#3a3f3b;--muted:#6b716c;--line:#e7dccb;--brand:#436649;--tint:#f4f7f4;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5}
+  .wrap{max-width:1240px;margin:0 auto;padding:40px 16px 72px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px}
+  .mono{width:32px;height:32px;border-radius:8px;background:var(--brand);color:#fff;display:inline-grid;place-items:center;font-weight:700}
+  h1{font:500 clamp(30px,5vw,44px)/1.1 Fraunces,Georgia,serif;margin:28px 0 10px;letter-spacing:-.5px}
+  .lede{max-width:680px;color:var(--ink7);margin:0}
+  .note{display:inline-block;margin-top:16px;font-size:13px;color:#7a5f36;background:#f4efe7;border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:24px;margin-top:40px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 20px rgba(28,31,29,.06)}
+  .thumb{display:block;position:relative;height:380px;overflow:hidden;background:var(--tint);border-bottom:1px solid var(--line)}
+  .thumb iframe{position:absolute;top:0;left:50%;width:700px;height:1000px;border:0;transform:translateX(-50%) scale(.5);transform-origin:top center;pointer-events:none}
+  .thumb:hover{outline:2px solid var(--brand);outline-offset:-2px}
+  .meta{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1}
+  .num{margin:0;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--brand);font-weight:600}
+  h2{font:500 22px/1.25 Fraunces,Georgia,serif;margin:6px 0 8px}
+  h2 a{color:inherit;text-decoration:none}
+  h2 a:hover{color:var(--brand)}
+  .steps{margin:28px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:10px 28px;font-size:14px;color:var(--ink7)}
+  .steps b{color:var(--brand)}
+  .desc{margin:0 0 14px;font-size:14px;color:var(--ink7);flex:1}
+  .swatches{display:flex;gap:6px;margin-bottom:14px}
+  .swatches span{width:22px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,.12)}
+  .links{margin:0;display:flex;flex-wrap:wrap;gap:8px;font-size:14px}
+  .links a{color:var(--brand);font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+  .links a:hover{background:var(--tint)}
+  .links a.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  footer{margin-top:48px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
+  code{font-size:12px;background:#f4efe7;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="mono" aria-hidden="true">D</span>DailyTrainer</div>
+  <h1>Choose a newsletter design</h1>
+  <p class="lede">Six design directions for the first issue of the DailyTrainer newsletter. Every design uses the same sample content, so you can compare style alone. Each is available in English and Bulgarian and adapts to phone screens.</p>
+  <span class="note">Sample content · Issue #1 · for design review</span>
+  <ol class="steps"><li><b>1.</b> Browse the six designs</li><li><b>2.</b> Open one to see it full size</li><li><b>3.</b> Check the Bulgarian and mobile versions</li><li><b>4.</b> Tell us your favourite (or what to combine)</li></ol>
+  <section class="grid" aria-label="Templates">
+    <article class="card">
+      <a class="thumb" href="template-01-clean/index.html" aria-label="Open template 01, Clean & Minimal">
+        <iframe src="template-01-clean/index.html" title="Clean & Minimal thumbnail" tabindex="-1" scrolling="no"></iframe>
+      </a>
+      <div class="meta">
+        <p class="num">Template 01</p>
+        <h2><a href="template-01-clean/index.html">Clean & Minimal</a></h2>
+        <p class="desc">Spacious single column, Fraunces-style serif headings, hairline dividers, one solid button.</p>
+        <div class="swatches" aria-hidden="true"><span style="background:#fbf9f6"></span><span style="background:#ffffff"></span><span style="background:#436649"></span></div>
+        <p class="links"><a class="primary" href="template-01-clean/index.html">View template</a><a href="template-01-clean/index.bg.html" hreflang="bg">На български</a><a href="template-01-clean/preview.html">Desktop &amp; mobile</a></p>
+      </div>
+    </article>
+    <article class="card">
+      <a class="thumb" href="template-02-editorial/index.html" aria-label="Open template 02, Editorial">
+        <iframe src="template-02-editorial/index.html" title="Editorial thumbnail" tabindex="-1" scrolling="no"></iframe>
+      </a>
+      <div class="meta">
+        <p class="num">Template 02</p>
+        <h2><a href="template-02-editorial/index.html">Editorial</a></h2>
+        <p class="desc">Magazine masthead, double rules, drop-cap editor’s letter, two-column feature and three-column “In this issue”.</p>
+        <div class="swatches" aria-hidden="true"><span style="background:#f4efe7"></span><span style="background:#fffdf9"></span><span style="background:#1c1f1d"></span></div>
+        <p class="links"><a class="primary" href="template-02-editorial/index.html">View template</a><a href="template-02-editorial/index.bg.html" hreflang="bg">На български</a><a href="template-02-editorial/preview.html">Desktop &amp; mobile</a></p>
+      </div>
+    </article>
+    <article class="card">
+      <a class="thumb" href="template-03-modern/index.html" aria-label="Open template 03, Modern & Friendly">
+        <iframe src="template-03-modern/index.html" title="Modern & Friendly thumbnail" tabindex="-1" scrolling="no"></iframe>
+      </a>
+      <div class="meta">
+        <p class="num">Template 03</p>
+        <h2><a href="template-03-modern/index.html">Modern & Friendly</a></h2>
+        <p class="desc">Rounded cards, brand-green hero with stat chips, pill buttons and tags, colourful icon tiles.</p>
+        <div class="swatches" aria-hidden="true"><span style="background:#f4f7f4"></span><span style="background:#436649"></span><span style="background:#e6ede6"></span></div>
+        <p class="links"><a class="primary" href="template-03-modern/index.html">View template</a><a href="template-03-modern/index.bg.html" hreflang="bg">На български</a><a href="template-03-modern/preview.html">Desktop &amp; mobile</a></p>
+      </div>
+    </article>
+    <article class="card">
+      <a class="thumb" href="template-04-premium/index.html" aria-label="Open template 04, Premium / Dark">
+        <iframe src="template-04-premium/index.html" title="Premium / Dark thumbnail" tabindex="-1" scrolling="no"></iframe>
+      </a>
+      <div class="meta">
+        <p class="num">Template 04</p>
+        <h2><a href="template-04-premium/index.html">Premium / Dark</a></h2>
+        <p class="desc">Deep green-black surface, sand-gold hairlines and numerals, serif display type, restrained accents.</p>
+        <div class="swatches" aria-hidden="true"><span style="background:#0e110f"></span><span style="background:#151a16"></span><span style="background:#d6c3a5"></span></div>
+        <p class="links"><a class="primary" href="template-04-premium/index.html">View template</a><a href="template-04-premium/index.bg.html" hreflang="bg">На български</a><a href="template-04-premium/preview.html">Desktop &amp; mobile</a></p>
+      </div>
+    </article>
+    <article class="card">
+      <a class="thumb" href="template-05-personal/index.html" aria-label="Open template 05, Personal Letter">
+        <iframe src="template-05-personal/index.html" title="Personal Letter thumbnail" tabindex="-1" scrolling="no"></iframe>
+      </a>
+      <div class="meta">
+        <p class="num">Template 05</p>
+        <h2><a href="template-05-personal/index.html">Personal Letter</a></h2>
+        <p class="desc">A plain, warm letter from your coach: author line, highlighted idea, dashed “try this” note, reply prompt, signature and P.S.</p>
+        <div class="swatches" aria-hidden="true"><span style="background:#f4efe7"></span><span style="background:#ffffff"></span><span style="background:#d6c3a5"></span></div>
+        <p class="links"><a class="primary" href="template-05-personal/index.html">View template</a><a href="template-05-personal/index.bg.html" hreflang="bg">На български</a><a href="template-05-personal/preview.html">Desktop &amp; mobile</a></p>
+      </div>
+    </article>
+    <article class="card">
+      <a class="thumb" href="template-06-athletic/index.html" aria-label="Open template 06, Athletic">
+        <iframe src="template-06-athletic/index.html" title="Athletic thumbnail" tabindex="-1" scrolling="no"></iframe>
+      </a>
+      <div class="meta">
+        <p class="num">Template 06</p>
+        <h2><a href="template-06-athletic/index.html">Athletic</a></h2>
+        <p class="desc">High-energy training look: heavy italic uppercase type, lime accents, session timer, weekly plan table and goal progress bar.</p>
+        <div class="swatches" aria-hidden="true"><span style="background:#1c1f1d"></span><span style="background:#c8f169"></span><span style="background:#436649"></span></div>
+        <p class="links"><a class="primary" href="template-06-athletic/index.html">View template</a><a href="template-06-athletic/index.bg.html" hreflang="bg">На български</a><a href="template-06-athletic/preview.html">Desktop &amp; mobile</a></p>
+      </div>
+    </article>
+  </section>
+  <footer>All designs build on DailyTrainer’s existing colours and typography (Athletic adds a lime accent). Text, figures, quotes and image areas are placeholders; links are inactive. Designs are built with email-safe techniques for common email apps; final testing in Gmail, Apple Mail and Outlook happens after a design is chosen.</footer>
+</div>
+</body>
+</html>
