@@ -4,6 +4,7 @@ import { registerUser } from '@/modules/auth/auth.service';
 import { withErrorHandling, jsonOk } from '@/lib/api-response';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { Errors } from '@/lib/api-response';
+import { getLocale } from '@/lib/i18n/get-locale';
 
 export async function POST(req: Request) {
   return withErrorHandling(async () => {
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const input = registerSchema.parse(body);
-    const user = await registerUser(input, { ip });
+    const user = await registerUser(input, { ip, locale: getLocale() });
     return jsonOk({ user }, 201);
   });
 }

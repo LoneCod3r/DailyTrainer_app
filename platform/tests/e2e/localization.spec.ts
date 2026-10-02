@@ -6,6 +6,13 @@ import { test, expect } from '@playwright/test';
 import { DEMO_USER } from './fixtures/data';
 import { loginViaUi } from './fixtures/auth-helpers';
 import { switchLanguage } from './fixtures/language-helpers';
+import { consentCookie } from './fixtures/consent-helpers';
+
+// Locale is left at the real default here, but a stored cookie choice is
+// still pre-set so the first-visit consent banner can't cover the form.
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([consentCookie(baseURL!)]);
+});
 
 test('BG (default) -> EN -> BG preserves route and authentication across reloads', async ({ page }) => {
   await page.goto('/');

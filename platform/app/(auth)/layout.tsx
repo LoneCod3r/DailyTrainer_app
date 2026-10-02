@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getSettings } from '@/modules/settings/settings.service';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
+import { SiteFooter } from '@/components/legal/SiteFooter';
 
 // Deliberately lighter chrome than the main app shell (no sidebar/bottom
 // nav) — login/register are entry points, not part of the practice
@@ -34,6 +35,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </div>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>
+      <SiteFooter appName={settings.appName} />
     </div>
   );
 }

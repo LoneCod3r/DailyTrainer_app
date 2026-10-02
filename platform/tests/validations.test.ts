@@ -37,6 +37,22 @@ describe('auth validations', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts registration with and without the optional legal consent block', () => {
+    expect(registerSchema.safeParse(VALID_REGISTER).success).toBe(true);
+    const withConsent = registerSchema.safeParse({
+      ...VALID_REGISTER,
+      legalConsent: { termsAccepted: true, termsVersion: '1.0', privacyAcknowledged: false, privacyVersion: '1.2' },
+    });
+    expect(withConsent.success && withConsent.data.legalConsent?.termsVersion).toBe('1.0');
+  });
+
+  it('rejects a malformed legal consent block', () => {
+    expect(registerSchema.safeParse({ ...VALID_REGISTER, legalConsent: { termsAccepted: 'yes' } }).success).toBe(false);
+    expect(
+      registerSchema.safeParse({ ...VALID_REGISTER, legalConsent: { termsVersion: 'x'.repeat(51) } }).success,
+    ).toBe(false);
+  });
+
   it('rejects registration when the CAPTCHA token is missing', () => {
     const { captchaToken, ...withoutCaptcha } = VALID_REGISTER;
     void captchaToken;

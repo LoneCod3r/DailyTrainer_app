@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Providers } from '@/components/layout/Providers';
+import { cookies } from 'next/headers';
 import { getLocale } from '@/lib/i18n/get-locale';
+import { getPublicLegalConfig } from '@/modules/legal/legal.service';
+import { CONSENT_COOKIE, parseConsent } from '@/modules/legal/cookie-consent';
 
 // Self-hosted so `next build` never depends on the live Google Fonts service
 // (next/font/google intermittently failed CI builds). The files are Google
@@ -51,13 +54,20 @@ const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('theme');v
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = getLocale();
+  // Legal/consent state is resolved here, once per request, so the cookie
+  // banner, footer and registration form all render correctly in the first
+  // HTML response (see components/legal/LegalProvider.tsx).
+  const legalConfig = getPublicLegalConfig();
+  const consent = parseConsent(cookies().get(CONSENT_COOKIE)?.value, legalConfig.cookiePolicyVersion);
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className={`${sans.variable} ${serif.variable} min-h-screen bg-page font-sans text-ink-900 antialiased`}>
-        <Providers locale={locale}>{children}</Providers>
+        <Providers locale={locale} legalConfig={legalConfig} consent={consent}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

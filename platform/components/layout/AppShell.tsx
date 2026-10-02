@@ -5,6 +5,7 @@ import { Topbar } from './Topbar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { MobileDrawer } from './MobileDrawer';
 import { VerificationBanner } from './VerificationBanner';
+import { SiteFooter } from '@/components/legal/SiteFooter';
 
 // The persistent application shell used by the Home / Practices / Community
 // / Account experience (app/(app)) — a topbar (logo + primary nav + search +
@@ -28,7 +29,9 @@ export function AppShell({
       <div className="flex min-h-screen flex-col">
         <Topbar appName={appName} planName={planName ?? null} onOpenMenu={() => setDrawerOpen(true)} />
         <VerificationBanner />
-        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+        <main className="flex-1">{children}</main>
+        {/* Bottom padding keeps the footer clear of the fixed mobile bottom nav. */}
+        <SiteFooter appName={appName} className="pb-20 lg:pb-0" />
       </div>
       <MobileBottomNav />
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

@@ -8,6 +8,8 @@ import { verifyMathChallenge } from '@/lib/math-challenge';
 import { sendVerificationEmail, sendPasswordResetEmail, EmailDeliveryError } from '@/lib/mail';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { type RegisterInput } from '@/lib/validations/auth';
+import { resolveRegistrationAgreements } from '@/modules/legal/legal.service';
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locale';
 
 const log = createLogger('auth.service');
 const SALT_ROUNDS = 12;
@@ -23,6 +25,9 @@ const MIN_HUMAN_SUBMIT_MS = 1500;
 
 type RegisterOptions = {
   ip: string;
+  // UI language the registration form was shown in. Stored with each legal
+  // agreement, so it's known which language version was agreed to.
+  locale?: Locale;
 };
 
 export async function registerUser(input: RegisterInput, options: RegisterOptions) {
@@ -45,6 +50,12 @@ export async function registerUser(input: RegisterInput, options: RegisterOption
     log.warn('registration rejected: submitted implausibly fast', { ip: options.ip });
     throw Errors.badRequest('Invalid submission');
   }
+
+  // Terms/Privacy agreement, checked before the math challenge and CAPTCHA
+  // so a missing checkbox doesn't use up either. Returns [] while no legal
+  // document is active (modules/legal/config.ts), which leaves registration
+  // unchanged.
+  const legalAgreements = resolveRegistrationAgreements(input.legalConsent, options.locale ?? DEFAULT_LOCALE);
 
   // Cheap, DB-only check before the network round-trip to Google — lets an
   // obviously-bot submission fail fast without spending a CAPTCHA verify
@@ -77,6 +88,10 @@ export async function registerUser(input: RegisterInput, options: RegisterOption
       role: 'USER',
       status: 'ACTIVE',
       profile: { create: {} },
+      // Created in the same write as the user: an account never exists
+      // without the agreements it was registered under. The rollback below
+      // removes them with the user (onDelete: Cascade).
+      ...(legalAgreements.length > 0 && { legalAgreements: { create: legalAgreements } }),
     },
     select: { id: true, name: true, email: true, role: true, status: true, emailVerified: true },
   });

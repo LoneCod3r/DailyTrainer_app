@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 
 vi.mock('@/lib/prisma', () => ({
@@ -344,5 +344,86 @@ describe('requestPasswordReset / resetPassword', () => {
     const updateArgs = (prisma.user.update as any).mock.calls[0][0];
     expect(updateArgs.data.passwordHash).not.toBe('brandNewPassword1');
     expect(await bcrypt.compare('brandNewPassword1', updateArgs.data.passwordHash)).toBe(true);
+  });
+});
+
+const { LEGAL_DOCUMENTS } = await import('@/modules/legal/documents');
+const { COMPANY_INFO } = await import('@/modules/legal/company');
+
+describe('registerUser — legal agreements (modules/legal)', () => {
+  const originalDocs = structuredClone(LEGAL_DOCUMENTS);
+  const originalCompany = { ...COMPANY_INFO };
+  // Fixture only: not legal wording.
+  const FIXTURE = { sections: [{ heading: 'Fixture', blocks: [{ type: 'paragraph' as const, text: 'Fixture text' }] }] };
+
+  function activateTermsAndPrivacy() {
+    vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
+    for (const [id, version] of [['terms', '1.0'], ['privacy', '1.2']] as const) {
+      Object.assign(LEGAL_DOCUMENTS[id], {
+        status: 'published',
+        version,
+        effectiveDate: '2026-11-01',
+        content: { bg: FIXTURE, en: FIXTURE },
+      });
+    }
+  }
+
+  function mockSuccessfulCreate() {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    (prisma.user.create as any).mockResolvedValue({
+      id: 'new-user', name: 'A', email: 'a@b.com', role: 'USER', status: 'ACTIVE', emailVerified: null,
+    });
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    for (const id of ['terms', 'privacy', 'cookies'] as const) LEGAL_DOCUMENTS[id] = structuredClone(originalDocs[id]);
+    Object.assign(COMPANY_INFO, originalCompany);
+  });
+
+  it('while documents are unpublished: registers without any consent fields and records no agreements', async () => {
+    mockSuccessfulCreate();
+    await registerUser(VALID_INPUT, REG_OPTIONS);
+    const { data } = (prisma.user.create as any).mock.calls[0][0];
+    expect(data).not.toHaveProperty('legalAgreements');
+  });
+
+  it('when active: rejects a registration without Terms acceptance before using up the math challenge or CAPTCHA', async () => {
+    activateTermsAndPrivacy();
+    mockSuccessfulCreate();
+    await expect(registerUser(VALID_INPUT, REG_OPTIONS)).rejects.toMatchObject({ status: 400 });
+    expect(verifyMathChallenge).not.toHaveBeenCalled();
+    expect(verifyRecaptchaToken).not.toHaveBeenCalled();
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it('when active: stores the accepted versions, UI language and timestamp in the same write as the user', async () => {
+    activateTermsAndPrivacy();
+    mockSuccessfulCreate();
+    const before = Date.now();
+    await registerUser(
+      { ...VALID_INPUT, legalConsent: { termsAccepted: true, termsVersion: '1.0', privacyVersion: '1.2' } },
+      { ...REG_OPTIONS, locale: 'bg' },
+    );
+    const { data } = (prisma.user.create as any).mock.calls[0][0];
+    const rows = data.legalAgreements.create;
+    expect(rows).toEqual([
+      expect.objectContaining({ documentType: 'TERMS', documentVersion: '1.0', action: 'ACCEPTED', locale: 'bg', source: 'REGISTRATION' }),
+      expect.objectContaining({ documentType: 'PRIVACY', documentVersion: '1.2', action: 'ACKNOWLEDGED', locale: 'bg', source: 'REGISTRATION' }),
+    ]);
+    for (const row of rows) {
+      expect(row.acceptedAt).toBeInstanceOf(Date);
+      expect(row.acceptedAt.getTime()).toBeGreaterThanOrEqual(before);
+    }
+    expect(rows[0].acceptedAt).toBe(rows[1].acceptedAt);
+  });
+
+  it('when active: rejects acceptance of a version the server no longer considers current', async () => {
+    activateTermsAndPrivacy();
+    mockSuccessfulCreate();
+    await expect(
+      registerUser({ ...VALID_INPUT, legalConsent: { termsAccepted: true, termsVersion: '0.9', privacyVersion: '1.2' } }, REG_OPTIONS),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(prisma.user.create).not.toHaveBeenCalled();
   });
 });

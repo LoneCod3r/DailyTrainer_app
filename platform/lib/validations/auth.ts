@@ -35,6 +35,19 @@ export const registerSchema = z.object({
   // number check refuses.
   mathChallengeId: z.string().min(1, 'Security check is required'),
   mathAnswer: z.coerce.number({ invalid_type_error: 'Please answer the security check' }),
+  // Terms/Privacy agreement. Optional at the schema level: whether it is
+  // required depends on which legal documents are currently active, and
+  // modules/legal/legal.service.ts (resolveRegistrationAgreements) enforces
+  // that. Versions are the ones the form displayed, checked against the
+  // current versions on the server.
+  legalConsent: z
+    .object({
+      termsAccepted: z.boolean().optional(),
+      termsVersion: z.string().max(50).optional(),
+      privacyAcknowledged: z.boolean().optional(),
+      privacyVersion: z.string().max(50).optional(),
+    })
+    .optional(),
 });
 
 export const resendVerificationSchema = z.object({

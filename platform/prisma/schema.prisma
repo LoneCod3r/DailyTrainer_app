@@ -93,6 +93,8 @@ model User {
   reportsFiled   Report[] @relation("ReportReporter")
   reportsHandled Report[] @relation("ReportHandler")
 
+  legalAgreements LegalAgreement[]
+
   @@index([role])
   @@index([status])
   @@map("users")
@@ -554,4 +556,54 @@ model LessonProgress {
   @@unique([userId, courseSlug, moduleSlug, lessonSlug])
   @@index([userId, courseSlug])
   @@map("lesson_progress")
+}
+
+// -----------------------------------------------------------------------------
+// Legal agreements (see modules/legal)
+// -----------------------------------------------------------------------------
+
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+  COOKIES
+}
+
+// ACCEPTED: the user actively agreed (the Terms checkbox). ACKNOWLEDGED: the
+// user was shown the document version and confirmed or was informed of it (the
+// Privacy Policy notice or checkbox, depending on LEGAL_PRIVACY_ACKNOWLEDGEMENT).
+enum LegalAgreementAction {
+  ACCEPTED
+  ACKNOWLEDGED
+}
+
+enum LegalAgreementSource {
+  REGISTRATION
+}
+
+// One row per user per agreed document version. Rows are insert-only: a new
+// document version adds a new row, and earlier rows are never updated, so
+// the history of what each user agreed to (and when) is kept. Rows are only
+// written for documents active at that moment (LEGAL_DOCUMENTS_PUBLISHED plus
+// an approved, published version), never for drafts.
+//
+// onDelete: Cascade matches the other per-user records and the registration
+// rollback in auth.service.ts. Whether agreement evidence must outlive a
+// deleted account is a retention decision still open in the Legal
+// Information Request; changing it is a one-line schema change.
+model LegalAgreement {
+  id              String               @id @default(cuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType    LegalDocumentType
+  // Exact version string from modules/legal/documents.ts.
+  documentVersion String
+  action          LegalAgreementAction
+  // Language version shown when agreeing ("bg" / "en").
+  locale          String
+  source          LegalAgreementSource
+  acceptedAt      DateTime             @default(now())
+
+  @@index([userId, documentType])
+  @@index([documentType, documentVersion])
+  @@map("legal_agreements")
 }

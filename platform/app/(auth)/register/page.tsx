@@ -8,9 +8,16 @@ import { Recaptcha } from '@/components/auth/Recaptcha';
 import { HoneypotField } from '@/components/auth/HoneypotField';
 import { MathChallenge, type MathChallengeValue } from '@/components/auth/MathChallenge';
 import { useT } from '@/lib/i18n/LocaleProvider';
+import { useLegal } from '@/components/legal/LegalProvider';
+import {
+  RegistrationConsent,
+  EMPTY_REGISTRATION_CONSENT,
+  type RegistrationConsentValue,
+} from '@/components/legal/RegistrationConsent';
 
 export default function RegisterPage() {
   const t = useT();
+  const { config: legalConfig } = useLegal();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +26,8 @@ export default function RegisterPage() {
   const [registered, setRegistered] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [mathChallenge, setMathChallenge] = useState<MathChallengeValue>({ challengeId: '', answer: '' });
+  const [legalConsent, setLegalConsent] = useState<RegistrationConsentValue>(EMPTY_REGISTRATION_CONSENT);
+  const [legalInvalid, setLegalInvalid] = useState<{ terms?: boolean; privacy?: boolean }>({});
   // A spent/rejected CAPTCHA token or math challenge can't be reused on a
   // retry — bumping this key remounts both widgets so the next submit gets
   // fresh ones, instead of silently resubmitting stale, already-consumed
@@ -40,6 +49,17 @@ export default function RegisterPage() {
       return;
     }
 
+    // Only checked when the documents are active (see components/legal/
+    // RegistrationConsent.tsx). The server enforces the same rule.
+    const { termsRequired, termsVersion, privacyRequired, privacyVersion, privacyMode } = legalConfig.registration;
+    const termsMissing = termsRequired && !legalConsent.termsAccepted;
+    const privacyMissing = privacyRequired && privacyMode === 'checkbox' && !legalConsent.privacyAcknowledged;
+    setLegalInvalid({ terms: termsMissing, privacy: privacyMissing });
+    if (termsMissing || privacyMissing) {
+      setError(termsMissing ? t('auth.legalTermsRequired') : t('auth.legalPrivacyRequired'));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -56,6 +76,16 @@ export default function RegisterPage() {
           formRenderedAt: formRenderedAt.current,
           mathChallengeId: mathChallenge.challengeId,
           mathAnswer: mathChallenge.answer,
+          // The versions displayed in this form. The server rejects the
+          // submission if they're no longer current.
+          ...((termsRequired || privacyRequired) && {
+            legalConsent: {
+              termsAccepted: legalConsent.termsAccepted,
+              termsVersion: termsVersion ?? undefined,
+              privacyAcknowledged: legalConsent.privacyAcknowledged,
+              privacyVersion: privacyVersion ?? undefined,
+            },
+          }),
         }),
       });
 
@@ -146,6 +176,7 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <MathChallenge key={`math-${challengeAttempt}`} onChange={setMathChallenge} />
+                <RegistrationConsent value={legalConsent} onChange={setLegalConsent} invalid={legalInvalid} />
                 <Recaptcha key={`recaptcha-${challengeAttempt}`} onVerify={setCaptchaToken} />
                 <Button
                   type="submit"
