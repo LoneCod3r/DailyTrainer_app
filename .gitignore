@@ -7,3 +7,8 @@
 Website-цена.txt
 platform/Videos/
 platform/KUKO_WAY_Legal_Documents/
+
+# Local exports (e.g. Stripe test invoice/receipt PDFs) inside the dated
+# daily working folders at the repo root (dd.mm.yyyy/). PDFs elsewhere stay
+# trackable.
+/[0-9][0-9].[0-9][0-9].[0-9][0-9][0-9][0-9]/**/*.pdf

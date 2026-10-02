@@ -16,6 +16,14 @@ import { prisma } from '@/lib/prisma';
 // cookie choice, so in gated mode the form starts behind the consent notice.
 // Google is replaced by fixtures/recaptcha-stub.ts unless E2E_REAL_RECAPTCHA=1.
 
+// Without a site key the form never loads reCAPTCHA at all (Recaptcha.tsx uses
+// its dev-only placeholder token instead, as in CI), so there is no lifecycle
+// to test. Skip rather than wait for a script that will never load.
+test.skip(
+  !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+  'NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set, so the registration form never loads reCAPTCHA',
+);
+
 async function openRegister(page: Page): Promise<'gated' | 'necessary'> {
   await stubRecaptcha(page);
   await page.goto('/register');

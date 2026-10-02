@@ -7,6 +7,15 @@ on:
     branches: [main]
   workflow_dispatch: {}
 
+# Read-only token: this workflow only checks code; it never deploys.
+permissions:
+  contents: read
+
+# A newer push to the same branch/PR supersedes an older, still-running check.
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     working-directory: platform
@@ -58,8 +67,19 @@ jobs:
       - name: Generate Prisma client
         run: npm run db:generate
 
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      # Only ever targets the throwaway `postgres` service container above
+      # (DATABASE_URL in `env`), never a real database.
       - name: Apply database migrations
         run: npm run db:deploy
+
+      # The database the migrations just produced must match schema.prisma
+      # exactly; exit code 2 means a schema change was committed without a
+      # migration (or a migration doesn't match the schema).
+      - name: Check migrations match the schema
+        run: npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
 
       # Demo account password for the seed and the e2e login fixtures —
       # random per run, so no password is ever committed to this public repo.
