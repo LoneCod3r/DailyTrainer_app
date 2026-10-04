@@ -300,7 +300,7 @@ describe('handleWebhook idempotency', () => {
     const event = {
       id: 'evt_2',
       type: 'checkout.session.completed',
-      data: { object: { id: 'cs_123', metadata: { kind: 'donation' }, payment_intent: 'pi_123' } },
+      data: { object: { id: 'cs_123', metadata: { kind: 'donation' }, payment_status: 'paid', payment_intent: 'pi_123' } },
     } as any;
 
     const result = await handleWebhook(event);
@@ -325,7 +325,7 @@ describe('handleWebhook idempotency', () => {
     const event = {
       id: 'evt_3',
       type: 'checkout.session.completed',
-      data: { object: { id: 'cs_456', metadata: { kind: 'donation' } } },
+      data: { object: { id: 'cs_456', metadata: { kind: 'donation' }, payment_status: 'paid' } },
     } as any;
 
     await expect(handleWebhook(event)).rejects.toThrow('db unavailable');
@@ -344,7 +344,7 @@ describe('handleWebhook idempotency', () => {
     const event = {
       id: 'evt_4',
       type: 'checkout.session.completed',
-      data: { object: { id: 'cs_789', metadata: { kind: 'donation' } } },
+      data: { object: { id: 'cs_789', metadata: { kind: 'donation' }, payment_status: 'paid' } },
     } as any;
 
     const result = await handleWebhook(event);
@@ -376,7 +376,7 @@ describe('handleWebhook idempotency', () => {
     const event = {
       id: 'evt_5',
       type: 'checkout.session.completed',
-      data: { object: { id: 'cs_race', metadata: { kind: 'donation' } } },
+      data: { object: { id: 'cs_race', metadata: { kind: 'donation' }, payment_status: 'paid' } },
     } as any;
 
     const result = await handleWebhook(event);
@@ -404,7 +404,7 @@ describe('handleWebhook idempotency', () => {
     const event = {
       id: 'evt_6',
       type: 'checkout.session.completed',
-      data: { object: { id: 'cs_downgrade', metadata: { kind: 'donation' } } },
+      data: { object: { id: 'cs_downgrade', metadata: { kind: 'donation' }, payment_status: 'paid' } },
     } as any;
 
     // Must NOT throw: the event is genuinely already handled by the other
@@ -859,6 +859,129 @@ describe('listInvoicesForUser', () => {
   });
 });
 
+describe('handleWebhook — donation settles only when Stripe reports it paid', () => {
+  // Minimal in-memory `donations` and `payment_events` tables, so each test
+  // asserts the persisted donation row and runs the real PaymentEvent
+  // duplicate handling in handleWebhook — not just which mock was called.
+  const donations = new Map<string, Record<string, unknown>>();
+  const paymentEvents = new Map<string, Record<string, unknown>>();
+
+  const PENDING_ROW = {
+    id: 'don_1',
+    userId: 'u1',
+    amount: 2500,
+    currency: 'eur',
+    status: 'PENDING',
+    stripePaymentIntentId: null,
+    stripeCheckoutSessionId: 'cs_don',
+  };
+
+  beforeEach(() => {
+    donations.clear();
+    paymentEvents.clear();
+    donations.set('cs_don', { ...PENDING_ROW });
+    (prisma.donation.updateMany as any).mockImplementation(async ({ where, data }: any) => {
+      const row = donations.get(where.stripeCheckoutSessionId);
+      if (!row) return { count: 0 };
+      donations.set(where.stripeCheckoutSessionId, { ...row, ...data });
+      return { count: 1 };
+    });
+    (prisma.paymentEvent.findUnique as any).mockImplementation(async ({ where }: any) => paymentEvents.get(where.eventId) ?? null);
+    (prisma.paymentEvent.updateMany as any).mockImplementation(async ({ where, data }: any) => {
+      const row = paymentEvents.get(where.eventId);
+      if (!row || row.status === where.status.not) return { count: 0 };
+      paymentEvents.set(where.eventId, { ...row, ...data });
+      return { count: 1 };
+    });
+    (prisma.paymentEvent.create as any).mockImplementation(async ({ data }: any) => {
+      paymentEvents.set(data.eventId, { ...data });
+      return data;
+    });
+  });
+
+  function checkoutEvent(id: string, type: string, session: Record<string, unknown>) {
+    return {
+      id,
+      type,
+      data: { object: { id: 'cs_don', mode: 'payment', metadata: { kind: 'donation', userId: 'u1' }, ...session } },
+    } as any;
+  }
+
+  it('checkout.session.completed with payment_status "paid" marks the donation SUCCEEDED', async () => {
+    await handleWebhook(checkoutEvent('evt_paid', 'checkout.session.completed', { payment_status: 'paid', payment_intent: 'pi_paid' }));
+
+    expect(donations.get('cs_don')).toEqual({ ...PENDING_ROW, status: 'SUCCEEDED', stripePaymentIntentId: 'pi_paid' });
+  });
+
+  it('checkout.session.completed with payment_status "unpaid" leaves the donation exactly as it was', async () => {
+    const result = await handleWebhook(
+      checkoutEvent('evt_unpaid', 'checkout.session.completed', { payment_status: 'unpaid', payment_intent: 'pi_pending' }),
+    );
+
+    expect(donations.get('cs_don')).toEqual(PENDING_ROW);
+    expect(prisma.donation.updateMany).not.toHaveBeenCalled();
+    // Handled, not failed — Stripe shouldn't keep retrying an event that
+    // was correctly acted on by doing nothing.
+    expect(result.duplicate).toBe(false);
+    expect(paymentEvents.get('evt_unpaid')?.status).toBe('processed');
+  });
+
+  it('checkout.session.completed with payment_status "no_payment_required" does not mark the donation SUCCEEDED', async () => {
+    await handleWebhook(checkoutEvent('evt_free', 'checkout.session.completed', { payment_status: 'no_payment_required' }));
+
+    expect(donations.get('cs_don')?.status).toBe('PENDING');
+  });
+
+  it('a donation that completed unpaid is settled by checkout.session.async_payment_succeeded once paid', async () => {
+    await handleWebhook(checkoutEvent('evt_c', 'checkout.session.completed', { payment_status: 'unpaid' }));
+    expect(donations.get('cs_don')?.status).toBe('PENDING');
+
+    await handleWebhook(
+      checkoutEvent('evt_async_ok', 'checkout.session.async_payment_succeeded', { payment_status: 'paid', payment_intent: 'pi_later' }),
+    );
+
+    expect(donations.get('cs_don')).toEqual({ ...PENDING_ROW, status: 'SUCCEEDED', stripePaymentIntentId: 'pi_later' });
+  });
+
+  it('async_payment_succeeded arriving before the unpaid completed event still ends SUCCEEDED', async () => {
+    await handleWebhook(
+      checkoutEvent('evt_async_first', 'checkout.session.async_payment_succeeded', { payment_status: 'paid', payment_intent: 'pi_x' }),
+    );
+    await handleWebhook(checkoutEvent('evt_completed_late', 'checkout.session.completed', { payment_status: 'unpaid' }));
+
+    expect(donations.get('cs_don')?.status).toBe('SUCCEEDED');
+  });
+
+  it('checkout.session.async_payment_failed does not mark the donation SUCCEEDED', async () => {
+    await handleWebhook(checkoutEvent('evt_async_fail', 'checkout.session.async_payment_failed', { payment_status: 'unpaid' }));
+
+    expect(donations.get('cs_don')).toEqual(PENDING_ROW);
+  });
+
+  it('async_payment_succeeded for a non-donation session leaves donations and purchases alone', async () => {
+    await handleWebhook({
+      id: 'evt_async_course',
+      type: 'checkout.session.async_payment_succeeded',
+      data: { object: { id: 'cs_don', mode: 'payment', metadata: { kind: 'course' }, payment_status: 'paid' } },
+    } as any);
+
+    expect(donations.get('cs_don')).toEqual(PENDING_ROW);
+    expect(prisma.purchase.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('a duplicate delivery of an already-processed event is ignored (PaymentEvent idempotency unchanged)', async () => {
+    const event = checkoutEvent('evt_dup', 'checkout.session.completed', { payment_status: 'paid', payment_intent: 'pi_dup' });
+
+    const first = await handleWebhook(event);
+    const second = await handleWebhook(event);
+
+    expect(first.duplicate).toBe(false);
+    expect(second.duplicate).toBe(true);
+    expect(prisma.donation.updateMany).toHaveBeenCalledTimes(1);
+    expect(donations.get('cs_don')?.status).toBe('SUCCEEDED');
+  });
+});
+
 describe('getDonationForUserBySession', () => {
   it('scopes the lookup to the given userId so one member cannot read another\'s donation', async () => {
     (prisma.donation.findFirst as any).mockResolvedValue({ id: 'don_1', status: 'SUCCEEDED' });
@@ -995,7 +1118,7 @@ describe('reconcileDonationFromCheckoutSession (webhook-delay fallback)', () => 
     await handleWebhook({
       id: 'evt_late',
       type: 'checkout.session.completed',
-      data: { object: { id: 'cs_1', metadata: { kind: 'donation' }, payment_intent: 'pi_1' } },
+      data: { object: { id: 'cs_1', metadata: { kind: 'donation' }, payment_status: 'paid', payment_intent: 'pi_1' } },
     } as any);
 
     const writes = (prisma.donation.updateMany as any).mock.calls.map((c: any[]) => c[0].data);

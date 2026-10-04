@@ -477,15 +477,36 @@ export async function getDonationForUserBySession(userId: string, stripeCheckout
 }
 
 // The one place a donation is marked SUCCEEDED — shared by the verified
-// webhook (checkout.session.completed) and the confirmation page's fallback
-// below, so both apply identical write semantics. `updateMany` keyed on the
+// webhook (checkout.session.completed and checkout.session.async_payment_succeeded,
+// via settleDonationIfPaid below) and the confirmation page's fallback below,
+// so every path applies identical write semantics. `updateMany` keyed on the
 // Stripe session id is naturally idempotent: repeating it (or running it
-// concurrently from both paths) just re-writes the same values.
+// concurrently from several paths) just re-writes the same values.
 async function markDonationSucceeded(where: Prisma.DonationWhereInput, stripePaymentIntentId: string | undefined) {
   return prisma.donation.updateMany({
     where,
     data: { status: PaymentStatus.SUCCEEDED, stripePaymentIntentId },
   });
+}
+
+// Webhook path. A completed Checkout Session is not proof of payment: with a
+// delayed payment method (e.g. SEPA Direct Debit) it completes while
+// `payment_status` is still 'unpaid', and Stripe sends
+// checkout.session.async_payment_succeeded once the money arrives. Only a
+// 'paid' session settles the donation — the same rule the confirmation-page
+// fallback below applies. Anything else leaves the row untouched (PENDING).
+async function settleDonationIfPaid(session: Stripe.Checkout.Session) {
+  if (session.payment_status !== 'paid') {
+    log.info('donation not settled: checkout session is not paid yet', {
+      stripeCheckoutSessionId: session.id,
+      paymentStatus: session.payment_status,
+    });
+    return;
+  }
+  await markDonationSucceeded(
+    { stripeCheckoutSessionId: session.id },
+    typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+  );
 }
 
 const UNSETTLED_DONATION_STATUSES = [PaymentStatus.PENDING, PaymentStatus.PROCESSING, PaymentStatus.REQUIRES_ACTION];
@@ -677,10 +698,7 @@ async function processStripeEvent(event: Stripe.Event) {
       const kind = session.metadata?.kind;
 
       if (kind === 'donation') {
-        await markDonationSucceeded(
-          { stripeCheckoutSessionId: session.id },
-          typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
-        );
+        await settleDonationIfPaid(session);
       } else if (kind === 'course') {
         await prisma.purchase.updateMany({
           where: { stripeCheckoutSessionId: session.id },
@@ -693,6 +711,16 @@ async function processStripeEvent(event: Stripe.Event) {
         });
       }
       // Subscription checkouts are finalized via customer.subscription.* events below.
+      break;
+    }
+
+    // Sent when a Checkout Session that completed unpaid (delayed payment
+    // method) is later paid — the only webhook that settles such a donation.
+    case 'checkout.session.async_payment_succeeded': {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.metadata?.kind === 'donation') {
+        await settleDonationIfPaid(session);
+      }
       break;
     }
 

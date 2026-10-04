@@ -92,6 +92,8 @@ is always one of the enums above.
      `status: "error"` and the error message, and the route responds `500`
      so Stripe retries.
 4. Handled event types today: `checkout.session.completed`,
+   `checkout.session.async_payment_succeeded` (donations only — a donation is
+   marked `SUCCEEDED` only when the session's `payment_status` is `paid`),
    `customer.subscription.created` / `.updated` / `.deleted`,
    `payment_intent.succeeded` / `.payment_failed`. Unhandled event types
    are logged (`debug`) and otherwise ignored — extend
