@@ -698,7 +698,17 @@ async function processStripeEvent(event: Stripe.Event) {
 
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
-      const sub = event.data.object as Stripe.Subscription;
+      // Stripe does not deliver events in order, and each payload is a
+      // snapshot from when that event was created — so an older event can
+      // arrive after a newer one. Writing the payload would roll the row back
+      // (e.g. CANCELED → ACTIVE). The event is only used as a signal: the
+      // subscription's current state is re-read from Stripe and that is what
+      // gets stored. Event timestamps can't order these instead — `created`
+      // has one-second resolution, and checkout emits `created` + `updated`
+      // within the same second. If the read fails, this throws and Stripe
+      // retries the event, rather than falling back to the stale payload.
+      const eventSub = event.data.object as Stripe.Subscription;
+      const sub = await getStripeClient().subscriptions.retrieve(eventSub.id);
       const userId = sub.metadata?.userId;
       const membershipPlanId = sub.metadata?.membershipPlanId;
 

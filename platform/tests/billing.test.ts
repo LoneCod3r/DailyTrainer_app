@@ -18,7 +18,7 @@ vi.mock('@/lib/prisma', () => ({
 const stripeMock = {
   customers: { create: vi.fn(), del: vi.fn(), retrieve: vi.fn(), update: vi.fn() },
   checkout: { sessions: { create: vi.fn(), retrieve: vi.fn() } },
-  subscriptions: { update: vi.fn() },
+  subscriptions: { update: vi.fn(), retrieve: vi.fn() },
   billingPortal: { sessions: { create: vi.fn() } },
   paymentMethods: { list: vi.fn() },
   invoices: { list: vi.fn() },
@@ -427,13 +427,21 @@ describe('handleWebhook — customer.subscription.* events', () => {
   // once" above, factored into a beforeEach since every test in this
   // describe needs it and none exercise the idempotency machinery itself
   // (already covered by the 'handleWebhook idempotency' suite above).
+  // The handler re-reads each subscription from Stripe (see the out-of-order
+  // suite below). In these tests nothing changes after the event, so
+  // Stripe's current state is the event's own snapshot.
+  const stripeSubscriptions = new Map<string, Record<string, unknown>>();
+
   beforeEach(() => {
     (prisma.paymentEvent.findUnique as any).mockResolvedValue(null);
     (prisma.paymentEvent.updateMany as any).mockResolvedValue({ count: 0 });
     (prisma.paymentEvent.create as any).mockResolvedValue({});
+    stripeSubscriptions.clear();
+    stripeMock.subscriptions.retrieve.mockImplementation(async (id: string) => stripeSubscriptions.get(id));
   });
 
   function subscriptionEvent(type: string, sub: Record<string, unknown>) {
+    stripeSubscriptions.set(sub.id as string, sub);
     return { id: `evt_${type}_${sub.id}`, type, data: { object: sub } } as any;
   }
 
@@ -586,6 +594,168 @@ describe('handleWebhook — customer.subscription.* events', () => {
       where: { stripeSubscriptionId: 'sub_del_1' },
       data: { status: 'CANCELED', canceledAt: expect.any(Date) },
     });
+  });
+});
+
+describe('handleWebhook — out-of-order customer.subscription.* delivery', () => {
+  // A minimal in-memory `subscriptions` table that applies upsert/updateMany
+  // the way Prisma does, so each test asserts the row a user is actually left
+  // with — not just which mock was called.
+  const rows = new Map<string, Record<string, unknown>>();
+  // What Stripe reports for each subscription *now*. Each event below carries
+  // its own, possibly older, snapshot — exactly the case being tested.
+  const stripeNow = new Map<string, Record<string, unknown>>();
+
+  beforeEach(() => {
+    rows.clear();
+    stripeNow.clear();
+    (prisma.paymentEvent.findUnique as any).mockResolvedValue(null);
+    (prisma.paymentEvent.updateMany as any).mockResolvedValue({ count: 0 });
+    (prisma.paymentEvent.create as any).mockResolvedValue({});
+    (prisma.subscription.upsert as any).mockImplementation(async ({ where, create, update }: any) => {
+      const existing = rows.get(where.stripeSubscriptionId);
+      const row = existing ? { ...existing, ...update } : { ...create };
+      rows.set(where.stripeSubscriptionId, row);
+      return row;
+    });
+    (prisma.subscription.updateMany as any).mockImplementation(async ({ where, data }: any) => {
+      const existing = rows.get(where.stripeSubscriptionId);
+      if (!existing) return { count: 0 };
+      rows.set(where.stripeSubscriptionId, { ...existing, ...data });
+      return { count: 1 };
+    });
+    stripeMock.subscriptions.retrieve.mockImplementation(async (id: string) => {
+      const sub = stripeNow.get(id);
+      if (!sub) throw new Error(`No such subscription: '${id}'`);
+      return sub;
+    });
+  });
+
+  // A subscription snapshot as Stripe would send it at one point in time.
+  function snapshot(fields: { status: string; periodStart?: number; periodEnd?: number; cancelAtPeriodEnd?: boolean }) {
+    return {
+      id: 'sub_ord',
+      customer: 'cus_1',
+      status: fields.status,
+      current_period_start: fields.periodStart ?? 1700000000,
+      current_period_end: fields.periodEnd ?? 1702592000,
+      cancel_at_period_end: fields.cancelAtPeriodEnd ?? false,
+      metadata: { userId: 'u1', membershipPlanId: 'plan_1' },
+      items: { data: [] },
+    };
+  }
+
+  let eventCounter = 0;
+  function eventFor(type: string, payload: Record<string, unknown>) {
+    return { id: `evt_ord_${++eventCounter}`, type, data: { object: payload } } as any;
+  }
+
+  it('an older event delivered after a newer one does not roll the subscription back (TRIALING → ACTIVE)', async () => {
+    const olderTrialing = eventFor('customer.subscription.created', snapshot({ status: 'trialing' }));
+    const newerActive = eventFor('customer.subscription.updated', snapshot({ status: 'active' }));
+    stripeNow.set('sub_ord', snapshot({ status: 'active' }));
+
+    await handleWebhook(newerActive);
+    expect(rows.get('sub_ord')?.status).toBe('ACTIVE');
+
+    await handleWebhook(olderTrialing);
+    expect(rows.get('sub_ord')?.status).toBe('ACTIVE');
+  });
+
+  it('an older ACTIVE event delivered after a newer PAST_DUE one keeps PAST_DUE', async () => {
+    const olderActive = eventFor('customer.subscription.updated', snapshot({ status: 'active' }));
+    const newerPastDue = eventFor('customer.subscription.updated', snapshot({ status: 'past_due' }));
+    stripeNow.set('sub_ord', snapshot({ status: 'past_due' }));
+
+    await handleWebhook(newerPastDue);
+    await handleWebhook(olderActive);
+
+    expect(rows.get('sub_ord')?.status).toBe('PAST_DUE');
+  });
+
+  it('a stale ACTIVE update delivered after customer.subscription.deleted does not revive the subscription (ACTIVE → CANCELED)', async () => {
+    rows.set('sub_ord', { stripeSubscriptionId: 'sub_ord', userId: 'u1', status: 'ACTIVE', cancelAtPeriodEnd: true });
+    const staleActive = eventFor('customer.subscription.updated', snapshot({ status: 'active', cancelAtPeriodEnd: true }));
+    const deleted = eventFor('customer.subscription.deleted', snapshot({ status: 'canceled', cancelAtPeriodEnd: true }));
+    stripeNow.set('sub_ord', snapshot({ status: 'canceled', cancelAtPeriodEnd: true }));
+
+    await handleWebhook(deleted);
+    expect(rows.get('sub_ord')?.status).toBe('CANCELED');
+
+    await handleWebhook(staleActive);
+    expect(rows.get('sub_ord')?.status).toBe('CANCELED');
+  });
+
+  it('a created event delivered after deleted creates the row as CANCELED, not ACTIVE', async () => {
+    const created = eventFor('customer.subscription.created', snapshot({ status: 'active' }));
+    const deleted = eventFor('customer.subscription.deleted', snapshot({ status: 'canceled' }));
+    stripeNow.set('sub_ord', snapshot({ status: 'canceled' }));
+
+    await handleWebhook(deleted); // no local row yet — nothing to cancel
+    await handleWebhook(created);
+
+    expect(rows.get('sub_ord')?.status).toBe('CANCELED');
+  });
+
+  it('an older event does not revert the billing period or cancel-at-period-end flag', async () => {
+    const older = eventFor(
+      'customer.subscription.updated',
+      snapshot({ status: 'active', periodStart: 1700000000, periodEnd: 1702592000, cancelAtPeriodEnd: false }),
+    );
+    const newer = eventFor(
+      'customer.subscription.updated',
+      snapshot({ status: 'active', periodStart: 1702592000, periodEnd: 1705270400, cancelAtPeriodEnd: true }),
+    );
+    stripeNow.set('sub_ord', snapshot({ status: 'active', periodStart: 1702592000, periodEnd: 1705270400, cancelAtPeriodEnd: true }));
+
+    await handleWebhook(newer);
+    await handleWebhook(older);
+
+    expect(rows.get('sub_ord')).toMatchObject({
+      currentPeriodStart: new Date(1702592000 * 1000),
+      currentPeriodEnd: new Date(1705270400 * 1000),
+      cancelAtPeriodEnd: true,
+    });
+  });
+
+  it('events delivered in order are each applied, ending on the newest state', async () => {
+    stripeNow.set('sub_ord', snapshot({ status: 'trialing' }));
+    await handleWebhook(eventFor('customer.subscription.created', snapshot({ status: 'trialing' })));
+    expect(rows.get('sub_ord')).toMatchObject({ status: 'TRIALING', userId: 'u1', membershipPlanId: 'plan_1' });
+
+    stripeNow.set('sub_ord', snapshot({ status: 'active', periodStart: 1702592000, periodEnd: 1705270400 }));
+    await handleWebhook(
+      eventFor('customer.subscription.updated', snapshot({ status: 'active', periodStart: 1702592000, periodEnd: 1705270400 })),
+    );
+
+    expect(rows.get('sub_ord')).toMatchObject({
+      status: 'ACTIVE',
+      currentPeriodStart: new Date(1702592000 * 1000),
+      currentPeriodEnd: new Date(1705270400 * 1000),
+    });
+  });
+
+  it('re-reads the subscription named in the event', async () => {
+    stripeNow.set('sub_ord', snapshot({ status: 'active' }));
+
+    await handleWebhook(eventFor('customer.subscription.updated', snapshot({ status: 'active' })));
+
+    expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith('sub_ord');
+  });
+
+  it('when Stripe cannot be read, writes nothing and fails the event so Stripe retries (never falls back to the payload)', async () => {
+    rows.set('sub_ord', { stripeSubscriptionId: 'sub_ord', status: 'CANCELED' });
+    stripeMock.subscriptions.retrieve.mockRejectedValue(new Error('Stripe API unavailable'));
+
+    await expect(
+      handleWebhook(eventFor('customer.subscription.updated', snapshot({ status: 'active' }))),
+    ).rejects.toThrow('Stripe API unavailable');
+
+    expect(prisma.subscription.upsert).not.toHaveBeenCalled();
+    expect(rows.get('sub_ord')?.status).toBe('CANCELED');
+    expect(prisma.paymentEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'error' }) }),
+    );
   });
 });
 
