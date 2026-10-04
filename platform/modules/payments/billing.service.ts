@@ -239,11 +239,37 @@ export async function setMembershipPlanProductActive(stripeProductId: string, ac
 
 // --- Checkout sessions ---------------------------------------------------------
 
+// Subscription statuses that already give the user a membership — the same
+// "in effect" definition as modules/membership's getActiveSubscriptionForUser
+// (not imported from there: membership.service imports this file). INCOMPLETE
+// is deliberately not included, matching that definition.
+const BLOCKING_SUBSCRIPTION_STATUSES = [
+  SubscriptionStatus.ACTIVE,
+  SubscriptionStatus.TRIALING,
+  SubscriptionStatus.PAST_DUE,
+];
+
 export async function createSubscriptionCheckout(params: { userId: string; membershipPlanId: string; locale?: Locale }) {
   const plan = await prisma.membershipPlan.findUnique({ where: { id: params.membershipPlanId } });
   if (!plan || !plan.active) throw Errors.notFound('Membership plan not found or inactive');
   if (!plan.stripePriceId) {
     throw Errors.badRequest('This membership plan is not yet connected to a Stripe Price');
+  }
+
+  // A second Checkout Session would create a second Stripe Subscription, billed
+  // independently of the first. Enforced here rather than only in the UI, so
+  // another tab, a stale page or a direct API call can't get past it. Checked
+  // before any Stripe call, so a refused request has no Stripe side effects.
+  const existing = await prisma.subscription.findFirst({
+    where: { userId: params.userId, status: { in: BLOCKING_SUBSCRIPTION_STATUSES } },
+    select: { id: true },
+  });
+  if (existing) {
+    log.info('subscription checkout refused: user already has a subscription in effect', {
+      userId: params.userId,
+      subscriptionId: existing.id,
+    });
+    throw Errors.conflict('You already have a membership. You can manage it from the Billing page.');
   }
 
   const customerId = await getOrCreateStripeCustomer(params.userId, params.locale);

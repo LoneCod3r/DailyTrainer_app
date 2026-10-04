@@ -8,7 +8,7 @@ vi.mock('@/lib/prisma', () => ({
     membershipPlan: { findUnique: vi.fn() },
     donation: { create: vi.fn(), updateMany: vi.fn(), findFirst: vi.fn() },
     purchase: { create: vi.fn(), updateMany: vi.fn() },
-    subscription: { upsert: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    subscription: { upsert: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
     payment: { updateMany: vi.fn(), findUnique: vi.fn() },
     paymentEvent: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
   },
@@ -32,6 +32,7 @@ const {
   getOrCreateStripeCustomer,
   handleWebhook,
   createDonationCheckout,
+  createSubscriptionCheckout,
   getPaymentMethodForUser,
   listInvoicesForUser,
   getDonationForUserBySession,
@@ -185,6 +186,94 @@ describe('createDonationCheckout', () => {
 
     const params = stripeMock.checkout.sessions.create.mock.calls[0][0];
     expect(params.locale).toBeUndefined();
+  });
+});
+
+describe('createSubscriptionCheckout — duplicate subscription guard', () => {
+  const plan = { id: 'plan_1', active: true, stripePriceId: 'price_1' };
+
+  // Behaves like Prisma for the guard's query: a row matches only if it
+  // belongs to the user and its status is in the requested `status.in` list.
+  function withSubscriptions(rows: { id: string; userId: string; status: string }[]) {
+    (prisma.subscription.findFirst as any).mockImplementation(async ({ where }: any) => {
+      const row = rows.find((r) => r.userId === where.userId && where.status.in.includes(r.status));
+      return row ? { id: row.id } : null;
+    });
+  }
+
+  beforeEach(() => {
+    (prisma.membershipPlan.findUnique as any).mockResolvedValue(plan);
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_1' });
+    stripeMock.checkout.sessions.create.mockResolvedValue({ id: 'cs_sub', url: 'https://checkout.stripe.test/cs_sub' });
+  });
+
+  it.each(['ACTIVE', 'TRIALING', 'PAST_DUE'])(
+    'refuses with 409 CONFLICT when the user already has a %s subscription, before any Stripe call',
+    async (status) => {
+      withSubscriptions([{ id: 'sub_1', userId: 'u1', status }]);
+
+      await expect(createSubscriptionCheckout({ userId: 'u1', membershipPlanId: 'plan_1' })).rejects.toMatchObject({
+        status: 409,
+        code: 'CONFLICT',
+      });
+
+      expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
+      expect(stripeMock.customers.create).not.toHaveBeenCalled();
+      expect(stripeMock.customers.retrieve).not.toHaveBeenCalled();
+    },
+  );
+
+  it('refuses even when the existing subscription is on a different plan', async () => {
+    withSubscriptions([{ id: 'sub_other', userId: 'u1', status: 'ACTIVE' }]);
+    (prisma.membershipPlan.findUnique as any).mockResolvedValue({ id: 'plan_2', active: true, stripePriceId: 'price_2' });
+
+    await expect(createSubscriptionCheckout({ userId: 'u1', membershipPlanId: 'plan_2' })).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  // Same rule as getActiveSubscriptionForUser: only ACTIVE/TRIALING/PAST_DUE
+  // count as a membership in effect, so these never block a new checkout.
+  it.each(['INCOMPLETE', 'INCOMPLETE_EXPIRED', 'CANCELED', 'UNPAID'])(
+    'still creates a checkout when the user only has a %s subscription',
+    async (status) => {
+      withSubscriptions([{ id: 'sub_old', userId: 'u1', status }]);
+
+      const session = await createSubscriptionCheckout({ userId: 'u1', membershipPlanId: 'plan_1' });
+
+      expect(session.id).toBe('cs_sub');
+      expect(stripeMock.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('creates a checkout for a user with no subscription at all', async () => {
+    withSubscriptions([]);
+
+    const session = await createSubscriptionCheckout({ userId: 'u1', membershipPlanId: 'plan_1' });
+
+    expect(session.url).toBe('https://checkout.stripe.test/cs_sub');
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'subscription', customer: 'cus_1', line_items: [{ price: 'price_1', quantity: 1 }] }),
+    );
+  });
+
+  it("is not blocked by another user's active subscription", async () => {
+    withSubscriptions([{ id: 'sub_someone_else', userId: 'u2', status: 'ACTIVE' }]);
+
+    await createSubscriptionCheckout({ userId: 'u1', membershipPlanId: 'plan_1' });
+
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('queries only this user and only the blocking statuses', async () => {
+    withSubscriptions([]);
+
+    await createSubscriptionCheckout({ userId: 'u1', membershipPlanId: 'plan_1' });
+
+    const { where } = (prisma.subscription.findFirst as any).mock.calls[0][0];
+    expect(where.userId).toBe('u1');
+    expect([...where.status.in].sort()).toEqual(['ACTIVE', 'PAST_DUE', 'TRIALING']);
   });
 });
 
