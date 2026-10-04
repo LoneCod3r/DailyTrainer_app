@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findUnique: vi.fn(), updateMany: vi.fn() },
-    membershipPlan: { findUnique: vi.fn() },
+    membershipPlan: { findUnique: vi.fn(), findMany: vi.fn() },
     donation: { create: vi.fn(), updateMany: vi.fn(), findFirst: vi.fn() },
     purchase: { create: vi.fn(), updateMany: vi.fn() },
     subscription: { upsert: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
@@ -756,6 +756,183 @@ describe('handleWebhook — out-of-order customer.subscription.* delivery', () =
     expect(prisma.paymentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'error' }) }),
     );
+  });
+});
+
+describe('handleWebhook — subscription plan follows the Stripe Product being billed', () => {
+  // In-memory `membership_plans` and `subscriptions` tables (Prisma-like
+  // findMany / upsert), so each test asserts the plan actually stored.
+  type Plan = { id: string; stripeProductId: string | null; active: boolean };
+  let plans: Plan[] = [];
+  const rows = new Map<string, Record<string, unknown>>();
+  // What Stripe reports for the subscription now — event payloads may differ.
+  const stripeNow = new Map<string, Record<string, unknown>>();
+
+  beforeEach(() => {
+    plans = [
+      { id: 'plan_A', stripeProductId: 'prod_A', active: true },
+      // Deactivated plans still have subscribers billed for them.
+      { id: 'plan_B', stripeProductId: 'prod_B', active: false },
+    ];
+    rows.clear();
+    stripeNow.clear();
+    (prisma.paymentEvent.findUnique as any).mockResolvedValue(null);
+    (prisma.paymentEvent.updateMany as any).mockResolvedValue({ count: 0 });
+    (prisma.paymentEvent.create as any).mockResolvedValue({});
+    (prisma.membershipPlan.findMany as any).mockImplementation(async ({ where, take }: any) =>
+      plans
+        .filter((p) => p.stripeProductId === where.stripeProductId && (where.active === undefined || p.active === where.active))
+        .slice(0, take ?? Infinity)
+        .map((p) => ({ id: p.id })),
+    );
+    (prisma.subscription.upsert as any).mockImplementation(async ({ where, create, update }: any) => {
+      const existing = rows.get(where.stripeSubscriptionId);
+      const row = existing ? { ...existing, ...update } : { ...create };
+      rows.set(where.stripeSubscriptionId, row);
+      return row;
+    });
+    stripeMock.subscriptions.retrieve.mockImplementation(async (id: string) => {
+      const sub = stripeNow.get(id);
+      if (!sub) throw new Error(`No such subscription: '${id}'`);
+      return sub;
+    });
+  });
+
+  // `metadataPlan` is what checkout stamped on the subscription — it never
+  // changes afterwards, which is exactly why it can't be trusted for the plan.
+  function stripeSub(fields: {
+    product: string | { id: string } | null;
+    priceId?: string;
+    status?: string;
+    periodEnd?: number;
+    cancelAtPeriodEnd?: boolean;
+    metadataPlan?: string;
+  }) {
+    return {
+      id: 'sub_plan',
+      customer: 'cus_1',
+      status: fields.status ?? 'active',
+      current_period_start: 1700000000,
+      current_period_end: fields.periodEnd ?? 1702592000,
+      cancel_at_period_end: fields.cancelAtPeriodEnd ?? false,
+      metadata: { userId: 'u1', membershipPlanId: fields.metadataPlan ?? 'plan_A' },
+      items: { data: fields.product === null ? [] : [{ price: { id: fields.priceId ?? 'price_1', product: fields.product } }] },
+    };
+  }
+
+  let n = 0;
+  const updated = (payload: Record<string, unknown>) =>
+    ({ id: `evt_plan_${++n}`, type: 'customer.subscription.updated', data: { object: payload } }) as any;
+  const created = (payload: Record<string, unknown>) =>
+    ({ id: `evt_plan_${++n}`, type: 'customer.subscription.created', data: { object: payload } }) as any;
+
+  function seedRow(fields: Record<string, unknown>) {
+    rows.set('sub_plan', {
+      userId: 'u1',
+      stripeSubscriptionId: 'sub_plan',
+      stripeCustomerId: 'cus_1',
+      status: 'ACTIVE',
+      cancelAtPeriodEnd: false,
+      ...fields,
+    });
+  }
+
+  it('a new subscription is stored with the plan its Stripe Product belongs to', async () => {
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_A' }));
+
+    await handleWebhook(created(stripeSub({ product: 'prod_A' })));
+
+    expect(rows.get('sub_plan')).toMatchObject({ membershipPlanId: 'plan_A', userId: 'u1', status: 'ACTIVE' });
+  });
+
+  it('a new subscription uses the plan of the Product Stripe is billing, overriding the checkout metadata plan', async () => {
+    // e.g. the plan was switched in Stripe before this created event was
+    // processed: metadata still names plan_A, the billed Product is plan_B's.
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_B', metadataPlan: 'plan_A' }));
+
+    await handleWebhook(created(stripeSub({ product: 'prod_B', metadataPlan: 'plan_A' })));
+
+    expect(rows.get('sub_plan')).toMatchObject({ membershipPlanId: 'plan_B', userId: 'u1', status: 'ACTIVE' });
+  });
+
+  it('switching to another plan in Stripe (Plan A → Plan B) updates the stored plan', async () => {
+    seedRow({ membershipPlanId: 'plan_A' });
+    // Checkout metadata still says plan_A — Stripe is now billing plan_B's Product.
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_B', priceId: 'price_B', metadataPlan: 'plan_A' }));
+
+    await handleWebhook(updated(stripeSub({ product: 'prod_B', priceId: 'price_B', metadataPlan: 'plan_A' })));
+
+    expect(rows.get('sub_plan')?.membershipPlanId).toBe('plan_B');
+  });
+
+  it('a status/period/cancel-only update keeps the plan', async () => {
+    seedRow({ membershipPlanId: 'plan_B' });
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_B', status: 'past_due', periodEnd: 1705270400, cancelAtPeriodEnd: true }));
+
+    await handleWebhook(updated(stripeSub({ product: 'prod_B', status: 'past_due', periodEnd: 1705270400, cancelAtPeriodEnd: true })));
+
+    expect(rows.get('sub_plan')).toMatchObject({
+      membershipPlanId: 'plan_B',
+      status: 'PAST_DUE',
+      currentPeriodEnd: new Date(1705270400 * 1000),
+      cancelAtPeriodEnd: true,
+    });
+  });
+
+  it("a new Price on the same plan's Product (admin price change) keeps the plan", async () => {
+    seedRow({ membershipPlanId: 'plan_A' });
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_A', priceId: 'price_A_v2' }));
+
+    await handleWebhook(updated(stripeSub({ product: 'prod_A', priceId: 'price_A_v2' })));
+
+    expect(rows.get('sub_plan')?.membershipPlanId).toBe('plan_A');
+  });
+
+  it('takes the plan from the current Stripe subscription, not the (stale) event payload (B-02 preserved)', async () => {
+    seedRow({ membershipPlanId: 'plan_A' });
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_B' }));
+
+    // The payload is an older snapshot from before the switch to plan B.
+    await handleWebhook(updated(stripeSub({ product: 'prod_A' })));
+
+    expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith('sub_plan');
+    expect(rows.get('sub_plan')?.membershipPlanId).toBe('plan_B');
+  });
+
+  it('resolves the plan when Stripe returns the Product expanded as an object', async () => {
+    seedRow({ membershipPlanId: 'plan_A' });
+    stripeNow.set('sub_plan', stripeSub({ product: { id: 'prod_B' } }));
+
+    await handleWebhook(updated(stripeSub({ product: { id: 'prod_B' } })));
+
+    expect(rows.get('sub_plan')?.membershipPlanId).toBe('plan_B');
+  });
+
+  it('an unmapped Product does not change an existing plan, but still applies the other fields', async () => {
+    seedRow({ membershipPlanId: 'plan_A' });
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_unknown', status: 'past_due' }));
+
+    await handleWebhook(updated(stripeSub({ product: 'prod_unknown', status: 'past_due' })));
+
+    expect(rows.get('sub_plan')).toMatchObject({ membershipPlanId: 'plan_A', status: 'PAST_DUE' });
+  });
+
+  it('an unmapped Product on a new subscription falls back to the checkout metadata plan (previous behavior)', async () => {
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_unknown', metadataPlan: 'plan_A' }));
+
+    await handleWebhook(created(stripeSub({ product: 'prod_unknown', metadataPlan: 'plan_A' })));
+
+    expect(rows.get('sub_plan')?.membershipPlanId).toBe('plan_A');
+  });
+
+  it('a Product shared by more than one plan is treated as unmapped, never guessed', async () => {
+    plans.push({ id: 'plan_B_duplicate', stripeProductId: 'prod_B', active: true });
+    seedRow({ membershipPlanId: 'plan_A' });
+    stripeNow.set('sub_plan', stripeSub({ product: 'prod_B' }));
+
+    await handleWebhook(updated(stripeSub({ product: 'prod_B' })));
+
+    expect(rows.get('sub_plan')?.membershipPlanId).toBe('plan_A');
   });
 });
 

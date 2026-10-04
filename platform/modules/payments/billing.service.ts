@@ -691,6 +691,26 @@ export async function handleWebhook(event: Stripe.Event) {
   }
 }
 
+// The MembershipPlan a Stripe subscription is actually billed for, from its
+// (single) item's Price → Product. Product, not Price, because each plan owns
+// exactly one Product (createPlan), while a plan price change creates a new
+// Price on that Product and existing subscribers stay on the old, archived one
+// (replaceMembershipPlanPrice) — matching on Price would lose them. Inactive
+// plans are included: deactivating a plan doesn't end existing subscriptions.
+// Returns null when the Product matches no plan, or more than one.
+async function resolveMembershipPlanIdFromStripe(sub: Stripe.Subscription): Promise<string | null> {
+  const product = sub.items?.data?.[0]?.price?.product;
+  const productId = typeof product === 'string' ? product : product?.id;
+  if (!productId) return null;
+
+  const plans = await prisma.membershipPlan.findMany({
+    where: { stripeProductId: productId },
+    select: { id: true },
+    take: 2,
+  });
+  return plans.length === 1 ? plans[0].id : null;
+}
+
 async function processStripeEvent(event: Stripe.Event) {
   switch (event.type) {
     case 'checkout.session.completed': {
@@ -742,11 +762,21 @@ async function processStripeEvent(event: Stripe.Event) {
 
       if (userId && membershipPlanId) {
         const { start, end } = subscriptionPeriod(sub);
+        // The plan follows what Stripe is billing (e.g. a plan switch in the
+        // Customer Portal), not the checkout-time metadata. If the Product
+        // can't be matched to exactly one plan, nothing is guessed: a new row
+        // uses the metadata plan and an existing row keeps its plan, as before.
+        const billedPlanId = await resolveMembershipPlanIdFromStripe(sub);
+        if (!billedPlanId) {
+          log.warn('subscription product does not map to exactly one membership plan; plan left unchanged', {
+            stripeSubscriptionId: sub.id,
+          });
+        }
         await prisma.subscription.upsert({
           where: { stripeSubscriptionId: sub.id },
           create: {
             userId,
-            membershipPlanId,
+            membershipPlanId: billedPlanId ?? membershipPlanId,
             stripeCustomerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
             stripeSubscriptionId: sub.id,
             status: stripeSubStatus(sub.status),
@@ -755,6 +785,7 @@ async function processStripeEvent(event: Stripe.Event) {
             cancelAtPeriodEnd: sub.cancel_at_period_end,
           },
           update: {
+            ...(billedPlanId ? { membershipPlanId: billedPlanId } : {}),
             status: stripeSubStatus(sub.status),
             currentPeriodStart: start,
             currentPeriodEnd: end,

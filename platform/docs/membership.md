@@ -25,6 +25,13 @@ handlers read `sub.metadata.userId`/`membershipPlanId` — without
 subscription checkout would never have been recorded in the database. Fixed
 by passing `subscription_data: { metadata: { userId, membershipPlanId } }`.
 
+That metadata is fixed at checkout, so the stored plan is not taken from it:
+the webhook maps the subscription item's Price → Product to the
+`MembershipPlan` with that `stripeProductId`, so a plan switch made in Stripe
+(e.g. the Customer Portal) updates the local plan. If the Product matches no
+plan (or more than one), a new subscription row falls back to the metadata
+plan and an existing row keeps its plan.
+
 ## Stripe Price immutability
 
 Stripe Prices can't be edited once created. `modules/membership/membership.service.ts`'s
