@@ -6,16 +6,21 @@ with `app.humangarage.net`** — that product was used only as a
 functional/structural reference during planning, never as code, content, or
 a live integration.
 
-The app is bilingual (Bulgarian default, English) throughout, and organized
-around four sections: **Home**, **Practices**, **Community**, and
-**Account**.
+The app is bilingual (Bulgarian default, English) throughout. Its main
+sections are **Home**, **Practice**, **Programs**, **Learn** (Knowledge),
+**Journey** and **Profile**; Community (Discussions, Courses, Meetings) and
+the Blog are reachable from the mobile menu and the footer. See the
+repository root [`README.md`](../README.md) for a product overview and
+[`docs/v1-implementation-notes.md`](docs/v1-implementation-notes.md) for the
+V1 details.
 
 ## What's been accomplished
 
 **Foundation** — authentication (NextAuth, credentials + JWT sessions),
 role-based access (Member / Moderator / Admin), an admin dashboard (users,
-membership plans, site settings), and a reusable Tailwind design system with
-full dark-mode support.
+membership plans, site settings), and a reusable Tailwind design system
+(KUKO WAY palette, Manrope + display serif with Cyrillic coverage) with full
+dark-mode support.
 
 **Registration security** — Google reCAPTCHA v3 (verified
 server-side) plus an invisible honeypot field, a minimum-fill-time check,
@@ -27,20 +32,38 @@ verified-link mechanism; per-account login lockout after repeated failed
 attempts, alongside IP-based rate limiting on register/login/verification/
 password-reset endpoints. See `docs/auth-security.md` for the full design.
 
-**Practices** — a "Start Here" onboarding track, a "Feel Better Now" quick-
-relief section, 7/14/28-day guided programs, a searchable/filterable
-practice Library, a Free Videos section (real YouTube embeds), and per-user
-progress tracking that persists real completions (not fixed demo data) both
-for signed-in members and locally on-device.
+**Practice** — "Start Here" (orientation chapters leading to the first
+practice), "Feel Better Now", a searchable/filterable Library and Free Videos
+(YouTube). Each practice runs as a guided flow: optional before/after
+check-ins, a focused practice mode with a timer, and private notes. Practice
+sessions, favorites, minutes and a local-calendar-day streak are saved to
+the account; signed-out completions stay on the device and are imported
+after sign-in.
+
+**Learn and Journey** — Learn holds the handbook's background chapters and
+articles (none of them repeated in Start Here).
+Journey shows practice stats, program progress, recent practice with
+check-ins, private notes and favorites; Profile leads with the same summary.
+
+**Reset Programs** — 1, 3, 7 and 28-day programs (€19 / €39 / €79 / €149,
+one-time) structured as phases → days → items, with server-side access
+checks, sequential day unlocking, item completion and private day
+reflections. Program content is still placeholder ("content coming soon")
+and the programs are unpublished (visible outside production only).
 
 **Community** — Discussions (create threads, reply), Courses (modules →
 lessons, with progress), Meetings, and a Blog, all wired to real seeded
 content and reachable from the primary nav.
 
-**Membership & payments** — Stripe-backed subscription checkout, a billing
-portal, and one-off donations, all in **Stripe test mode**; admin UI to
-manage membership plans. The donation flow gracefully disables itself when
-Stripe isn't configured, rather than failing.
+**Payments** — one-time Reset Program purchases via Stripe Checkout in
+**Stripe test mode**: access is granted only from the verified webhook (or a
+server-side check of the paid session), duplicate webhook deliveries are
+idempotent, and a full refund revokes access. One-off donations and the
+billing portal also run in test mode. KUKO WAY **does not currently offer a
+membership/subscription plan** — membership sales are off
+(`NEXT_PUBLIC_FEATURE_MEMBERSHIP_SALES`); the subscription billing code is
+kept for a future Community subscription. The donation flow gracefully
+disables itself when Stripe isn't configured, rather than failing.
 
 **Design & polish** — a topbar with flyout submenus and a flag-based
 language switcher (replacing an earlier sidebar-based layout), a full-width
@@ -60,6 +83,14 @@ meetings, blog, payments, protected routes, and localization.
 
 ## What lies ahead
 
+- **Program content** — the real videos, audio and texts for the four Reset
+  Programs, and a hosting choice for program media (no media provider is
+  integrated yet).
+- **Live payments** — production checkout stays disabled until the pricing,
+  VAT and legal terms are confirmed.
+- **Newsletter** — scoped but not built (see `docs/v1-implementation-notes.md`).
+- **Community subscription and Trainer program** — future stages; shown only
+  as "coming later".
 - **Notifications module** — still an empty placeholder (`modules/notifications`);
   no in-app or email notifications exist yet.
 - **Real KUKO WAY photography/video** — the Home hero and Explore section
@@ -133,7 +164,11 @@ Then edit `.env`:
   production, where an unset `SMTP_HOST` makes registration fail outright
   rather than silently skip sending — see `docs/auth-security.md`.
 - Stripe variables are optional for local development unless you're working
-  on membership/donations (see `docs/billing.md`, `docs/membership.md`).
+  on Reset purchases or donations (see `docs/billing.md`). Test-mode Reset
+  checkout additionally needs `NEXT_PUBLIC_FEATURE_PROGRAM_CHECKOUT="true"`
+  and an `sk_test_` key; forward webhooks locally with `stripe listen
+  --forward-to localhost:3000/api/webhooks/stripe` (event list in
+  `docs/v1-implementation-notes.md`).
 
 **Never commit `.env`.** Only `.env.example` (with placeholder values) is
 tracked in version control.
@@ -222,19 +257,21 @@ npm run db:deploy    # apply existing migrations (production/CI)
 
 ```
 app/                 Next.js App Router pages & API routes
-  (app)/               Home, Practices, Community, Account — the main app shell
+  (app)/               Home, Practice, Programs, Learn, Journey, Account and Community — the main app shell
   (auth)/              Login / register pages
   admin/               Admin dashboard (server-protected, ADMIN only)
   api/                 REST-style API routes, grouped by concern
 components/
   ui/                  Reusable design-system primitives (Button, Card, ...)
   layout/              Topbar, MobileDrawer, MobileBottomNav, AdminSidebar
-  admin/, account/, home/, practices/, community/   Feature-specific components
+  admin/, account/, practices/, programs/, journey/, commerce/, community/   Feature-specific components
 modules/              Business logic, framework-agnostic where possible
   auth/, users/, profiles/, content/, media/, settings/   Foundation modules
-  kuko-way/            Practices/programs domain logic + demo progress
+  kuko-way/            Practices, handbook, check-ins and practice progress
+  programs/            Reset Program content model, progression and progress
+  commerce/            Product catalog, checkout, purchases and entitlements
   courses/, discussions/, events/     Community feature modules
-  membership/, payments/              Billing foundation + subscriptions (Stripe)
+  membership/, payments/              Billing foundation (Stripe); subscriptions not currently sold
   donations/, notifications/          Reserved module boundaries — see "What lies ahead"
 lib/                  Cross-cutting utilities (prisma client, logger,
                        permissions, api-response, rate-limit, validations,

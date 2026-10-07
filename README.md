@@ -1,11 +1,13 @@
 # DailyTrainer_app — KUKO WAY Platform
 
 This repository holds **KUKO WAY**, a standalone, independently-deployable
-wellness/community platform (bilingual, Bulgarian default + English). The
-actual Next.js application lives in [`platform/`](platform/) — see
-[`platform/README.md`](platform/README.md) for full setup instructions. This
-top-level README summarizes what the project is, what's built, and what
-isn't yet, for anyone landing on the repo root.
+platform for body awareness and daily practice — guided Fascial Maneuvers,
+breathing and reset practices, educational content and personal progress —
+in Bulgarian (default) and English. It is designed as a calm practice space,
+not a fitness or medical app. The Next.js application lives in
+[`platform/`](platform/) — see [`platform/README.md`](platform/README.md) for
+setup instructions. This top-level README summarizes what the product is,
+what is built, and what is not yet.
 
 > This project has no connection to, dependency on, or shared infrastructure
 > with `app.humangarage.net` — that product was used only as a
@@ -15,13 +17,115 @@ isn't yet, for anyone landing on the repo root.
 ## Repository layout
 
 ```
-platform/    The Next.js application (see platform/README.md for details)
-*.docx       Planning documents (structure, prompts, security notes — Bulgarian/English)
-*.png/.webm  Reference screenshots and a short demo recording
+platform/              The Next.js application (see platform/README.md)
+newsletter-templates/  Newsletter design explorations (static HTML, not used by the app)
+*.docx                 Planning documents (structure, prompts, security notes — Bulgarian/English)
+*.png/.webm            Reference screenshots and a short demo recording
 ```
 
-The app itself is organized around four sections: **Home**, **Practices**,
-**Community**, and **Account**.
+## Main sections and user flow
+
+| Section | Purpose |
+| --- | --- |
+| **Home** | Entry point: a practice to start, the program in progress and personal progress at a glance. |
+| **Practice** | The handbook practices — *Start Here* (first steps), *Feel Better Now*, the searchable Library and the free videos. |
+| **Programs** | The Reset Programs (1, 3, 7 and 28 days) with prices, access and progress. |
+| **Knowledge** (*Learn*, BG „Знание“) | Educational reference: the handbook's chapters on the body and fascia, and articles. |
+| **Journey** | Personal progress over time: practice history, check-ins, notes, programs, favorites. |
+| **Profile** | The account: journey summary, purchased programs, settings and billing. |
+
+Desktop shows Practice · Programs · Learn · Journey in the top bar (the logo
+leads Home); on mobile a bottom bar gives one-tap access to Home, Practice,
+Programs, Journey and Profile. Community (Discussions, Courses, Meetings) and
+the Blog remain available from the mobile menu and the footer.
+
+Typical flow: start with *Start Here* → do a practice → see it in *Journey* →
+continue with a Reset Program.
+
+## What's implemented
+
+**Practice flow and progress** — every practice runs as a guided flow:
+*Begin* → an optional "before" check-in (tension, pressure, fatigue,
+restlessness) → a focused practice mode with a timer and one step at a time
+→ an optional "after" check-in → completion. For signed-in users each
+practice is saved with its measured time and check-ins; practice history,
+total minutes, practised days and the consecutive-day streak (counted by the
+user's own calendar day) appear in Journey and Profile. Signed-out visitors
+can practise too; their completions are kept on the device and added to
+their account after they sign in.
+
+**Favorites, history and private notes** — signed-in users can save
+practices as favorites, see their recent practice history with before/after
+check-ins, and write private notes after a practice and a reflection for
+each program day. Notes are visible only to their author.
+
+**Start Here and Knowledge** — each handbook chapter has a single home:
+*Start Here* holds the orientation chapters and leads to the first practice;
+*Knowledge* holds the background chapters and articles. Practice videos are
+reached through the Practice section.
+
+**Reset Programs (1, 3, 7 and 28 days)** — each program is structured into
+days with their materials; the 28 Day Reset is organized in four weekly
+phases (Release, Restore, Reconnect, Reset). Days open in sequence — the next
+day unlocks when the previous one is complete — and each day has an optional
+private reflection. Progress is shown on the program page, in Journey, in
+Profile and on Home.
+
+**Payment and access to purchased content** — a program is bought with a
+one-time card payment; access is granted only after the payment is
+confirmed, appears in Profile ("Purchased programs"), and ends again if the
+payment is fully refunded. A user cannot buy a program they already have.
+Purchasing currently runs in **payment test mode only** (see *Next steps*).
+
+**Accounts and security** — registration with email verification, password
+reset, bot protection (reCAPTCHA v3, honeypot, minimum fill time, an
+arithmetic challenge), login lockout after repeated failed attempts and rate
+limiting; roles Member / Moderator / Admin with an admin dashboard. Design in
+`platform/docs/auth-security.md`.
+
+**Community and support** — Discussions (threads, replies, moderation and
+reports), Courses (modules → lessons with progress), Meetings, a Blog, and
+voluntary one-off donations.
+
+**Bulgarian and English** — the whole interface is available in both
+languages (Bulgarian by default), switchable at any time.
+
+**Mobile experience** — layouts and navigation are built for phones as well
+as desktop and checked at a 375 px viewport.
+
+**Accessibility** — automated accessibility checks (axe) on the main pages,
+WCAG AA colour contrast in light and dark themes, a single top-level heading
+per page and keyboard-operable navigation.
+
+## Programs and prices
+
+| Program | Price |
+| --- | --- |
+| 1 Day Reset | €19 (one-time) |
+| 3 Day Reset | €39 (one-time) |
+| 7 Day Reset | €79 (one-time) |
+| 28 Day Reset | €149 (one-time) |
+
+KUKO WAY **currently does not offer a membership or subscription plan.**
+*KUKO WAY Community* (subscription) and the *Trainer Program* are shown only
+as "coming later" and cannot be purchased.
+
+**Program content:** the functional foundation of the programs (structure,
+days, sequential access, progress, reflections, purchase and access) is
+ready for the real content, but the actual program materials — videos,
+audio and texts — have not yet been provided and added. Until then every
+program item is a placeholder ("content coming soon").
+
+## Next steps
+
+- **Program content** — add the real videos, audio and texts to the four
+  programs, and choose the hosting for program video and audio.
+- **Texts and terms** — final approval of the Bulgarian (and English)
+  wording; finalize the commercial and legal terms (pricing rules, VAT,
+  terms of sale, refunds, privacy) needed before real payments are enabled.
+- **Newsletter** — define the scope and provider, then build it (see the
+  assessment in `platform/docs/v1-implementation-notes.md`).
+- **Future stages** — KUKO WAY Community and the Trainer education program.
 
 ## Technology stack
 
@@ -34,81 +138,8 @@ The app itself is organized around four sections: **Home**, **Practices**,
 | Auth           | NextAuth.js (credentials, JWT sessions)    |
 | Bot protection | Google reCAPTCHA v3 + honeypot + math challenge |
 | Email          | Nodemailer (any SMTP provider)             |
-| Payments       | Stripe (currently test mode)               |
+| Payments       | Stripe (test mode)                         |
 | Testing        | Vitest (unit) + Playwright (e2e, incl. axe-core a11y) |
-
-## What's implemented
-
-**Foundation** — NextAuth-based authentication with credentials + JWT
-sessions, role-based access (Member / Moderator / Admin), an admin dashboard
-(users, membership plans, site settings), and a reusable Tailwind design
-system with full dark-mode support.
-
-**Registration & account security** — Google reCAPTCHA v3 (verified
-server-side), an invisible honeypot field, a minimum-fill-time check, and a
-server-side arithmetic ("math challenge") anti-bot check on registration;
-mandatory email verification (signed, single-use, time-limited tokens)
-gating member actions (posting, replying, editing a profile); a
-self-service "forgot password" flow using the same verified-link mechanism;
-per-account login lockout after repeated failed attempts; IP-based rate
-limiting on register/login/verification/password-reset endpoints. Full
-design in `platform/docs/auth-security.md`.
-
-**Practices** — a "Start Here" onboarding track, a "Feel Better Now"
-quick-relief section, 7/14/28-day guided programs, a searchable/filterable
-practice Library, a Free Videos section (real YouTube embeds), and per-user
-progress tracking that persists real completions for both signed-in members
-and locally on-device.
-
-**Community** — Discussions (create threads, reply), Courses (modules →
-lessons with progress tracking), Meetings, and a Blog — all wired to real
-seeded content and reachable from the primary nav.
-
-**Membership & payments** — Stripe-backed subscription checkout, a billing
-portal, and one-off donations, all in Stripe **test mode**; admin UI to
-manage membership plans. The donation flow degrades gracefully (disables
-itself) when Stripe isn't configured, rather than failing.
-
-**Design & polish** — a topbar with flyout submenus and a flag-based
-language switcher, a full-width photo hero on Home with a KUKO WAY
-philosophy quote for signed-out visitors, and a site-wide typography pass
-with responsive nav breakpoints re-tuned to match.
-
-**Testing** — Vitest unit tests for framework-agnostic logic (permissions,
-validation, auth, rate limiting, CAPTCHA verification, email
-verification/password-reset token lifecycle, billing/webhook idempotency),
-plus a full Playwright end-to-end suite covering accessibility, theming,
-responsive layout at real breakpoints, and functional flows for auth,
-navigation, practices, discussions, courses, meetings, blog, payments,
-protected routes, and localization.
-
-## What's NOT implemented yet
-
-- **Notifications module** — `platform/modules/notifications` is a reserved,
-  empty placeholder. No in-app or email notifications exist yet (beyond the
-  transactional auth/verification emails).
-- **Real KUKO WAY photography/video** — the Home hero and Explore section
-  currently use licensed stock photos and a few client-supplied images (see
-  `platform/public/images/home/CREDITS.md`); real studio photography/video
-  is still pending.
-- **Content authoring UI** — Blog, Discussions, Courses, and Meetings render
-  real seeded content, but there is no admin CRUD screen yet to create or
-  edit that content without touching the database directly (e.g. via
-  `npx prisma studio`).
-- **Production billing** — Stripe is wired end-to-end but only in test mode.
-  Going live requires real API keys, a production webhook endpoint, and a
-  final review of the checkout/donation flows.
-- **Donations module beyond the basic flow** — `platform/modules/donations`
-  is largely a reserved module boundary; the working donation flow exists at
-  the route/API level but the module itself isn't fully fleshed out.
-- **SEO & performance pass, real-device QA** — verified via Playwright at
-  emulated breakpoints (375/768/1024/1440px) and axe-core accessibility
-  checks, but there hasn't been a dedicated performance/SEO audit or a pass
-  on physical devices yet.
-- **Known flaky tests** — a handful of WebKit/Firefox-only Playwright auth
-  tests are intermittently flaky, tied to a pre-existing `next dev`-only
-  React Strict Mode/CSRF race unrelated to app code (documented in the test
-  file itself, not currently blocking).
 
 ## Stripe Billing Localization
 
@@ -124,10 +155,10 @@ show different languages for the same invoice:
 
 **Customer sync.** The app mirrors the selected app language onto the user's
 *existing* Stripe Customer as `preferred_locales: ['bg']` or `['en']`. It runs
-on subscription checkout, Billing Portal access, donation checkout, and when a
+on checkout (Reset Programs, donations), Billing Portal access, and when a
 logged-in user switches language (`POST /api/account/locale`). It only updates
-when the value differs, never creates a Customer, and a Stripe failure never
-blocks the user.
+when the value differs, never creates a Customer by itself, and a Stripe
+failure never blocks the user.
 
 **Hosted Invoice Page.** Stripe determines its language from the customer's
 browser settings; it is not controlled by the DailyTrainer locale or by
@@ -165,6 +196,7 @@ npm run dev
 
 See also:
 
+- [`platform/docs/v1-implementation-notes.md`](platform/docs/v1-implementation-notes.md) — what V1 implements, feature flags, test-mode purchasing, open decisions
 - [`platform/docs/ARCHITECTURE.md`](platform/docs/ARCHITECTURE.md) — architecture and tech choices
 - [`platform/docs/auth-security.md`](platform/docs/auth-security.md) — auth/registration security design
-- [`platform/docs/billing.md`](platform/docs/billing.md) and [`platform/docs/membership.md`](platform/docs/membership.md) — Stripe billing/membership design
+- [`platform/docs/billing.md`](platform/docs/billing.md) and [`platform/docs/membership.md`](platform/docs/membership.md) — Stripe billing foundation and the (currently not offered) membership design
