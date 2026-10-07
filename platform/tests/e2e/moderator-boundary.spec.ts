@@ -149,7 +149,11 @@ test.describe('Admin financial/admin access (regression)', () => {
     const subscribeRes = await page.request.post('/api/membership/subscribe', {
       data: { membershipPlanId: 'does-not-matter' },
     });
-    expect(subscribeRes.status()).not.toBe(403);
+    // With membership sales closed (V1) every subscribe is refused — but with
+    // MEMBERSHIP_SALES_CLOSED, never the Moderator guard's FORBIDDEN.
+    if (subscribeRes.status() === 403) {
+      expect((await subscribeRes.json()).error.code).toBe('MEMBERSHIP_SALES_CLOSED');
+    }
 
     const portalRes = await page.request.post('/api/membership/portal');
     expect(portalRes.status()).not.toBe(403);

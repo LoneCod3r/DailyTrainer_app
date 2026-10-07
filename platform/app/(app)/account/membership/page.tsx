@@ -9,6 +9,8 @@ import { getT } from '@/lib/i18n/dictionaries';
 import { formatCurrency } from '@/lib/format-currency';
 import { isModeratorOnly } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { features } from '@/lib/features';
 
 const BENEFIT_KEYS = [
   'account.membership.benefit1',
@@ -25,6 +27,43 @@ export default async function MembershipPage({ searchParams }: { searchParams: {
   if (session?.user && isModeratorOnly(session.user.role)) redirect('/account');
   const locale = getLocale();
   const t = getT(locale);
+
+  // Membership sales are closed in V1 (lib/features.ts): the legacy plan is
+  // never listed or offered, and there is no Join action. KUKO WAY Community
+  // is a future product, not a replacement checkout. Existing subscribers
+  // still see their own subscription (it stays active and is managed from
+  // Billing / the Stripe portal) — nothing about it is changed here.
+  if (!features.membershipSales) {
+    const existing = session?.user ? await getActiveSubscriptionForUser(session.user.id) : null;
+    return (
+      <Container className="flex max-w-2xl flex-col gap-6 py-8" data-testid="membership-sales-closed">
+        {existing ? (
+          <>
+            <h1 className="sr-only">{t('nav.accountMembership')}</h1>
+            <MembershipStatus subscription={existing} locale={locale} />
+            <Card>
+              <CardContent className="flex flex-col items-start gap-3">
+                <p className="text-sm text-ink-700">{t('account.membership.legacyNote')}</p>
+                <Link href="/account/billing">
+                  <Button variant="secondary">{t('account.membership.manageInBilling')}</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-start gap-3">
+              <h1 className="text-xl font-semibold text-ink-900">{t('account.membership.salesClosedTitle')}</h1>
+              <p className="text-ink-700">{t('account.membership.salesClosedDesc')}</p>
+              <Link href="/practices/programs">
+                <Button>{t('account.membership.exploreResetPrograms')} →</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+      </Container>
+    );
+  }
 
   const [plans, subscription] = await Promise.all([
     listActivePlans(),

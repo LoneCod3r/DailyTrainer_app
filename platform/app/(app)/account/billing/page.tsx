@@ -14,6 +14,7 @@ import { InvoiceHistory } from '@/components/account/InvoiceHistory';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { isModeratorOnly } from '@/lib/permissions';
+import { features } from '@/lib/features';
 
 // Billing = "what am I paying for, how am I paying, and where can I manage
 // it?" — payment method and invoices are read live from Stripe (never
@@ -47,9 +48,17 @@ export default async function BillingPage() {
           title={t('account.billing.emptyTitle')}
           description={t('account.billing.emptyDesc')}
           action={
-            <Link href="/account/membership">
-              <Button variant="secondary">{t('account.billing.viewMembership')}</Button>
-            </Link>
+            // Membership sales are closed in V1 (lib/features.ts) — point to
+            // what is actually offered instead of the legacy plan.
+            features.membershipSales ? (
+              <Link href="/account/membership">
+                <Button variant="secondary">{t('account.billing.viewMembership')}</Button>
+              </Link>
+            ) : (
+              <Link href="/practices/programs">
+                <Button variant="secondary">{t('account.billing.exploreResetPrograms')}</Button>
+              </Link>
+            )
           }
         />
       ) : (

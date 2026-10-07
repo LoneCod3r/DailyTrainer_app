@@ -2,6 +2,11 @@ import { test, expect } from './fixtures/base';
 import { AUTH_STORAGE_STATE } from './fixtures/data';
 import { registerCleanUser } from './fixtures/auth-helpers';
 
+// Membership sales are closed in V1 (lib/features.ts) unless explicitly
+// re-enabled. The old "browse plans / Join" behaviour is asserted only when
+// they are open; the closed V1 behaviour is covered in membership-legacy.spec.ts.
+const MEMBERSHIP_SALES_OPEN = process.env.NEXT_PUBLIC_FEATURE_MEMBERSHIP_SALES === 'true';
+
 // Stripe may or may not be configured in the environment these run against
 // (a real test-mode STRIPE_SECRET_KEY vs. the placeholder sk_test_replace_me),
 // and the amount-selection UI only renders once it is. The Donation tests
@@ -41,6 +46,7 @@ test.describe('Membership, Billing and Donation (authenticated)', () => {
   test.use({ storageState: AUTH_STORAGE_STATE });
 
   test('a cancelled checkout query param shows the cancelled notice', async ({ page }) => {
+    test.skip(!MEMBERSHIP_SALES_OPEN, 'membership sales are closed in V1 — there is no checkout to cancel');
     await page.goto('/account/membership?checkout=cancelled');
     await expect(page.getByText('Checkout cancelled')).toBeVisible();
     await expect(page.getByText('your card was not charged')).toBeVisible();
@@ -149,6 +155,7 @@ test.describe('Donation amount selection (authenticated, Stripe configured)', ()
 // (subscription, customer, saved card, invoices) done on member@example.dev.
 test.describe('Membership and Billing (new account, no Stripe activity)', () => {
   test('a new user without a membership sees the available plan with a Join action', async ({ page }) => {
+    test.skip(!MEMBERSHIP_SALES_OPEN, 'membership sales are closed in V1 — no plan is offered');
     await registerCleanUser(page, 'membership');
     await page.goto('/account/membership');
     await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
@@ -193,7 +200,12 @@ test.describe('Membership, Billing and Donation (unauthenticated)', () => {
         // app/(app)/account/membership/page.tsx), so "Available plans" is
         // the stable heading that proves the real page rendered.
         await expect(page).toHaveURL('/account/membership');
-        await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
+        await expect(
+          page.getByRole('heading', {
+            name: MEMBERSHIP_SALES_OPEN ? 'Available plans' : 'Membership isn’t offered at the moment',
+            exact: true,
+          }),
+        ).toBeVisible();
         return;
       }
       await expect(page).toHaveURL(new RegExp(`/login\\?callbackUrl=${path}`));

@@ -1,6 +1,11 @@
 import { test, expect } from './fixtures/base';
 import { AUTH_STORAGE_STATE } from './fixtures/data';
 
+// Membership sales are closed in V1 (lib/features.ts) unless explicitly
+// re-enabled. The old "browse plans / Join" behaviour is asserted only when
+// they are open; the closed V1 behaviour is covered in membership-legacy.spec.ts.
+const MEMBERSHIP_SALES_OPEN = process.env.NEXT_PUBLIC_FEATURE_MEMBERSHIP_SALES === 'true';
+
 // /account/membership is deliberately NOT fully gated — the plans/pricing
 // are publicly browsable, only joining a plan requires auth (see
 // app/(app)/account/membership/page.tsx and payments.spec.ts). Everything
@@ -27,8 +32,14 @@ test.describe('Protected routes — unauthenticated', () => {
     // The page's own generic "Membership" header was intentionally removed
     // (see app/(app)/account/membership/page.tsx) — "Available plans" is
     // the stable heading that proves the real, public page rendered rather
-    // than a redirect or protected/blocked state.
-    await expect(page.getByRole('heading', { name: 'Available plans', exact: true })).toBeVisible();
+    // than a redirect or protected/blocked state. With sales closed (V1) the
+    // page renders its calm "not offered" notice instead.
+    await expect(
+      page.getByRole('heading', {
+        name: MEMBERSHIP_SALES_OPEN ? 'Available plans' : 'Membership isn’t offered at the moment',
+        exact: true,
+      }),
+    ).toBeVisible();
   });
 });
 

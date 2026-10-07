@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Exercises the real POST /api/membership/subscribe handler and the real
 // billing.service — only the session, the database and Stripe are mocked — to
@@ -14,6 +14,21 @@ vi.mock('@/lib/prisma', () => ({
 vi.mock('next-auth', () => ({ getServerSession: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('next/headers', () => ({ cookies: () => ({ get: () => undefined }) }));
+// Membership sales are closed in V1. The duplicate-guard tests below run with
+// sales re-opened (as if Community launched), so that guard stays covered;
+// the "sales closed" tests at the end run with the real V1 setting.
+const featureState = { membershipSales: true };
+vi.mock('@/lib/features', () => ({
+  features: {
+    get membershipSales() {
+      return featureState.membershipSales;
+    },
+    programCheckout: false,
+    pricingPreview: true,
+    programsPreview: true,
+    founders: false,
+  },
+}));
 
 const stripeMock = {
   customers: { create: vi.fn(), retrieve: vi.fn(), update: vi.fn() },
@@ -91,5 +106,25 @@ describe('POST /api/membership/subscribe — duplicate subscription guard', () =
     await subscribe();
 
     expect((prisma.subscription.findFirst as any).mock.calls[0][0].where.userId).toBe(userId);
+  });
+});
+
+describe('POST /api/membership/subscribe — membership sales closed (V1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    featureState.membershipSales = false;
+  });
+  afterEach(() => {
+    featureState.membershipSales = true;
+  });
+
+  it('refuses any new membership checkout — the legacy plan cannot be bought', async () => {
+    (getServerSession as any).mockResolvedValue({ user: { id: 'u-closed-1', role: 'USER' } });
+    const res = await subscribe();
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('MEMBERSHIP_SALES_CLOSED');
+    // Refused before any plan lookup or Stripe call.
+    expect(prisma.membershipPlan.findUnique).not.toHaveBeenCalled();
+    expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
   });
 });

@@ -342,6 +342,11 @@ const bg = {
       successDesc:
         'В момента потвърждаваме плащането ти в Stripe — това може да отнеме няколко секунди. Статусът на абонамента ти ще се обнови автоматично, след като бъде потвърден.',
       goToMembership: 'Към моя абонамент',
+      salesClosedTitle: 'В момента не предлагаме абонамент',
+      salesClosedDesc: 'KUKO WAY Community предстои. Дотогава програмите за рестарт са начинът да практикуваш с KUKO WAY.',
+      exploreResetPrograms: 'Разгледай програмите за рестарт',
+      legacyNote: 'Съществуващият ти абонамент остава активен. Можеш да го управляваш от „Плащания“.',
+      manageInBilling: 'Към „Плащания“',
       status: {
         ACTIVE: 'Активен',
         TRIALING: 'Пробен период',
@@ -366,6 +371,7 @@ const bg = {
       amount: 'Сума',
       noActiveSubscription: 'Няма активен абонамент.',
       viewMembership: 'Виж плановете за абонамент',
+      exploreResetPrograms: 'Разгледай програмите за рестарт',
       paymentMethod: 'Начин на плащане',
       noPaymentMethod: 'Все още няма запазен начин на плащане.',
       cardEndingIn: '{brand}, завършваща на {last4}',

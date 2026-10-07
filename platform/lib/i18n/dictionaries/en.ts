@@ -340,6 +340,11 @@ const en: typeof bg = {
       successDesc:
         "We're confirming your payment with Stripe now — this can take a few seconds. Your membership status will update automatically once it's confirmed.",
       goToMembership: 'Go to my membership',
+      salesClosedTitle: 'Membership isn’t offered at the moment',
+      salesClosedDesc: 'KUKO WAY Community is coming later. Until then, the Reset Programs are the way to practise with KUKO WAY.',
+      exploreResetPrograms: 'Explore the Reset Programs',
+      legacyNote: 'Your existing subscription stays active. You can manage it from Billing.',
+      manageInBilling: 'Go to Billing',
       status: {
         ACTIVE: 'Active',
         TRIALING: 'Trial',
@@ -364,6 +369,7 @@ const en: typeof bg = {
       amount: 'Amount',
       noActiveSubscription: 'No active membership subscription.',
       viewMembership: 'View membership plans',
+      exploreResetPrograms: 'Explore the Reset Programs',
       paymentMethod: 'Payment method',
       noPaymentMethod: 'No payment method on file yet.',
       cardEndingIn: '{brand} ending in {last4}',
