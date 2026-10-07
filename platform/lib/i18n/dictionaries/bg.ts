@@ -626,11 +626,10 @@ const bg = {
   },
   learn: {
     pageTitle: 'Знание',
-    pageSubtitle: 'Опознай тялото, с което практикуваш — основите, статии и видеа на едно място.',
+    pageSubtitle: 'Опознай тялото, с което практикуваш — наръчникът и статиите на едно място.',
     bodyTitle: 'Разбери тялото',
     newHere: 'За първи път в KUKO WAY?',
     articlesTitle: 'Статии',
-    videosTitle: 'Видеа',
     viewAll: 'Виж всички',
   },
   practiceSession: {

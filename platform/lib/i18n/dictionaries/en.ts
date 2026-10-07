@@ -624,11 +624,10 @@ const en: typeof bg = {
   },
   learn: {
     pageTitle: 'Learn',
-    pageSubtitle: 'Understand the body you practise with — the basics, articles and videos in one place.',
+    pageSubtitle: 'Understand the body you practise with — the handbook and articles in one place.',
     bodyTitle: 'Understand the body',
     newHere: 'New to KUKO WAY?',
     articlesTitle: 'Articles',
-    videosTitle: 'Videos',
     viewAll: 'View all',
   },
   practiceSession: {

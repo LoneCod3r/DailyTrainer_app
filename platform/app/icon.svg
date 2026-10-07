@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- KUKO WAY mark: the topbar's "K" tile (brand-600 sage, white K). Drawn
+       with strokes, not text, so it never depends on a font being present. -->
+  <rect width="32" height="32" rx="7" fill="#5f6d55"/>
+  <path d="M11 8.5v15M21 8.5l-8.4 7.5L21.5 23.5" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

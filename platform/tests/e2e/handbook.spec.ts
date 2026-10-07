@@ -55,3 +55,19 @@ test('Library links each chapter to its single home', async ({ page }) => {
   await expect(page.getByRole('link', { name: /What Is Fascia\?/ })).toHaveAttribute('href', '/learn/kakvo-e-fastsiya');
   await expect(page.getByRole('link', { name: /^01\s*Introduction/ })).toHaveAttribute('href', '/practices/start-here/vavedenie');
 });
+
+test('Learn is knowledge only — no video listings; videos stay under Practice', async ({ page }) => {
+  await page.goto('/learn');
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { level: 1, name: 'Learn' })).toBeVisible();
+  await expect(main.locator('img[src*="img.youtube.com"]')).toHaveCount(0);
+  await expect(main.locator('a[href*="youtube.com"], a[href^="/practices/free-videos"], iframe')).toHaveCount(0);
+  await expect(main.getByRole('heading', { name: /^videos?$/i })).toHaveCount(0);
+
+  // The canonical entry point for videos: the Practice menu.
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await nav.getByRole('button', { name: 'Practice: Show' }).click();
+  await nav.getByRole('link', { name: 'Free Videos' }).click();
+  await expect(page).toHaveURL('/practices/free-videos');
+  await expect(page.locator('img[src*="img.youtube.com"]').first()).toBeVisible();
+});

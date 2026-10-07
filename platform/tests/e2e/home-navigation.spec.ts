@@ -170,3 +170,16 @@ test.describe('Home / account menu (authenticated)', () => {
     await expect(overviewLink).toBeHidden();
   });
 });
+
+test('the KUKO WAY favicon is served (no favicon 404)', async ({ page }) => {
+  for (const [path, type] of [
+    ['/favicon.ico', 'image/x-icon'],
+    ['/icon.svg', 'image/svg+xml'],
+  ]) {
+    const res = await page.request.get(path);
+    expect(res.status(), path).toBe(200);
+    expect(res.headers()['content-type']).toContain(type);
+  }
+  await page.goto('/');
+  await expect(page.locator('link[rel="icon"][href^="/icon.svg"]')).toHaveCount(1);
+});
