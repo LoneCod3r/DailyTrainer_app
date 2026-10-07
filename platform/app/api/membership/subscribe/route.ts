@@ -16,7 +16,7 @@ import { getLocale } from '@/lib/i18n/get-locale';
 //
 // Membership sales are closed in V1 (lib/features.ts): the legacy plan is not
 // sold and KUKO WAY Community is a future product, so this refuses before
-// doing anything. Existing subscribers are unaffected — they manage their
+// any plan lookup or Stripe call. Existing subscribers are unaffected — they manage their
 // subscription through the billing portal (/api/membership/portal).
 export async function POST(req: Request) {
   return withErrorHandling(async () => {
@@ -24,14 +24,15 @@ export async function POST(req: Request) {
     if (!session?.user) throw Errors.unauthorized();
     forbidModeratorFinancialAccess(session.user.role);
 
-    // After the auth/role checks (so their specific refusals still apply),
-    // before any rate-limit, plan lookup or Stripe call.
-    if (!features.membershipSales) {
-      throw new ApiError(403, 'MEMBERSHIP_SALES_CLOSED', 'Membership is not offered at the moment');
-    }
-
     if (!checkRateLimit(`membership:subscribe:${session.user.id}`, 10, 60_000)) {
       throw Errors.tooManyRequests();
+    }
+
+    // Order: sign-in → moderator check → rate limit → sales closed. The
+    // rate limit still counts every request; nothing below (plan lookup,
+    // Stripe) runs while sales are closed.
+    if (!features.membershipSales) {
+      throw new ApiError(403, 'MEMBERSHIP_SALES_CLOSED', 'Membership is not offered at the moment');
     }
 
     const body = await req.json();
