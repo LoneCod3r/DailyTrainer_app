@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { clsx } from '@/lib/clsx';
 import { Card, EmptyState } from '@/components/ui';
 import { useLocale } from '@/lib/i18n/LocaleProvider';
-import { localize, type Practice, type Program, type StartHereSection } from '@/modules/kuko-way/types';
+import { localize, type Practice, type StartHereSection } from '@/modules/kuko-way/types';
+import type { ResetProgram } from '@/modules/programs/types';
+import { handbookSectionHref } from '@/modules/kuko-way/handbook';
 
 type Category = 'all' | 'learn' | 'practices' | 'programs';
 
@@ -20,7 +22,7 @@ function stepCountOf(practice: Practice): number | undefined {
 // Redesigned from a repetitive card-grid browser into an editorial "archive
 // index": a numbered list for Learn, a single featured practice + compact
 // scan list for Practices, and a quiet list for Programs — kept lighter than
-// the entry point / ProgramTrail zones on the main /practices page. Search
+// the entry-point zones on the main /practices page. Search
 // deliberately stays a plain filtered list rather than the editorial
 // treatment, since search is a utility flow, not a browsing one.
 export function LibraryBrowser({
@@ -31,7 +33,7 @@ export function LibraryBrowser({
 }: {
   practices: Practice[];
   startHereSections: StartHereSection[];
-  programs: Program[];
+  programs: ResetProgram[];
   initialQuery?: string;
 }) {
   const { locale, t } = useLocale();
@@ -114,13 +116,13 @@ export function LibraryBrowser({
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-link sm:text-sm">
                   {t('library.categoryLearn')}
                 </h2>
-                <p className="font-serif text-xl text-ink-900 sm:text-2xl">{t('startHere.subtitle')}</p>
+                <p className="font-serif text-xl text-ink-900 sm:text-2xl">{t('library.handbookDesc')}</p>
               </div>
               <ol className="flex list-none flex-col divide-y divide-sand-100">
                 {filteredSections.map((section, index) => (
                   <li key={section.id}>
                     <Link
-                      href={`/practices/start-here/${section.slug}`}
+                      href={handbookSectionHref(section)}
                       className="group flex items-center gap-4 py-3.5 sm:py-4"
                     >
                       <span className="w-8 shrink-0 font-serif text-base text-ink-300 sm:w-10 sm:text-lg">
@@ -226,7 +228,7 @@ export function LibraryBrowser({
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-link sm:text-sm">
                   {t('library.categoryPrograms')}
                 </h2>
-                <p className="font-serif text-xl text-ink-900 sm:text-2xl">{t('practices.programsDesc')}</p>
+                <p className="font-serif text-xl text-ink-900 sm:text-2xl">{t('resetPrograms.pageSubtitle')}</p>
               </div>
               <ul className="flex list-none flex-col divide-y divide-sand-100">
                 {filteredPrograms.map((program) => (
@@ -237,9 +239,13 @@ export function LibraryBrowser({
                     >
                       <span className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
                         <span className="shrink-0 text-sm font-semibold text-ink-900 group-hover:text-link sm:text-base">
-                          {program.length} {t('programs.daysUnit')}
+                          {localize(program.title, locale).value}
                         </span>
-                        <span className="text-sm text-ink-500">{localize(program.description, locale).value}</span>
+                        <span className="text-sm text-ink-500">
+                          {program.lengthDays === 1
+                            ? t('resetPrograms.oneDay')
+                            : t('resetPrograms.days', { count: program.lengthDays })}
+                        </span>
                       </span>
                       <span
                         aria-hidden="true"

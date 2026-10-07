@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     membershipPlan: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    subscription: { findFirst: vi.fn() },
+    subscription: { findFirst: vi.fn(), findMany: vi.fn() },
   },
 }));
 
@@ -17,13 +17,13 @@ vi.mock('@/modules/payments/billing.service', () => ({
   updateMembershipPlanProduct: vi.fn(),
   replaceMembershipPlanPrice: vi.fn(),
   setMembershipPlanProductActive: vi.fn(),
+  listStripeSubscriptionViews: vi.fn(),
 }));
 
 const { prisma } = await import('@/lib/prisma');
 const billing = await import('@/modules/payments/billing.service');
-const { createPlan, updatePlan, listActivePlans, getActiveSubscriptionForUser } = await import(
-  '@/modules/membership/membership.service'
-);
+const { createPlan, updatePlan, listActivePlans, getActiveSubscriptionForUser, getLatestSubscriptionForUser } =
+  await import('@/modules/membership/membership.service');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -110,16 +110,101 @@ describe('listActivePlans', () => {
   });
 });
 
-describe('getActiveSubscriptionForUser', () => {
-  it('only considers ACTIVE, TRIALING or PAST_DUE as a current membership', async () => {
-    (prisma.subscription.findFirst as any).mockResolvedValue(null);
+describe('membership subscription lookup (Billing / Account / Membership)', () => {
+  const plan = { id: 'plan_1', name: 'KUKO WAY Premium', amount: 2999, currency: 'eur', interval: 'month' };
+  const day = 24 * 60 * 60 * 1000;
+  const localRow = (over: Record<string, unknown> = {}) => ({
+    stripeSubscriptionId: 'sub_local',
+    status: 'ACTIVE',
+    currentPeriodEnd: new Date(Date.now() + 20 * day),
+    cancelAtPeriodEnd: false,
+    createdAt: new Date(Date.now() - 10 * day),
+    membershipPlanId: 'plan_1',
+    membershipPlan: plan,
+    ...over,
+  });
+  const stripeView = (over: Record<string, unknown> = {}) => ({
+    source: 'stripe',
+    stripeSubscriptionId: 'sub_live',
+    status: 'ACTIVE',
+    currentPeriodEnd: new Date(Date.now() + 28 * day),
+    cancelAtPeriodEnd: false,
+    createdAt: new Date(Date.now() - 2 * day),
+    membershipPlanId: 'plan_1',
+    membershipPlan: plan,
+    ...over,
+  });
 
-    await getActiveSubscriptionForUser('user_1');
+  beforeEach(() => {
+    (prisma.subscription.findMany as any).mockResolvedValue([]);
+    (billing.listStripeSubscriptionViews as any).mockResolvedValue([]);
+  });
 
-    expect(prisma.subscription.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { userId: 'user_1', status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] } },
-      }),
-    );
+  it('an active local subscription is current — without asking Stripe', async () => {
+    (prisma.subscription.findMany as any).mockResolvedValue([localRow()]);
+    const sub = await getActiveSubscriptionForUser('user_1');
+    expect(sub).toMatchObject({ source: 'local', status: 'ACTIVE', membershipPlan: { name: 'KUKO WAY Premium' } });
+    expect(billing.listStripeSubscriptionViews).not.toHaveBeenCalled();
+    // Scoped to the requesting user.
+    expect((prisma.subscription.findMany as any).mock.calls[0][0].where).toEqual({ userId: 'user_1' });
+  });
+
+  it('the bug: no local row, but active in Stripe → shown as active (read from Stripe)', async () => {
+    (billing.listStripeSubscriptionViews as any).mockResolvedValue([stripeView()]);
+    expect(await getActiveSubscriptionForUser('user_1')).toMatchObject({ source: 'stripe', status: 'ACTIVE' });
+    expect(await getLatestSubscriptionForUser('user_1')).toMatchObject({ source: 'stripe', status: 'ACTIVE' });
+  });
+
+  it('cancel-at-period-end stays active until the period ends', async () => {
+    (prisma.subscription.findMany as any).mockResolvedValue([localRow({ cancelAtPeriodEnd: true })]);
+    expect(await getActiveSubscriptionForUser('user_1')).toMatchObject({ status: 'ACTIVE', cancelAtPeriodEnd: true });
+  });
+
+  it('an expired subscription is not active (canceled, or cancel-at-period-end past its end)', async () => {
+    (prisma.subscription.findMany as any).mockResolvedValue([
+      localRow({ status: 'CANCELED', stripeSubscriptionId: 'sub_a' }),
+      localRow({ cancelAtPeriodEnd: true, currentPeriodEnd: new Date(Date.now() - day), stripeSubscriptionId: 'sub_b' }),
+    ]);
+    expect(await getActiveSubscriptionForUser('user_1')).toBeNull();
+    // Billing still shows the most recent one as history (not as active).
+    const latest = await getLatestSubscriptionForUser('user_1');
+    expect(latest).not.toBeNull();
+    expect(latest!.status === 'CANCELED' || latest!.cancelAtPeriodEnd).toBe(true);
+  });
+
+  it.each(['TRIALING', 'PAST_DUE'])('%s counts as in effect', async (status) => {
+    (prisma.subscription.findMany as any).mockResolvedValue([localRow({ status })]);
+    expect(await getActiveSubscriptionForUser('user_1')).toMatchObject({ status });
+  });
+
+  it.each(['INCOMPLETE', 'INCOMPLETE_EXPIRED', 'UNPAID', 'CANCELED'])('%s is not in effect', async (status) => {
+    (prisma.subscription.findMany as any).mockResolvedValue([localRow({ status })]);
+    expect(await getActiveSubscriptionForUser('user_1')).toBeNull();
+  });
+
+  it('no subscription anywhere → null ("No active membership subscription")', async () => {
+    expect(await getActiveSubscriptionForUser('user_1')).toBeNull();
+    expect(await getLatestSubscriptionForUser('user_1')).toBeNull();
+  });
+
+  it('multiple historical subscriptions → the one currently in effect, not just the newest row', async () => {
+    (prisma.subscription.findMany as any).mockResolvedValue([
+      localRow({ status: 'CANCELED', stripeSubscriptionId: 'sub_new_canceled', createdAt: new Date(Date.now() - day) }),
+      localRow({ status: 'ACTIVE', stripeSubscriptionId: 'sub_old_active', createdAt: new Date(Date.now() - 60 * day) }),
+    ]);
+    expect(await getActiveSubscriptionForUser('user_1')).toMatchObject({ stripeSubscriptionId: 'sub_old_active' });
+    expect(await getLatestSubscriptionForUser('user_1')).toMatchObject({ stripeSubscriptionId: 'sub_old_active' });
+  });
+
+  it('a stale local CANCELED row does not hide a newer active Stripe subscription', async () => {
+    (prisma.subscription.findMany as any).mockResolvedValue([localRow({ status: 'CANCELED' })]);
+    (billing.listStripeSubscriptionViews as any).mockResolvedValue([stripeView()]);
+    expect(await getActiveSubscriptionForUser('user_1')).toMatchObject({ stripeSubscriptionId: 'sub_live' });
+  });
+
+  it('the same subscription seen locally and in Stripe counts once (local record wins)', async () => {
+    (prisma.subscription.findMany as any).mockResolvedValue([localRow({ status: 'CANCELED', stripeSubscriptionId: 'sub_x' })]);
+    (billing.listStripeSubscriptionViews as any).mockResolvedValue([stripeView({ stripeSubscriptionId: 'sub_x' })]);
+    expect(await getActiveSubscriptionForUser('user_1')).toBeNull();
   });
 });

@@ -38,6 +38,28 @@ export function PracticesIcon(props: IconProps) {
   );
 }
 
+// Programs — a short path of three steps (the Reset programs).
+export function ProgramsIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="4.5" cy="14.5" r="1.8" />
+      <circle cx="10" cy="9.5" r="1.8" />
+      <circle cx="15.5" cy="4.5" r="1.8" />
+      <path d="M5.8 13.2 8.7 10.8M11.3 8.2l2.9-2.4" />
+    </svg>
+  );
+}
+
+// Journey — a gentle rising line (progress over time).
+export function JourneyIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 15.5c2.5 0 3-4 5.5-4s2.5 2 4.5 2 2.5-6 4-8" />
+      <path d="M3 17.5h14" />
+    </svg>
+  );
+}
+
 export function CommunityIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

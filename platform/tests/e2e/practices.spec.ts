@@ -52,50 +52,27 @@ test.describe('Practices — Feel Better Now', () => {
   });
 });
 
-test.describe('Practices — Programs', () => {
-  test('7-day program shows the active-progress state', async ({ page }) => {
-    // "Day X of N" is now derived from real local completion history (see
-    // lib/local-progress.ts's getCurrentProgramDay: distinct days practiced,
-    // not fixed demo data) — seed completions on two distinct past days so
-    // day 1 shows completed and day 2 shows current, instead of the
-    // brand-new-user default (day 1, nothing completed yet).
-    await page.goto('/');
-    await page.evaluate(() => {
-      const dateKey = (daysAgo: number) => {
-        const d = new Date();
-        d.setDate(d.getDate() - daysAgo);
-        return d.toISOString().slice(0, 10);
-      };
-      localStorage.setItem('ptd:completed:body-scan-1', dateKey(2));
-      localStorage.setItem('ptd:completed:plazgane-po-nebtseto', dateKey(1));
-    });
-
-    await page.goto('/practices/programs/7-days');
-    await expect(page.getByRole('button', { name: 'Continue program' })).toBeVisible();
-    await expect(page.getByText('Current', { exact: true })).toBeVisible();
-    await expect(page.getByText('Completed', { exact: true }).first()).toBeVisible();
-
-    // Leave no lasting local state for other tests.
-    await page.evaluate(() => {
-      localStorage.removeItem('ptd:completed:body-scan-1');
-      localStorage.removeItem('ptd:completed:plazgane-po-nebtseto');
-    });
+test.describe('Practices — Reset Programs', () => {
+  test('lists the 1 / 3 / 7 / 28 day Reset Programs', async ({ page }) => {
+    await page.goto('/practices/programs');
+    await expect(page.getByRole('heading', { name: 'Reset Programs', exact: true })).toBeVisible();
+    for (const slug of ['1-day', '3-days', '7-days', '28-days']) {
+      await expect(page.getByTestId(`program-tile-${slug}`)).toBeVisible();
+    }
   });
 
-  test('a brand-new user sees day 1 with nothing completed yet (not fixed demo progress)', async ({ page }) => {
-    await page.goto('/practices/programs/7-days');
-    await expect(page.getByRole('button', { name: 'Continue program' })).toBeVisible();
-    await expect(page.getByText('Day 1 of 7')).toBeVisible();
-    await expect(page.getByText('Completed', { exact: true })).toHaveCount(0);
+  test('the retired 14-day program redirects to the programs overview', async ({ page }) => {
+    await page.goto('/practices/programs/14-days');
+    await expect(page).toHaveURL('/practices/programs');
   });
 
-  test('14-day and 28-day programs show the coming-soon state', async ({ page }) => {
-    for (const slug of ['14-days', '28-days']) {
+  test('existing 7/28-day URLs still resolve, now to the Reset Programs', async ({ page }) => {
+    for (const [slug, title] of [
+      ['7-days', '7 Day Reset'],
+      ['28-days', '28 Day Reset'],
+    ]) {
       await page.goto(`/practices/programs/${slug}`);
-      await expect(page.getByRole('button', { name: 'Start program' })).toBeVisible();
-      await expect(
-        page.getByText('Each day below will unlock a guided practice session once this program is published.'),
-      ).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
     }
   });
 });
@@ -142,7 +119,7 @@ test.describe('Practices — Free Videos', () => {
   test('is reachable from the Practices submenu', async ({ page }) => {
     await page.goto('/');
     const nav = page.getByRole('navigation', { name: 'Main' });
-    await nav.getByRole('button', { name: 'Practices: Show' }).click();
+    await nav.getByRole('button', { name: 'Practice: Show' }).click();
     await nav.getByRole('link', { name: 'Free Videos' }).click();
     await expect(page).toHaveURL('/practices/free-videos');
   });
@@ -165,26 +142,38 @@ test.describe('Topbar search', () => {
   });
 });
 
-test.describe('Practice completion (local, device-only state)', () => {
-  test('marking a practice complete toggles and survives a reload', async ({ page }) => {
+test.describe('Practice session (signed out — this device only)', () => {
+  test('begin → practice mode → finish records the practice on this device', async ({ page }) => {
     await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
 
-    const markComplete = page.getByRole('button', { name: 'Mark as complete' });
-    const completed = page.getByRole('button', { name: '✓ Completed' });
+    await page.getByTestId('practice-begin').click();
+    // Signed-out visitors skip the check-ins (account-only) and go straight in.
+    const mode = page.getByTestId('practice-mode');
+    await expect(mode).toBeVisible();
+    await expect(mode.getByRole('timer')).toBeVisible();
+    await expect(mode.getByText(/^Step 1 of \d+/)).toBeVisible();
 
-    await expect(markComplete).toBeVisible();
-    await markComplete.click();
-    await expect(completed).toBeVisible();
+    await mode.getByRole('button', { name: 'Finish', exact: true }).first().click();
+    const done = page.getByTestId('practice-complete');
+    await expect(done.getByRole('heading', { name: 'Practice complete.' })).toBeVisible();
+    await expect(done.getByText('You showed up for yourself.')).toBeVisible();
+    await expect(done.getByRole('link', { name: 'Create a free account →' })).toBeVisible();
 
-    await page.reload();
-    await expect(completed).toBeVisible();
-
-    // Toggle back off so this test leaves no lasting local state.
-    await completed.click();
-    await expect(markComplete).toBeVisible();
+    // Kept on this device only — no check-ins or notes are stored locally.
+    const stored = await page.evaluate((slug) => localStorage.getItem(`ptd:completed:${slug}`), PRACTICE_WITH_INSTRUCTIONS);
+    expect(stored).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  test("Home's Your Progress reflects real completions, not fixed demo numbers", async ({ page }) => {
+  test('leaving practice mode records nothing', async ({ page }) => {
+    await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
+    await page.getByTestId('practice-begin').click();
+    await page.getByTestId('practice-mode').getByRole('button', { name: 'Leave practice' }).click();
+    await expect(page.getByTestId('practice-begin')).toBeVisible();
+    const stored = await page.evaluate((slug) => localStorage.getItem(`ptd:completed:${slug}`), PRACTICE_WITH_INSTRUCTIONS);
+    expect(stored).toBeNull();
+  });
+
+  test("Home's progress reflects real completions, not fixed demo numbers", async ({ page }) => {
     await page.goto('/');
     const streakStat = page.getByTestId('streak-stat');
     const completedStat = page.getByTestId('practices-completed-stat');
@@ -194,17 +183,12 @@ test.describe('Practice completion (local, device-only state)', () => {
     await expect(completedStat.locator('p').first()).toHaveText('0');
 
     await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
-    await page.getByRole('button', { name: 'Mark as complete' }).click();
+    await page.getByTestId('practice-begin').click();
+    await page.getByTestId('practice-mode').getByRole('button', { name: 'Finish', exact: true }).first().click();
+    await expect(page.getByTestId('practice-complete')).toBeVisible();
 
     await page.goto('/');
     await expect(streakStat.locator('p').first()).toHaveText('1');
     await expect(completedStat.locator('p').first()).toHaveText('1');
-
-    // Leave no lasting local state for other tests.
-    await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
-    await page.getByRole('button', { name: '✓ Completed' }).click();
-    await page.goto('/');
-    await expect(streakStat.locator('p').first()).toHaveText('0');
-    await expect(completedStat.locator('p').first()).toHaveText('0');
   });
 });

@@ -6,6 +6,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { MobileDrawer } from './MobileDrawer';
 import { VerificationBanner } from './VerificationBanner';
 import { SiteFooter } from '@/components/legal/SiteFooter';
+import { useDeviceProgressImport } from '@/lib/progress/client';
 
 // The persistent application shell used by the Home / Practices / Community
 // / Account experience (app/(app)) — a topbar (logo + primary nav + search +
@@ -23,6 +24,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Signed-out practice done on this device joins the account after sign-in.
+  useDeviceProgressImport();
 
   return (
     <div className="min-h-screen bg-page">

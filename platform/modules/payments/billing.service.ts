@@ -1,10 +1,12 @@
 import type Stripe from 'stripe';
 import { PaymentStatus, SubscriptionStatus, type Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { getStripeClient } from '@/lib/stripe';
+import { getStripeClient, isStripeConfigured } from '@/lib/stripe';
 import { createLogger } from '@/lib/logger';
 import { Errors } from '@/lib/api-response';
 import type { Locale } from '@/lib/i18n/locale';
+import { closeProgramPurchase, refundProgramPurchase, settleProgramPurchase } from '@/modules/commerce/purchases.service';
+import { selectCurrentSubscription, type SubscriptionView } from '@/modules/membership/current-subscription';
 
 const log = createLogger('billing');
 
@@ -237,6 +239,69 @@ export async function setMembershipPlanProductActive(stripeProductId: string, ac
   await stripe.products.update(stripeProductId, { active });
 }
 
+// --- Live subscription state (read-only) ---------------------------------------
+// The local `subscriptions` table is written only by the webhook. If a
+// subscription's events never arrived (e.g. no webhook forwarding at the
+// time), the local table has no row while Stripe — and the live invoice list
+// — show a paid, active subscription. These reads let membership state fall
+// back to Stripe itself, the same source the Billing page already uses for
+// invoices and the payment method. Nothing here writes to the database or
+// changes anything in Stripe.
+
+const STRIPE_SUBSCRIPTION_CACHE_MS = 60_000;
+const stripeSubscriptionCache = new Map<string, { at: number; views: SubscriptionView[] }>();
+
+export function clearStripeSubscriptionCache() {
+  stripeSubscriptionCache.clear();
+}
+
+// A Stripe subscription as a SubscriptionView, if it is one of this app's
+// membership plans (matched by Stripe Product, like the webhook does, or by
+// the plan id stored in its metadata at checkout). Anything else — e.g. a
+// subscription created outside this app — is not a membership and is skipped.
+async function toSubscriptionView(sub: Stripe.Subscription): Promise<SubscriptionView | null> {
+  const planId = (await resolveMembershipPlanIdFromStripe(sub)) ?? sub.metadata?.membershipPlanId;
+  if (!planId) return null;
+  const plan = await prisma.membershipPlan.findUnique({ where: { id: planId } });
+  if (!plan) return null;
+  const { end } = subscriptionPeriod(sub);
+  return {
+    source: 'stripe',
+    stripeSubscriptionId: sub.id,
+    status: stripeSubStatus(sub.status),
+    currentPeriodEnd: end,
+    cancelAtPeriodEnd: sub.cancel_at_period_end,
+    createdAt: new Date(sub.created * 1000),
+    membershipPlanId: plan.id,
+    membershipPlan: { id: plan.id, name: plan.name, amount: plan.amount, currency: plan.currency, interval: plan.interval },
+  };
+}
+
+// The user's membership subscriptions as Stripe reports them. Only Stripe
+// *subscriptions* are listed, so one-time purchases (Reset Programs,
+// donations) can never appear here. Cached briefly per customer; returns []
+// when the user has no Stripe customer, Stripe isn't configured, or the call
+// fails (callers then rely on the local records alone).
+export async function listStripeSubscriptionViews(userId: string): Promise<SubscriptionView[]> {
+  if (!isStripeConfigured()) return [];
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { stripeCustomerId: true } });
+  const customerId = user?.stripeCustomerId;
+  if (!customerId) return [];
+
+  const cached = stripeSubscriptionCache.get(customerId);
+  if (cached && Date.now() - cached.at < STRIPE_SUBSCRIPTION_CACHE_MS) return cached.views;
+
+  try {
+    const list = await getStripeClient().subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
+    const views = (await Promise.all(list.data.map(toSubscriptionView))).filter((v): v is SubscriptionView => v !== null);
+    stripeSubscriptionCache.set(customerId, { at: Date.now(), views });
+    return views;
+  } catch (err) {
+    log.warn('live Stripe subscription lookup failed; using local records only', { message: (err as Error).message });
+    return [];
+  }
+}
+
 // --- Checkout sessions ---------------------------------------------------------
 
 // Subscription statuses that already give the user a membership — the same
@@ -268,6 +333,16 @@ export async function createSubscriptionCheckout(params: { userId: string; membe
     log.info('subscription checkout refused: user already has a subscription in effect', {
       userId: params.userId,
       subscriptionId: existing.id,
+    });
+    throw Errors.conflict('You already have a membership. You can manage it from the Billing page.');
+  }
+  // The local table can miss a subscription whose webhook never arrived —
+  // ask Stripe too, so such a user can't be billed for a second one.
+  const live = selectCurrentSubscription(await listStripeSubscriptionViews(params.userId), new Date());
+  if (live) {
+    log.info('subscription checkout refused: Stripe reports a subscription in effect', {
+      userId: params.userId,
+      stripeSubscriptionId: live.stripeSubscriptionId,
     });
     throw Errors.conflict('You already have a membership. You can manage it from the Billing page.');
   }
@@ -387,6 +462,68 @@ export async function createDonationCheckout(params: {
   });
 
   return session;
+}
+
+// --- Reset Program purchases (one-time, Stripe TEST MODE) ---------------------
+// Orchestrated by modules/commerce/checkout.service.ts, which creates the
+// PENDING Purchase first and passes its id here. The amount always comes
+// from the server-side catalog (modules/commerce/catalog.ts) — never from the
+// client — and is sent as `price_data`, the same convention as the other
+// one-time checkouts in this file, so no Stripe Price ids are needed.
+
+export async function createProgramCheckoutSession(params: {
+  userId: string;
+  purchaseId: string;
+  productSlug: string;
+  programSlug: string;
+  productName: string;
+  amount: number;
+  currency: string;
+  locale?: Locale;
+}) {
+  const stripe = getStripeClient();
+  const customerId = await getOrCreateStripeCustomer(params.userId, params.locale);
+  const metadata = {
+    kind: 'program',
+    purchaseId: params.purchaseId,
+    userId: params.userId,
+    productSlug: params.productSlug,
+    programSlug: params.programSlug,
+  };
+  const returnPath = `${process.env.APP_URL}/practices/programs/${params.programSlug}`;
+
+  return stripe.checkout.sessions.create(
+    {
+      mode: 'payment',
+      customer: customerId,
+      line_items: [
+        {
+          price_data: {
+            currency: params.currency,
+            unit_amount: params.amount,
+            product_data: { name: params.productName },
+          },
+          quantity: 1,
+        },
+      ],
+      locale: params.locale,
+      // Short-lived: an abandoned checkout expires (→ checkout.session.expired
+      // marks the Purchase CANCELED) instead of lingering for 24 hours.
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+      success_url: `${returnPath}?purchase=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${returnPath}?purchase=cancelled`,
+      metadata,
+      // Copied onto the PaymentIntent so a later refund (charge.refunded) can
+      // be traced back to the Purchase.
+      payment_intent_data: { metadata },
+    },
+    // One Stripe session per Purchase, even if this call is retried.
+    { idempotencyKey: `program-checkout-${params.purchaseId}` },
+  );
+}
+
+export async function retrieveCheckoutSession(stripeCheckoutSessionId: string) {
+  return getStripeClient().checkout.sessions.retrieve(stripeCheckoutSessionId);
 }
 
 // --- Read-only Stripe lookups for the Billing page ------------------------------
@@ -719,6 +856,11 @@ async function processStripeEvent(event: Stripe.Event) {
 
       if (kind === 'donation') {
         await settleDonationIfPaid(session);
+      } else if (kind === 'program') {
+        // Reset Program (one-time). Paid sessions settle the Purchase and
+        // grant access; unpaid ones (delayed methods) wait for
+        // async_payment_succeeded. See modules/commerce/purchases.service.ts.
+        await settleProgramPurchase(session);
       } else if (kind === 'course') {
         await prisma.purchase.updateMany({
           where: { stripeCheckoutSessionId: session.id },
@@ -740,7 +882,25 @@ async function processStripeEvent(event: Stripe.Event) {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.metadata?.kind === 'donation') {
         await settleDonationIfPaid(session);
+      } else if (session.metadata?.kind === 'program') {
+        await settleProgramPurchase(session);
       }
+      break;
+    }
+
+    // Reset Program checkouts that end without payment — never grant access.
+    case 'checkout.session.async_payment_failed': {
+      await closeProgramPurchase(event.data.object as Stripe.Checkout.Session, 'FAILED');
+      break;
+    }
+    case 'checkout.session.expired': {
+      await closeProgramPurchase(event.data.object as Stripe.Checkout.Session, 'CANCELED');
+      break;
+    }
+
+    // A full refund of a Reset Program purchase ends its access.
+    case 'charge.refunded': {
+      await refundProgramPurchase(event.data.object as Stripe.Charge);
       break;
     }
 

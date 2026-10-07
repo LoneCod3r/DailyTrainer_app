@@ -4,7 +4,8 @@ import { Disclaimer } from '@/components/practices/Disclaimer';
 import { LibraryBrowser } from '@/components/practices/LibraryBrowser';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
-import { getTopLevelPractices, getStartHereSections, getPrograms } from '@/modules/kuko-way/service';
+import { getTopLevelPractices, getHandbookSections } from '@/modules/kuko-way/service';
+import { getVisiblePrograms } from '@/modules/programs/service';
 
 export default function LibraryPage({ searchParams }: { searchParams: { q?: string } }) {
   const locale = getLocale();
@@ -18,8 +19,8 @@ export default function LibraryPage({ searchParams }: { searchParams: { q?: stri
       <LibraryBrowser
         key={initialQuery}
         practices={getTopLevelPractices()}
-        startHereSections={getStartHereSections()}
-        programs={getPrograms()}
+        startHereSections={getHandbookSections()}
+        programs={getVisiblePrograms()}
         initialQuery={initialQuery}
       />
 

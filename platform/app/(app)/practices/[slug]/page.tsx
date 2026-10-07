@@ -2,22 +2,41 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Container, Card, Alert } from '@/components/ui';
 import { PracticeCard } from '@/components/practices/PracticeCard';
-import { MarkCompleteButton } from '@/components/practices/MarkCompleteButton';
+import { PracticeSession, type SessionStep } from '@/components/practices/PracticeSession';
+import { FavoriteButton } from '@/components/practices/FavoriteButton';
 import { Disclaimer } from '@/components/practices/Disclaimer';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { getAllPractices, getPracticeBySlug, getPracticeById, getChildPractices, getRelatedPractices } from '@/modules/kuko-way/service';
 import { localize } from '@/modules/kuko-way/types';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { countSessionsForPractice, isFavoritePractice } from '@/modules/kuko-way/progress.service';
 
 export function generateStaticParams() {
   return getAllPractices().map((p) => ({ slug: p.slug }));
 }
 
-export default function PracticeDetailPage({ params }: { params: { slug: string } }) {
+export default async function PracticeDetailPage({ params }: { params: { slug: string } }) {
   const locale = getLocale();
   const t = getT(locale);
   const practice = getPracticeBySlug(params.slug);
   if (!practice) notFound();
+
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  const [favorite, timesPractised] = userId
+    ? await Promise.all([isFavoritePractice(userId, practice.slug), countSessionsForPractice(userId, practice.slug)])
+    : [false, 0];
+
+  // Practice mode walks through the same approved steps shown below, one at
+  // a time (concept §8: "minimal instructions, no clutter").
+  const sessionSteps: SessionStep[] = (practice.instructions ?? []).flatMap((group) =>
+    group.steps.map((step) => ({
+      label: group.label ? localize(group.label, locale).value : undefined,
+      text: localize(step, locale).value,
+    })),
+  );
 
   const title = localize(practice.title, locale);
   const parent = practice.parentId ? getPracticeById(practice.parentId) : undefined;
@@ -37,8 +56,14 @@ export default function PracticeDetailPage({ params }: { params: { slug: string 
         {parent && (
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-link">{t('practiceDetail.partOfOrganReset')}</p>
         )}
-        <h1 className="text-2xl font-semibold text-ink-900">{title.value}</h1>
+        <h1 className="font-serif text-3xl text-ink-900 sm:text-4xl">{title.value}</h1>
         {title.isFallback && <p className="mt-1 text-sm italic text-ink-300">{t('language.contentInBulgarian')}</p>}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <FavoriteButton practiceSlug={practice.slug} initialFavorite={favorite} signedIn={Boolean(userId)} />
+          {timesPractised > 0 && (
+            <span className="text-sm text-ink-500">{t('practiceSession.timesPractised', { count: timesPractised })}</span>
+          )}
+        </div>
       </div>
 
       {practice.safetyNote && (
@@ -83,6 +108,10 @@ export default function PracticeDetailPage({ params }: { params: { slug: string 
         </section>
       )}
 
+      {sessionSteps.length > 0 && (
+        <PracticeSession practiceSlug={practice.slug} steps={sessionSteps} signedIn={Boolean(userId)} />
+      )}
+
       {practice.instructions && practice.instructions.length > 0 && (
         <section id="instructions" className="flex flex-col gap-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.instructions')}</h2>
@@ -108,11 +137,6 @@ export default function PracticeDetailPage({ params }: { params: { slug: string 
         <Card className="p-5 text-sm text-ink-500">{t('practiceDetail.stepsComingSoon')}</Card>
       )}
 
-      {practice.instructions && (
-        <div>
-          <MarkCompleteButton practiceSlug={practice.slug} />
-        </div>
-      )}
 
       {related.length > 0 && (
         <section className="flex flex-col gap-3 border-t border-sand-200 pt-6">

@@ -2,12 +2,14 @@ import { prisma } from '@/lib/prisma';
 import { Errors } from '@/lib/api-response';
 import { createLogger } from '@/lib/logger';
 import {
+  listStripeSubscriptionViews,
   createMembershipPlanProduct,
   updateMembershipPlanProduct,
   replaceMembershipPlanPrice,
   setMembershipPlanProductActive,
 } from '@/modules/payments/billing.service';
 import type { CreateMembershipPlanInput, UpdateMembershipPlanInput } from '@/lib/validations/membership';
+import { selectCurrentSubscription, selectLatestSubscription, type SubscriptionView } from './current-subscription';
 
 const log = createLogger('membership');
 
@@ -53,27 +55,59 @@ export async function getPlanById(id: string) {
   return plan;
 }
 
-// A user may have at most one Subscription row that Stripe currently
-// considers "in effect" (active/trialing/past_due — the last one still
-// grants access while payment retries). CANCELED/INCOMPLETE_EXPIRED/UNPAID
-// rows are history, not current membership.
-export async function getActiveSubscriptionForUser(userId: string) {
-  return prisma.subscription.findFirst({
-    where: { userId, status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] } },
-    include: { membershipPlan: true },
-    orderBy: { createdAt: 'desc' },
-  });
-}
-
-// Unlike getActiveSubscriptionForUser, this includes CANCELED/INCOMPLETE_*
-// rows — the Billing page ("what am I paying for, and what happened to it")
-// should still show a just-canceled subscription rather than nothing.
-export async function getLatestSubscriptionForUser(userId: string) {
-  return prisma.subscription.findFirst({
+// Membership subscription state for one user — the single choke point every
+// surface uses (Billing, Account, Membership, Home, topbar). Selection rules
+// live in ./current-subscription.ts.
+//
+// Local rows (written by the Stripe webhook) are used first. When none of
+// them is in effect, Stripe is asked directly (read-only, briefly cached):
+// a subscription whose webhook events never arrived has no local row, yet is
+// paid and active in Stripe — and its invoices are listed live — so relying
+// on the local table alone showed such users "no active subscription".
+async function listLocalSubscriptionViews(userId: string): Promise<SubscriptionView[]> {
+  const rows = await prisma.subscription.findMany({
     where: { userId },
     include: { membershipPlan: true },
     orderBy: { createdAt: 'desc' },
+    take: 20,
   });
+  return rows.map((row) => ({
+    source: 'local' as const,
+    stripeSubscriptionId: row.stripeSubscriptionId,
+    status: row.status,
+    currentPeriodEnd: row.currentPeriodEnd,
+    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    createdAt: row.createdAt,
+    membershipPlanId: row.membershipPlanId,
+    membershipPlan: {
+      id: row.membershipPlan.id,
+      name: row.membershipPlan.name,
+      amount: row.membershipPlan.amount,
+      currency: row.membershipPlan.currency,
+      interval: row.membershipPlan.interval,
+    },
+  }));
+}
+
+async function listSubscriptionCandidates(userId: string, now: Date): Promise<SubscriptionView[]> {
+  const local = await listLocalSubscriptionViews(userId);
+  if (selectCurrentSubscription(local, now)) return local;
+  return [...local, ...(await listStripeSubscriptionViews(userId))];
+}
+
+// The subscription currently in effect (active / trialing / past due, and —
+// if set to cancel — not yet past its period end), or null.
+export async function getActiveSubscriptionForUser(userId: string): Promise<SubscriptionView | null> {
+  const now = new Date();
+  return selectCurrentSubscription(await listSubscriptionCandidates(userId, now), now);
+}
+
+// For Billing ("what am I paying for, and what happened to it"): the one in
+// effect, else the most recent historical one (so a just-canceled
+// subscription shows as Canceled rather than vanishing), else null.
+export async function getLatestSubscriptionForUser(userId: string): Promise<SubscriptionView | null> {
+  const now = new Date();
+  return selectLatestSubscription(await listSubscriptionCandidates(userId, now), now);
 }
 
 // --- Admin mutations -------------------------------------------------------------

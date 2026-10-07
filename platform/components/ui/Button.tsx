@@ -1,7 +1,11 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { clsx } from '@/lib/clsx';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+// KUKO WAY button language (concept §20): primary is solid and gently
+// rounded ("START PRACTICE →"), secondary is outlined ("EXPLORE"). `inverse`
+// and `inverse-ghost` are for the always-dark practice mode / video surfaces
+// (bg-night) — light text on near-black in both themes.
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse' | 'inverse-ghost';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,9 +16,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary: 'bg-brand-600 text-white hover:bg-brand-700 focus-visible:outline-brand-600',
-  secondary: 'bg-surface text-ink-900 border border-sand-200 hover:bg-sand-50 focus-visible:outline-brand-600',
+  secondary:
+    'bg-transparent text-ink-900 border border-ink-900/25 hover:border-ink-900/40 hover:bg-sand-100 focus-visible:outline-brand-600',
   ghost: 'bg-transparent text-ink-700 hover:bg-sand-100 focus-visible:outline-brand-600',
   danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600',
+  inverse: 'bg-[#f4f0e8] text-night hover:bg-white focus-visible:outline-[#f4f0e8]',
+  'inverse-ghost': 'bg-transparent text-[#f4f0e8] hover:bg-white/10 focus-visible:outline-[#f4f0e8]',
 };
 
 const sizeClasses: Record<Size, string> = {

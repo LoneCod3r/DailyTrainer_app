@@ -13,18 +13,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Natural Sage scale (KUKO WAY concept §17). 500 is the concept's
+        // own #7D8B72 and 300 its Soft Moss #AAB39C — both decorative-only
+        // (fills, dots, rings). 600+ are the derived text/button-safe
+        // shades: white on brand-600 is 5.5:1, on brand-700 7.5:1.
         brand: {
-          50: '#f4f7f4',
-          100: '#e6ede6',
-          200: '#c9dbca',
-          300: '#a3c1a5',
-          400: '#79a17d',
-          500: '#57815c',
-          600: '#436649',
-          700: '#37513c',
-          800: '#2e4232',
-          900: '#27362a',
+          50: '#f3f4f0',
+          100: '#e6e9e1',
+          200: '#cdd3c4',
+          300: '#aab39c',
+          400: '#94a086',
+          500: '#7d8b72',
+          600: '#5f6d55',
+          700: '#4c5844',
+          800: '#3d4637',
+          900: '#2f362b',
         },
+        // Clay accent (#B77D61) — `clay` itself is the dark-mode-aware,
+        // text-safe shade from globals.css; `clay-fill` is the concept hex
+        // for decorative fills only.
+        clay: 'rgb(var(--clay) / <alpha-value>)',
+        'clay-fill': '#b77d61',
+        // Near-black (concept §18) for practice mode / video areas — fixed,
+        // not theme-dependent, since practice mode is dark in both themes.
+        night: '#181917',
         // sand/ink/surface/page are CSS-variable-backed (see globals.css) so
         // every existing `text-ink-*` / `border-sand-*` / `bg-surface` usage
         // repaints for dark mode without touching each call site.
@@ -55,6 +67,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        // Large philosophical headings only (concept §19) — see globals.css.
         serif: ['var(--font-serif)', 'Georgia', 'serif'],
       },
       borderRadius: {
@@ -62,8 +75,8 @@ const config: Config = {
         '2xl': '1.5rem',
       },
       boxShadow: {
-        soft: '0 2px 20px rgba(28, 31, 29, 0.06)',
-        card: '0 1px 3px rgba(28, 31, 29, 0.08), 0 1px 2px rgba(28,31,29,0.04)',
+        soft: '0 2px 20px rgba(37, 38, 34, 0.06)',
+        card: '0 1px 3px rgba(37, 38, 34, 0.06), 0 1px 2px rgba(37, 38, 34, 0.03)',
       },
     },
   },

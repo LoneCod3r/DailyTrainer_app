@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Container } from '@/components/ui';
-import { ProgramTrail } from '@/components/practices/ProgramTrail';
+import { ProgramTile } from '@/components/programs/ProgramTile';
+import { getVisiblePrograms } from '@/modules/programs/service';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 
@@ -29,8 +30,8 @@ export default function PracticesPage() {
   return (
     <Container className="flex flex-col gap-10 py-8 sm:gap-14">
       <div>
-        <h1 className="text-2xl font-semibold text-ink-900">{t('practices.pageTitle')}</h1>
-        <p className="mt-1 text-sm text-ink-500">{t('practices.pageSubtitle')}</p>
+        <h1 className="font-serif text-4xl text-ink-900 sm:text-5xl">{t('practices.pageTitle')}</h1>
+        <p className="mt-2 text-lg text-ink-700">{t('practices.pageSubtitle')}</p>
       </div>
 
       {/* Entry point — Start Here is the large tile so it's the obvious
@@ -87,15 +88,19 @@ export default function PracticesPage() {
         </Link>
       </section>
 
-      {/* Programs — one connected trail (see ProgramTrail) instead of three
-          identical cards, so 7/14/28 read as ascending steps of one journey. */}
+      {/* Reset Programs (1 / 3 / 7 / 28 days) — each opens its own overview;
+          access to the days is checked server-side there. */}
       <section className="flex flex-col gap-8 border-t border-sand-200 pt-10 sm:pt-14">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-link">{t('nav.practices')}</p>
           <h2 className="mt-1 font-serif text-2xl text-ink-900 sm:text-3xl">{t('practices.programsTitle')}</h2>
           <p className="mt-1 max-w-lg text-sm text-ink-500 sm:text-base">{t('practices.programsDesc')}</p>
         </div>
-        <ProgramTrail />
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {getVisiblePrograms().map((program) => (
+            <ProgramTile key={program.slug} program={program} locale={locale} t={t} />
+          ))}
+        </div>
       </section>
     </Container>
   );

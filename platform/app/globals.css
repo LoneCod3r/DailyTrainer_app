@@ -2,53 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
+/* -----------------------------------------------------------------------------
+   Fonts — KUKO WAY UI/UX concept ("KUKO WAY template 3 усъвършенстване", §19):
+   Manrope for the interface, DM Serif Display for the big philosophical
+   headings only. Self-hosted (Google Fonts' own woff2 subsets, OFL — see the
+   *-OFL.txt files next to them) so builds never depend on the live Google
+   Fonts service. Plain @font-face + unicode-range rather than next/font/local
+   because next/font can't express per-subset unicode ranges.
+
+   DM Serif Display ships Latin only, and Bulgarian is the default locale, so
+   the "KUKO Display" family maps its Cyrillic ranges to Playfair Display (a
+   close display-serif companion) instead of falling back to Georgia.
+   -------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/manrope-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/manrope-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/manrope-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/manrope-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'KUKO Display';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/playfair-display-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'KUKO Display';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/dm-serif-display-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'KUKO Display';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/dm-serif-display-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @layer base {
+  /* Colour system — KUKO WAY concept §17–18. The concept's hexes are kept for
+     surfaces and large decorative fills (Warm Ivory page, Deep Earth text,
+     Warm Sand), while text-bearing tiers are derived shades that clear WCAG
+     AA 4.5:1 — Natural Sage #7D8B72 and Clay #B77D61 themselves only reach
+     ~3.2–3.6:1 for text, so they're used as fills, never as body text or
+     white-on-colour button backgrounds (see tailwind.config.ts `brand`). */
   :root {
-    --page: 255 255 255;
-    --surface: 255 255 255;
-    --ink-900: 28 31 29;
-    --ink-700: 58 63 59;
-    --ink-500: 107 113 108;
-    /* Was 164 170 165 — measured at 2.36:1 against white (fails WCAG AA's
-       4.5:1 for normal text, axe rule color-contrast). Darkened to clear
-       4.5:1; ends up close to --ink-500 since AA leaves little headroom
-       for a tier lighter than that at normal text sizes. */
-    --ink-300: 108 114 109;
-    --sand-50: 251 249 246;
-    --sand-100: 244 239 231;
-    --sand-200: 231 220 203;
-    --sand-300: 214 195 165;
-    /* Soft brand-tinted surface/text used for active nav states, badges and
+    --font-sans: 'Manrope';
+    --font-serif: 'KUKO Display';
+    --page: 244 240 232; /* Warm Ivory #F4F0E8 */
+    --surface: 251 249 244;
+    --ink-900: 37 38 34; /* Deep Earth #252622 */
+    --ink-700: 66 68 60;
+    --ink-500: 92 94 84;
+    /* Lightest text tier — still clears 4.5:1 on every light surface. */
+    --ink-300: 98 100 90;
+    --sand-50: 248 245 238;
+    --sand-100: 237 231 219;
+    --sand-200: 223 214 196;
+    --sand-300: 217 199 167; /* Warm Sand #D9C7A7 */
+    /* Soft sage-tinted surface/text used for active nav states, badges and
        links — kept separate from the static `brand` Tailwind scale because
        those hexes don't adapt for dark mode on their own. */
-    --brand-tint: 244 247 244;
-    --link: 55 81 60;
-    /* Payment-method card face — a deliberately dark, brand-tinted surface
+    --brand-tint: 232 235 226;
+    --link: 76 88 68;
+    /* Clay accent (#B77D61) — text-safe shade for eyebrows/accents. */
+    --clay: 142 90 65;
+    /* Payment-method card face — a deliberately dark, earth-toned surface
        (like a physical card) that stays legible sitting on a light page.
        See components/account/PaymentMethodCard.tsx. */
-    --card-face-from: 46 63 49;
-    --card-face-to: 22 28 23;
+    --card-face-from: 61 70 55;
+    --card-face-to: 24 25 23;
   }
 
   :root.dark {
-    --page: 24 26 24;
-    --surface: 34 37 34;
-    --ink-900: 244 246 243;
-    --ink-700: 209 213 208;
-    --ink-500: 154 163 156;
-    /* Was 91 98 92 — measured at 2.46:1 against --surface (fails WCAG AA's
-       4.5:1); raised to comfortably clear it against --surface/--page. */
-    --ink-300: 142 148 144;
-    --sand-50: 35 38 35;
-    --sand-100: 44 48 44;
-    --sand-200: 58 63 58;
-    --sand-300: 75 82 75;
-    --brand-tint: 42 54 44;
-    --link: 163 193 165;
+    --page: 24 25 23; /* near-black #181917 (concept §18) */
+    --surface: 34 35 32;
+    --ink-900: 244 240 232;
+    --ink-700: 214 209 199;
+    --ink-500: 168 165 155;
+    --ink-300: 160 157 148;
+    --sand-50: 30 31 28;
+    --sand-100: 42 43 39;
+    --sand-200: 60 61 56;
+    --sand-300: 82 83 76;
+    --brand-tint: 46 53 42;
+    --link: 178 190 162;
+    --clay: 214 160 132;
     /* Slightly deeper than the light-mode face so the card still reads as
        raised depth against the app's own dark page background. */
-    --card-face-from: 39 54 42;
-    --card-face-to: 14 18 15;
+    --card-face-from: 52 60 47;
+    --card-face-to: 14 15 13;
   }
 
   html {
@@ -64,9 +143,13 @@
     color-scheme: dark;
   }
 
+  /* Headings use the interface face by default. The display serif is
+     reserved for the large, philosophical headings (concept §19 — "only for
+     big philosophical titles") and is opted into per heading with the
+     `font-serif` utility, rather than applied to every h1–h3. */
   h1,
   h2,
   h3 {
-    font-family: var(--font-serif), Georgia, serif;
+    letter-spacing: -0.01em;
   }
 }

@@ -10,6 +10,18 @@ import { SUBSCRIPTION_STATUS_TONE, subscriptionStatusKey } from '@/lib/billing-s
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT, type DictKey } from '@/lib/i18n/dictionaries';
 import { isModeratorOnly } from '@/lib/permissions';
+import { features } from '@/lib/features';
+import { YourProgressStats } from '@/components/practices/YourProgressStats';
+import { PracticeCard } from '@/components/practices/PracticeCard';
+import { ProgramProgressList } from '@/components/journey/ProgramProgressList';
+import { getPracticeBySlug } from '@/modules/kuko-way/service';
+import type { Practice } from '@/modules/kuko-way/types';
+import { listFavoritePracticeSlugs } from '@/modules/kuko-way/progress.service';
+import { getProgramProgressOverview } from '@/modules/programs/progress.service';
+import { ProgramPurchases } from '@/components/account/ProgramPurchases';
+import { listProgramPurchases } from '@/modules/commerce/purchases.service';
+import { listAccessibleProgramSlugs } from '@/modules/commerce/entitlements.service';
+import { getAllProgramsUnfiltered } from '@/modules/programs/service';
 
 const ROLE_KEY: Record<string, DictKey> = {
   USER: 'profile.roleUser',
@@ -17,10 +29,11 @@ const ROLE_KEY: Record<string, DictKey> = {
   ADMIN: 'profile.roleAdmin',
 };
 
-// Account is a secondary/supporting area, not the core practice experience —
-// this hub links out to its sub-sections rather than surfacing all of their
-// content here. Membership and Donation are kept as visually separate cards
-// (recurring paid access vs. voluntary support).
+// Profile (KUKO WAY concept §16): kept very clean — your journey and practice
+// first (programs, practice numbers, favorites; the full history lives on
+// /journey), then the account sub-sections as links. Membership and Donation
+// are kept as visually separate cards (recurring paid access vs. voluntary
+// support).
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login?callbackUrl=/account');
@@ -32,7 +45,20 @@ export default async function AccountPage() {
   // lib/permissions.ts's isModeratorOnly), so there's no reason to fetch or
   // render subscription data for them here.
   const isStaffModerator = isModeratorOnly(session.user.role);
-  const subscription = isStaffModerator ? null : await getActiveSubscriptionForUser(session.user.id);
+  const [subscription, programRows, favoriteSlugs, programPurchases, accessibleProgramSlugs] = await Promise.all([
+    isStaffModerator ? null : getActiveSubscriptionForUser(session.user.id),
+    getProgramProgressOverview(session.user.id),
+    listFavoritePracticeSlugs(session.user.id),
+    listProgramPurchases(session.user.id),
+    listAccessibleProgramSlugs(
+      session.user,
+      getAllProgramsUnfiltered().map((p) => p.slug),
+    ),
+  ]);
+  const favorites = favoriteSlugs
+    .slice(0, 3)
+    .map((slug) => getPracticeBySlug(slug))
+    .filter((p): p is Practice => Boolean(p));
 
   return (
     <Container className="flex flex-col gap-8 py-8">
@@ -60,7 +86,42 @@ export default async function AccountPage() {
         </CardContent>
       </Card>
 
-      {!isStaffModerator && !subscription && (
+      <section className="flex flex-col gap-4" aria-labelledby="profile-journey">
+        <div className="flex items-end justify-between gap-3">
+          <h2 id="profile-journey" className="font-serif text-2xl text-ink-900 sm:text-3xl">
+            {t('journey.pageTitle')}
+          </h2>
+          <Link href="/journey" className="shrink-0 text-sm font-medium text-link hover:underline">
+            {t('practiceSession.viewJourney')} →
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="flex flex-wrap gap-10">
+            <YourProgressStats showMinutes />
+          </CardContent>
+        </Card>
+        <ProgramProgressList rows={programRows} locale={locale} t={t} />
+        {favorites.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <h3 className="text-base font-semibold text-ink-900">{t('journey.favoritesTitle')}</h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {favorites.map((p) => (
+                <PracticeCard key={p.id} practice={p} locale={locale} t={t} />
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <ProgramPurchases
+        purchases={programPurchases}
+        accessibleProgramSlugs={accessibleProgramSlugs}
+        locale={locale}
+        t={t}
+      />
+
+      {/* Membership sales are off in V1 (lib/features.ts). */}
+      {features.membershipSales && !isStaffModerator && !subscription && (
         <Card className="border-dashed bg-sand-50/50">
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -95,22 +156,26 @@ export default async function AccountPage() {
             too (app/(app)/account/{membership,billing,donation}/page.tsx). */}
         {!isStaffModerator && (
           <>
-            <Link href="/account/membership">
-              <Card className="h-full transition-shadow hover:shadow-soft">
-                <CardContent className="flex items-start gap-3">
-                  <MembershipIcon className="mt-0.5 shrink-0 text-brand-700" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base font-semibold text-ink-900">{t('account.hub.membershipTitle')}</h2>
-                      <Badge tone={subscription ? SUBSCRIPTION_STATUS_TONE[subscription.status] ?? 'neutral' : 'neutral'}>
-                        {subscription ? t(subscriptionStatusKey(subscription.status)) : t('account.hub.noMembership')}
-                      </Badge>
+            {/* Shown while sales are off only to people who already have a
+                subscription, so they can still manage it. */}
+            {(features.membershipSales || subscription) && (
+              <Link href="/account/membership">
+                <Card className="h-full transition-shadow hover:shadow-soft">
+                  <CardContent className="flex items-start gap-3">
+                    <MembershipIcon className="mt-0.5 shrink-0 text-brand-700" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-base font-semibold text-ink-900">{t('account.hub.membershipTitle')}</h2>
+                        <Badge tone={subscription ? SUBSCRIPTION_STATUS_TONE[subscription.status] ?? 'neutral' : 'neutral'}>
+                          {subscription ? t(subscriptionStatusKey(subscription.status)) : t('account.hub.noMembership')}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-ink-500">{t('account.hub.membershipDesc')}</p>
                     </div>
-                    <p className="mt-1 text-sm text-ink-500">{t('account.hub.membershipDesc')}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
 
             <Link href="/account/billing">
               <Card className="h-full transition-shadow hover:shadow-soft">

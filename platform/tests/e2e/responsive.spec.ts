@@ -15,6 +15,10 @@ const PUBLIC_PAGES = [
   '/',
   '/practices',
   `/practices/${PRACTICE_WITH_INSTRUCTIONS}`,
+  '/practices/programs',
+  '/practices/programs/28-days',
+  '/learn',
+  '/journey',
   '/community',
   `/community/discussions/${SEEDED_DISCUSSIONS.withReply}`,
   `/community/courses/${COURSE.slug}/${COURSE.moduleSlug}/${COURSE.firstLessonSlug}`,
@@ -42,6 +46,28 @@ test.describe('Responsive — 375px viewport, public pages', () => {
     await lastSection.scrollIntoViewIfNeeded();
     const sectionBox = await lastSection.boundingBox();
     expect(navBox && sectionBox && sectionBox.y < navBox.y).toBeTruthy();
+  });
+
+  test('bottom navigation carries the five V1 destinations without overflow, in both languages', async ({ page }) => {
+    const bottomNav = page.getByRole('navigation', { name: 'Mobile' });
+    for (const [locale, labels] of [
+      ['en', ['Home', 'Practice', 'Programs', 'Journey', 'Profile']],
+      ['bg', ['Начало', 'Практика', 'Програми', 'Път', 'Профил']],
+    ] as const) {
+      await page.context().addCookies([{ name: 'ptd_locale', value: locale, url: 'http://localhost:3000' }]);
+      await page.goto('/');
+      for (const label of labels) {
+        await expect(bottomNav.getByRole('link', { name: label, exact: true })).toBeVisible();
+      }
+      await assertNoHorizontalOverflow(page);
+    }
+  });
+
+  test('practice mode fits a narrow viewport', async ({ page }) => {
+    await page.goto(`/practices/${PRACTICE_WITH_INSTRUCTIONS}`);
+    await page.getByTestId('practice-begin').click();
+    await expect(page.getByTestId('practice-mode')).toBeVisible();
+    await assertNoHorizontalOverflow(page);
   });
 
   test('drawer opens from the bottom-nav menu and its links are usable', async ({ page }) => {

@@ -40,3 +40,10 @@ export function isStripeConfigured(): boolean {
   const key = process.env.STRIPE_SECRET_KEY;
   return Boolean(key && key !== 'sk_test_replace_me');
 }
+
+// True only for a real Stripe TEST secret key. Reset Program checkout is
+// test-mode only for now, so it refuses to run against anything else.
+export function isStripeTestMode(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY;
+  return isStripeConfigured() && Boolean(key?.startsWith('sk_test_'));
+}

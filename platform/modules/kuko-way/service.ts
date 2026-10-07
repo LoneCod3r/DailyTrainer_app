@@ -1,8 +1,8 @@
 import { practices } from './content/practices';
 import { startHereSections } from './content/start-here';
-import { programs } from './content/programs';
 import { freeVideos } from './content/free-videos';
-import type { FreeVideo, Practice, Program, StartHereSection } from './types';
+import type { FreeVideo, Practice, StartHereSection } from './types';
+import { LEARN_SECTION_IDS, START_HERE_SECTION_IDS } from './handbook';
 
 // Static content accessors. The KUKO WAY handbook is fixed reference
 // content for Day 2 (no admin CRUD yet) — see modules/kuko-way/types.ts for
@@ -27,6 +27,13 @@ export function getPracticeById(id: string): Practice | undefined {
   return practices.find((p) => p.id === id);
 }
 
+// A practice that can actually be done and recorded — it has its own steps.
+// (Parent entries like "Organ Reset" are collections of sub-practices.)
+export function isTrackablePractice(slug: string): boolean {
+  const practice = getPracticeBySlug(slug);
+  return Boolean(practice?.instructions && practice.instructions.length > 0);
+}
+
 export function getChildPractices(practice: Practice): Practice[] {
   if (!practice.childIds) return [];
   return practice.childIds
@@ -41,20 +48,38 @@ export function getRelatedPractices(practice: Practice, limit = 3): Practice[] {
     .slice(0, limit);
 }
 
-export function getStartHereSections(): StartHereSection[] {
+// Every handbook chapter, in handbook order (the Library's searchable
+// archive). Each chapter's single home is decided in ./handbook.ts.
+export function getHandbookSections(): StartHereSection[] {
   return [...startHereSections].sort((a, b) => a.order - b.order);
 }
 
-export function getStartHereSectionBySlug(slug: string): StartHereSection | undefined {
+export function getHandbookSectionBySlug(slug: string): StartHereSection | undefined {
   return startHereSections.find((s) => s.slug === slug);
 }
 
-export function getPrograms(): Program[] {
-  return programs;
+function sectionsByIds(ids: readonly string[]): StartHereSection[] {
+  return ids
+    .map((id) => startHereSections.find((s) => s.id === id))
+    .filter((s): s is StartHereSection => Boolean(s));
 }
 
-export function getProgramBySlug(slug: string): Program | undefined {
-  return programs.find((p) => p.slug === slug);
+// Start Here's own chapters (orientation and first steps), in reading order.
+export function getStartHereSections(): StartHereSection[] {
+  return sectionsByIds(START_HERE_SECTION_IDS);
+}
+
+export function getStartHereSectionBySlug(slug: string): StartHereSection | undefined {
+  return getStartHereSections().find((s) => s.slug === slug);
+}
+
+// Learn's chapters (understanding and reference), in reading order.
+export function getLearnSections(): StartHereSection[] {
+  return sectionsByIds(LEARN_SECTION_IDS);
+}
+
+export function getLearnSectionBySlug(slug: string): StartHereSection | undefined {
+  return getLearnSections().find((s) => s.slug === slug);
 }
 
 // The handbook explicitly states these three form a ~15-minute "tension

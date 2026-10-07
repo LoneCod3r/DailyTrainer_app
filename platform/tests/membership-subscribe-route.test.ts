@@ -18,8 +18,10 @@ vi.mock('next/headers', () => ({ cookies: () => ({ get: () => undefined }) }));
 const stripeMock = {
   customers: { create: vi.fn(), retrieve: vi.fn(), update: vi.fn() },
   checkout: { sessions: { create: vi.fn() } },
+  // Live subscription read used by the duplicate guard (no live subscription).
+  subscriptions: { list: vi.fn().mockResolvedValue({ data: [] }) },
 };
-vi.mock('@/lib/stripe', () => ({ getStripeClient: () => stripeMock }));
+vi.mock('@/lib/stripe', () => ({ getStripeClient: () => stripeMock, isStripeConfigured: () => true }));
 
 const { prisma } = await import('@/lib/prisma');
 const { getServerSession } = await import('next-auth');

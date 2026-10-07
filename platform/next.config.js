@@ -19,6 +19,12 @@ const nextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
+  // The 14-day program is not part of the V1 Reset lineup (1/3/7/28 days).
+  // Temporary (307), not permanent, so old links land on the programs
+  // overview without browsers caching the move forever.
+  async redirects() {
+    return [{ source: '/practices/programs/14-days', destination: '/practices/programs', permanent: false }];
+  },
 };
 
 module.exports = nextConfig;

@@ -17,7 +17,7 @@ async function assertNoContrastViolations(page: import('@playwright/test').Page)
 }
 
 test.describe('Theme — public pages', () => {
-  for (const path of ['/', '/practices', '/community']) {
+  for (const path of ['/', '/practices', '/practices/programs/28-days', '/learn', '/journey', '/community']) {
     test(`${path}: dark mode repaints and has no contrast violations`, async ({ page }) => {
       await page.goto(path);
       const bgLight = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);

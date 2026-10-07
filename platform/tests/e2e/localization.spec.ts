@@ -29,21 +29,21 @@ test('BG (default) -> EN -> BG preserves route and authentication across reloads
   await switchLanguage(page, 'bg', 'en');
   await expect(page.getByRole('heading', { name: 'Welcome, Demo' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Practices' }).click();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Practice', exact: true }).click();
   await expect(page).toHaveURL('/practices');
-  await expect(page.getByRole('heading', { name: 'Practices' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Practice', exact: true })).toBeVisible();
 
   await page.reload();
   await expect(page).toHaveURL('/practices');
-  await expect(page.getByRole('heading', { name: 'Practices' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Practice', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /demo member/i })).toBeVisible(); // still authenticated
 
   // EN -> BG, same route
   await switchLanguage(page, 'en', 'bg');
-  await expect(page.getByRole('heading', { name: 'Практики' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Практика', exact: true })).toBeVisible();
 
   await page.reload();
   await expect(page).toHaveURL('/practices');
-  await expect(page.getByRole('heading', { name: 'Практики' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Практика', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /demo member/i })).toBeVisible(); // still authenticated
 });

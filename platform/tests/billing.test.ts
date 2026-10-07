@@ -18,13 +18,14 @@ vi.mock('@/lib/prisma', () => ({
 const stripeMock = {
   customers: { create: vi.fn(), del: vi.fn(), retrieve: vi.fn(), update: vi.fn() },
   checkout: { sessions: { create: vi.fn(), retrieve: vi.fn() } },
-  subscriptions: { update: vi.fn(), retrieve: vi.fn() },
+  subscriptions: { update: vi.fn(), retrieve: vi.fn(), list: vi.fn().mockResolvedValue({ data: [] }) },
   billingPortal: { sessions: { create: vi.fn() } },
   paymentMethods: { list: vi.fn() },
   invoices: { list: vi.fn() },
 };
 vi.mock('@/lib/stripe', () => ({
   getStripeClient: () => stripeMock,
+  isStripeConfigured: () => true,
 }));
 
 const { prisma } = await import('@/lib/prisma');
@@ -37,6 +38,7 @@ const {
   listInvoicesForUser,
   getDonationForUserBySession,
   reconcileDonationFromCheckoutSession,
+  clearStripeSubscriptionCache,
 } = await import('@/modules/payments/billing.service');
 
 beforeEach(() => {
@@ -205,6 +207,43 @@ describe('createSubscriptionCheckout — duplicate subscription guard', () => {
     (prisma.membershipPlan.findUnique as any).mockResolvedValue(plan);
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', stripeCustomerId: 'cus_1' });
     stripeMock.checkout.sessions.create.mockResolvedValue({ id: 'cs_sub', url: 'https://checkout.stripe.test/cs_sub' });
+    stripeMock.subscriptions.list.mockResolvedValue({ data: [] });
+    clearStripeSubscriptionCache();
+  });
+
+  // The bug behind "paid in Stripe, 'no active subscription' in the app": a
+  // subscription whose webhook never arrived has no local row. The guard
+  // must still see it, or the user could be billed for a second one.
+  it('refuses with 409 when Stripe reports an active subscription that has no local row', async () => {
+    withSubscriptions([]);
+    stripeMock.subscriptions.list.mockResolvedValue({
+      data: [
+        {
+          id: 'sub_live',
+          status: 'active',
+          created: 1_790_000_000,
+          cancel_at_period_end: false,
+          current_period_end: 4_102_444_800,
+          metadata: { userId: 'u1', membershipPlanId: 'plan_1' },
+          items: { data: [{ price: { product: 'prod_1' } }] },
+        },
+      ],
+    });
+    (prisma.membershipPlan.findMany as any).mockResolvedValue([{ id: 'plan_1' }]);
+    (prisma.membershipPlan.findUnique as any).mockImplementation(async () => ({
+      ...plan,
+      name: 'Premium',
+      amount: 2999,
+      currency: 'eur',
+      interval: 'month',
+    }));
+
+    await expect(createSubscriptionCheckout({ userId: 'u1', membershipPlanId: 'plan_1' })).rejects.toMatchObject({
+      status: 409,
+      code: 'CONFLICT',
+    });
+    expect(stripeMock.subscriptions.list).toHaveBeenCalledWith({ customer: 'cus_1', status: 'all', limit: 20 });
+    expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
   it.each(['ACTIVE', 'TRIALING', 'PAST_DUE'])(

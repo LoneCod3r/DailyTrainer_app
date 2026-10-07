@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { clsx } from '@/lib/clsx';
 import { Container, Card, CardContent, Badge, Button, EmptyState } from '@/components/ui';
-import { ProgramDayProgress } from '@/components/practices/ProgramDayProgress';
+import { ProgressBar } from '@/components/practices/ProgressBar';
 import { YourProgressStats } from '@/components/practices/YourProgressStats';
 import { MeetingStatusBadge } from '@/components/meetings/MeetingStatusBadge';
 import { JoinMeetingButton } from '@/components/meetings/JoinMeetingButton';
@@ -14,12 +14,13 @@ import { getActiveSubscriptionForUser } from '@/modules/membership/membership.se
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { toBulgarianCyrillic } from '@/lib/i18n/transliterate';
-import { getPracticeById, getProgramBySlug, getStartHereSectionBySlug } from '@/modules/kuko-way/service';
-import { demoProgress } from '@/modules/kuko-way/demo-progress';
+import { getPracticeById, getStartHereSectionBySlug } from '@/modules/kuko-way/service';
+import { getProgramProgressOverview } from '@/modules/programs/progress.service';
 import { localize } from '@/modules/kuko-way/types';
 import { getNextUpcomingMeeting, getMeetingStatus } from '@/modules/events/service';
 import { formatDateTime } from '@/lib/format-date';
 import { isModeratorOnly } from '@/lib/permissions';
+import { features } from '@/lib/features';
 
 // Home v2 — moves away from "sidebar + topbar + cards + progress widget"
 // toward an editorial, movement/body-oriented composition (visual/UX
@@ -27,12 +28,11 @@ import { isModeratorOnly } from '@/lib/permissions';
 // structure only — no HG text, imagery, layout code, or branding was
 // copied; every string/asset here is KUKO WAY's own). No routes, data,
 // i18n keys, or business logic changed — same session/locale/content
-// wiring as before, just a different visual composition around it. Which
-// program is "active" is still a fixed demo default (see modules/kuko-way/
-// demo-progress.ts) — there's no real enrollment flow yet — but every
-// number about progress on it (day X of N, streak, completed count) is
-// real, derived from this device's own completion history (see
-// lib/local-progress.ts, ProgramDayProgress, YourProgressStats).
+// wiring as before, just a different visual composition around it. The
+// "continue" program is the signed-in user's real, started Reset Program
+// (modules/programs/progress.service.ts); streak/practice numbers come from
+// the hybrid progress facade (YourProgressStats) — account-wide when signed
+// in, this device otherwise.
 // Photography credit/license: public/images/home/CREDITS.md — placeholder
 // imagery until real KUKO WAY practice photography/video exists.
 const EXPLORE_ITEMS = [
@@ -70,7 +70,10 @@ export default async function HomePage() {
   const firstName = session?.user?.name?.split(' ')[0];
   const greetingName = firstName && locale === 'bg' ? toBulgarianCyrillic(firstName) : firstName;
   const todaysPractice = getPracticeById('body-scan-1');
-  const activeProgram = getProgramBySlug(demoProgress.activeProgramSlug);
+  // The first started, unfinished program — real enrollment, not a default.
+  const activeProgram = session?.user
+    ? (await getProgramProgressOverview(session.user.id)).find((row) => !row.complete)
+    : undefined;
 
   const practiceTitle = todaysPractice ? localize(todaysPractice.title, locale) : undefined;
   const practiceSummary = todaysPractice?.intro?.[0] ? localize(todaysPractice.intro[0], locale) : undefined;
@@ -220,20 +223,29 @@ export default async function HomePage() {
 
         {/* Progress — a continuation-of-practice moment: your program by
             name, a slim day-progress line, and your real streak/completed
-            numbers set as typography rather than stat tiles. Same
-            data/logic as before (lib/local-progress.ts). */}
+            numbers set as typography rather than stat tiles. */}
         <section className="flex flex-col gap-6 border-t border-sand-200 pt-14 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
           <div className="flex flex-1 flex-col gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('home.yourProgress')}</h2>
             {activeProgram ? (
               <>
                 <p className="font-serif text-3xl text-ink-900 sm:text-4xl">
-                  {t('home.continueProgram')} — {localize(activeProgram.title, locale).value}
+                  {t('home.continueProgram')} — {localize(activeProgram.program.title, locale).value}
                 </p>
-                <div className="max-w-xs">
-                  <ProgramDayProgress programLength={activeProgram.length} />
+                <div className="flex max-w-xs flex-col gap-1.5">
+                  <ProgressBar
+                    value={activeProgram.completedDays}
+                    max={activeProgram.totalDays}
+                    label={t('journey.daysCompleted', { count: activeProgram.completedDays, total: activeProgram.totalDays })}
+                  />
+                  <p className="text-xs text-ink-500">
+                    {t('journey.daysCompleted', { count: activeProgram.completedDays, total: activeProgram.totalDays })}
+                  </p>
                 </div>
-                <Link href={`/practices/programs/${activeProgram.slug}`} className="w-fit pt-1">
+                <Link
+                  href={`/practices/programs/${activeProgram.program.slug}/day/${activeProgram.currentDay}`}
+                  className="w-fit pt-1"
+                >
                   <Button variant="secondary" size="sm">
                     {t('home.continue')}
                   </Button>
@@ -242,19 +254,28 @@ export default async function HomePage() {
             ) : (
               <>
                 <p className="text-base text-ink-500">{t('home.noActiveProgram')}</p>
-                <Link href="/practices" className="w-fit text-base font-medium text-link hover:underline">
+                <Link href="/practices/programs" className="w-fit text-base font-medium text-link hover:underline">
                   {t('home.chooseProgram')} →
                 </Link>
               </>
             )}
           </div>
 
-          <div className="flex gap-10 sm:border-l sm:border-sand-200 sm:pl-10">
-            <YourProgressStats />
+          <div className="flex flex-col gap-3 sm:border-l sm:border-sand-200 sm:pl-10">
+            <div className="flex gap-10">
+              <YourProgressStats />
+            </div>
+            <Link href="/journey" className="w-fit text-sm font-medium text-link hover:underline">
+              {t('practiceSession.viewJourney')} →
+            </Link>
           </div>
         </section>
 
-        {session && !isStaffModerator && <MembershipStrip subscription={subscription} locale={locale} t={t} />}
+        {/* Membership sales are off in V1 (lib/features.ts); existing
+            subscribers still see their plan. */}
+        {session && !isStaffModerator && (features.membershipSales || subscription) && (
+          <MembershipStrip subscription={subscription} locale={locale} t={t} />
+        )}
 
         {/* Latest information — an editorial list, not a card grid. */}
         <section className="flex flex-col gap-6 border-t border-sand-200 pt-14">

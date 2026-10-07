@@ -29,6 +29,13 @@ export function SiteFooter({ appName, className }: { appName: string; className?
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <nav aria-label={t('legal.footerNavLabel')}>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
+            {/* Community (Discussions/Courses/Meetings) left the primary nav
+                in V1 (concept: Community is V2) — it stays reachable here. */}
+            <li>
+              <Link href="/community" className={linkClass}>
+                {t('nav.community')}
+              </Link>
+            </li>
             {LEGAL_DOCUMENT_IDS.map((id) => (
               <li key={id}>
                 <Link href={config.documents[id].path} className={linkClass}>

@@ -5,16 +5,12 @@ import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { getStartHereSections } from '@/modules/kuko-way/service';
 import { localize } from '@/modules/kuko-way/types';
+import { START_HERE_PHASES } from '@/modules/kuko-way/handbook';
 
-// Groups the handbook's introductory chapters into one guided journey
-// (Learn → Understand → Prepare → Practice) instead of dumping the table of
-// contents as a flat list — per Prompt2 Day 2 Step 5.
-const PHASES: { titleBg: string; titleEn: string; sectionIds: string[] }[] = [
-  { titleBg: 'Учи', titleEn: 'Learn', sectionIds: ['intro', 'what-is-kuko-way', 'our-beliefs', 'evolution-of-training'] },
-  { titleBg: 'Разбери', titleEn: 'Understand', sectionIds: ['what-is-fascia', 'what-is-fascial-maneuver', 'body-zones'] },
-  { titleBg: 'Подготви се', titleEn: 'Prepare', sectionIds: ['fascia-fundamentals', 'body-fundamentals', 'getting-started-tips'] },
-  { titleBg: 'Практикувай', titleEn: 'Practice', sectionIds: ['what-to-expect'] },
-];
+// Start Here = orientation and first steps only: get to know KUKO WAY, get
+// ready for the first practice, then practise. The handbook's background
+// chapters (fascia, the body, body zones, …) live in Learn — each chapter has
+// exactly one home (modules/kuko-way/handbook.ts), so nothing is duplicated.
 
 export default function StartHerePage() {
   const locale = getLocale();
@@ -27,14 +23,14 @@ export default function StartHerePage() {
       <PageHeader eyebrow={t('nav.practices')} title={t('startHere.title')} description={t('startHere.subtitle')} />
 
       <div className="flex flex-col gap-8">
-        {PHASES.map((phase, phaseIndex) => (
-          <div key={phase.titleBg} className="flex flex-col gap-3">
+        {START_HERE_PHASES.map((phase, phaseIndex) => (
+          <div key={phase.labelKey} className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xs font-semibold text-link">
                 {phaseIndex + 1}
               </span>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">
-                {locale === 'en' ? phase.titleEn : phase.titleBg}
+                {t(phase.labelKey)}
               </h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -66,6 +62,13 @@ export default function StartHerePage() {
           <Button>{t('startHere.goToFirstPractice')}</Button>
         </Link>
       </Card>
+
+      <p className="text-sm text-ink-500">
+        {t('startHere.learnMore')}{' '}
+        <Link href="/learn" className="font-medium text-link hover:underline">
+          {t('startHere.learnMoreCta')} →
+        </Link>
+      </p>
     </Container>
   );
 }

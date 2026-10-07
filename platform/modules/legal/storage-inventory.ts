@@ -113,7 +113,7 @@ export function getStorageInventory({ recaptchaCategory }: { recaptchaCategory: 
     },
     {
       id: 'practiceProgress',
-      names: ['ptd:completed:*'],
+      names: ['ptd:completed:*', 'ptd:imported:*'],
       kind: 'localStorage',
       provider: 'first-party',
       category: 'necessary',

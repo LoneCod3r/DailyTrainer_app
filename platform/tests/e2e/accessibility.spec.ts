@@ -28,13 +28,28 @@ test.describe('Accessibility smoke checks', () => {
     await assertNoSeriousViolations(page);
   });
 
+  test('practice page and practice mode have no serious/critical axe violations', async ({ page }) => {
+    await page.goto('/practices/plazgane-po-nebtseto');
+    await assertNoSeriousViolations(page);
+    await page.getByTestId('practice-begin').click();
+    await expect(page.getByTestId('practice-mode')).toBeVisible();
+    await assertNoSeriousViolations(page);
+  });
+
+  test('program overview, Learn and Journey have no serious/critical axe violations', async ({ page }) => {
+    for (const path of ['/practices/programs', '/practices/programs/28-days', '/learn', '/journey']) {
+      await page.goto(path);
+      await assertNoSeriousViolations(page);
+    }
+  });
+
   test('discussion thread page has no serious/critical axe violations', async ({ page }) => {
     await page.goto('/community/discussions/how-did-you-start-your-daily-practice');
     await assertNoSeriousViolations(page);
   });
 
   test('every page has a document title and a single top-level heading', async ({ page }) => {
-    for (const path of ['/', '/practices', '/community', '/blog', '/login']) {
+    for (const path of ['/', '/practices', '/practices/programs', '/practices/programs/28-days', '/learn', '/journey', '/community', '/blog', '/login']) {
       await page.goto(path);
       await expect(page).toHaveTitle(/.+/);
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);

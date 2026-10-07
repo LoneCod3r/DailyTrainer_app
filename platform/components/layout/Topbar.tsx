@@ -11,7 +11,7 @@ import { useT } from '@/lib/i18n/LocaleProvider';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ACCOUNT_NAV, PRIMARY_NAV, SUPPORT_NAV, isActive } from './nav';
+import { ACCOUNT_NAV, PRIMARY_NAV, SUPPORT_NAV, isActive, isNavItemActive } from './nav';
 import {
   MenuIcon,
   SearchIcon,
@@ -109,12 +109,12 @@ export function Topbar({
         {/* Centered between the logo and the account controls, same way
             search used to sit — nav + search now share that centered slot. */}
         <div className="flex flex-1 items-center justify-center gap-4">
-        {/* Primary nav — Home / Practices / Community. Was the left sidebar;
+        {/* Primary nav — Practice / Programs / Learn / Journey (logo = Home). Was the left sidebar;
             same Link+toggle-button contract, now a horizontal navbar with
             flyout submenus instead of an inline-expanding list. */}
         <nav aria-label="Main" ref={navRef} className="hidden items-center gap-1 lg:flex">
           {PRIMARY_NAV.map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = isNavItemActive(pathname, item);
             // Unlike the old sidebar (an inline list, safe to auto-expand
             // for the active section), this is a floating flyout — it must
             // only open on an explicit click, never just because you
@@ -292,9 +292,12 @@ export function Topbar({
                   {t('topbar.login')}
                 </Button>
               </Link>
+              {/* Calm invitation rather than a sales CTA (concept §2/§20). The
+                  short label keeps it on one line at 375px. */}
               <Link href="/register">
                 <Button variant="primary" size="sm" className="!px-2 sm:!px-3">
-                  {t('topbar.join')}
+                  <span className="sm:hidden">{t('topbar.join')}</span>
+                  <span className="hidden sm:inline">{t('topbar.startJourney')} →</span>
                 </Button>
               </Link>
             </div>

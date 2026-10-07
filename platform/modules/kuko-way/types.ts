@@ -54,19 +54,6 @@ export interface StartHereSection {
   subsections?: StartHereSubsection[];
 }
 
-export type ProgramLength = 7 | 14 | 28;
-
-export interface ProgramDay {
-  day: number;
-}
-
-export interface Program {
-  length: ProgramLength;
-  slug: string;
-  title: LocalizedText;
-  description: LocalizedText;
-}
-
 // External YouTube content (KUKO WAY's own channel), embedded rather than
 // hosted — not part of the handbook, so titles are the real video titles as
 // published, not handbook transcriptions.

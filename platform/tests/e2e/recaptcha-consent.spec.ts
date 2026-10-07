@@ -97,7 +97,7 @@ test.describe('reCAPTCHA consent — consent-gated configuration', () => {
     expect(await recaptchaFootprint(page)).toEqual(NO_RECAPTCHA);
 
     // Back to the form client-side, still the same document.
-    await page.getByRole('link', { name: 'Join' }).first().click();
+    await page.getByRole('link', { name: /Start your journey/ }).first().click();
     await expect(page).toHaveURL('/register');
     await assertNoReload(page);
     await expect(page.getByTestId('recaptcha-consent')).toBeVisible();
@@ -137,7 +137,7 @@ test.describe('reCAPTCHA consent — default configuration (necessary)', () => {
     // categories doesn't touch it.
     expect((await recaptchaFootprint(page)).grecaptcha).toBe(true);
 
-    await page.getByRole('link', { name: 'Join' }).first().click();
+    await page.getByRole('link', { name: /Start your journey/ }).first().click();
     await expect(page).toHaveURL('/register');
     await assertNoReload(page);
     await expect(page.getByTestId('recaptcha-consent')).toHaveCount(0);
