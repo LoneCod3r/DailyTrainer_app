@@ -9,6 +9,10 @@ not a fitness or medical app. The Next.js application lives in
 setup instructions. This top-level README summarizes what the product is,
 what is built, and what is not yet.
 
+**Production (test phase):** https://daily-trainer-app.vercel.app/ — see
+[Deployment and CI](#deployment-and-ci) for what is live and what is still
+limited (payments run in Stripe test mode only).
+
 > This project has no connection to, dependency on, or shared infrastructure
 > with `app.humangarage.net` — that product was used only as a
 > functional/structural reference during planning, never as code, content,
@@ -31,8 +35,8 @@ newsletter-templates/  Newsletter design explorations (static HTML, not used by 
 | **Practice** | The handbook practices — *Start Here* (first steps), *Feel Better Now*, the searchable Library and the free videos. |
 | **Programs** | The Reset Programs (1, 3, 7 and 28 days) with prices, access and progress. |
 | **Knowledge** (*Learn*, BG „Знание“) | Educational reference: the handbook's chapters on the body and fascia, and articles. |
-| **Journey** | Personal progress over time: practice history, check-ins, notes, programs, favorites. |
-| **Profile** | The account: journey summary, purchased programs, settings and billing. |
+| **Journey** | Personal progress over time: practice statistics, programs, favorites, recent practice with check-ins, and private notes. |
+| **Profile** | The account: journey summary, purchased programs, settings (including password change) and billing. |
 
 Desktop shows Practice · Programs · Learn · Journey in the top bar (the logo
 leads Home); on mobile a bottom bar gives one-tap access to Home, Practice,
@@ -59,6 +63,14 @@ practices as favorites, see their recent practice history with before/after
 check-ins, and write private notes after a practice and a reflection for
 each program day. Notes are visible only to their author.
 
+**Journey dashboard** — the Journey page opens with the practice statistics
+(days of showing up, practices completed, minutes of practice) as cards
+beside the page title on wide screens. Below them, four cards in a two-column
+grid: *Your programs*, *Favorites*, *Recent practice* and *Your notes*
+(one column on tablets and phones). Each empty card says what will appear
+there, with a link to get started where relevant. Signed-out visitors see
+this device's numbers and an invitation to create an account.
+
 **Start Here and Knowledge** — each handbook chapter has a single home:
 *Start Here* holds the orientation chapters and leads to the first practice;
 *Knowledge* holds the background chapters and articles. Practice videos are
@@ -80,8 +92,10 @@ Purchasing currently runs in **payment test mode only** (see *Next steps*).
 **Accounts and security** — registration with email verification, password
 reset, bot protection (reCAPTCHA v3, honeypot, minimum fill time, an
 arithmetic challenge), login lockout after repeated failed attempts and rate
-limiting; roles Member / Moderator / Admin with an admin dashboard. Design in
-`platform/docs/auth-security.md`.
+limiting; roles Member / Moderator / Admin with an admin dashboard. Signed-in
+users can change their password in Profile & Settings (the current password
+is required); changing or resetting a password signs the account out on all
+other devices. Design in `platform/docs/auth-security.md`.
 
 **Community and support** — Discussions (threads, replies, moderation and
 reports), Courses (modules → lessons with progress), Meetings, a Blog, and
@@ -91,11 +105,14 @@ voluntary one-off donations.
 languages (Bulgarian by default), switchable at any time.
 
 **Mobile experience** — layouts and navigation are built for phones as well
-as desktop and checked at a 375 px viewport.
+as desktop and checked at a 375 px viewport. Profile & Settings and Journey
+use two columns on wide screens and stack into one column on smaller ones.
 
 **Accessibility** — automated accessibility checks (axe) on the main pages,
 WCAG AA colour contrast in light and dark themes, a single top-level heading
-per page and keyboard-operable navigation.
+per page and keyboard-operable navigation. Form fields are linked to their
+labels, and icon-only controls (such as the account menu on phones) have an
+accessible name.
 
 ## Programs and prices
 
@@ -107,8 +124,8 @@ per page and keyboard-operable navigation.
 | 28 Day Reset | €149 (one-time) |
 
 KUKO WAY **currently does not offer a membership or subscription plan.**
-*KUKO WAY Community* (subscription) and the *Trainer Program* are shown only
-as "coming later" and cannot be purchased.
+*KUKO WAY Community* (subscription) and the *Trainer Program* are shown on the
+Programs page only as "Coming soon" (BG „Предстои“) and cannot be purchased.
 
 **Program content:** the functional foundation of the programs (structure,
 days, sequential access, progress, reflections, purchase and access) is
@@ -125,6 +142,9 @@ program item is a placeholder ("content coming soon").
   terms of sale, refunds, privacy) needed before real payments are enabled.
 - **Newsletter** — define the scope and provider, then build it (see the
   assessment in `platform/docs/v1-implementation-notes.md`).
+- **Production setup** — connect the `kukoway.com` domain, verify it for
+  outgoing email, and move payments from Stripe test mode to live mode (a
+  reviewed code change plus live Stripe configuration).
 - **Future stages** — KUKO WAY Community and the Trainer education program.
 
 ## Technology stack
@@ -140,6 +160,8 @@ program item is a placeholder ("content coming soon").
 | Email          | Nodemailer (any SMTP provider)             |
 | Payments       | Stripe (test mode)                         |
 | Testing        | Vitest (unit) + Playwright (e2e, incl. axe-core a11y) |
+| Hosting        | Vercel (functions in `fra1`) + Neon PostgreSQL (Frankfurt) |
+| CI             | GitHub Actions (Smoke Test; production DB migrations) |
 
 ## Stripe Billing Localization
 
@@ -178,6 +200,34 @@ Verified examples:
 This is expected Stripe behavior, not a DailyTrainer bug. Stripe documents no
 supported way for an application to set the Hosted Invoice Page language, so
 none is used here.
+
+## Deployment and CI
+
+- **Production:** https://daily-trainer-app.vercel.app/ (Vercel, Root
+  Directory `platform`). Every push to `main` deploys automatically. The build
+  only runs `prisma generate` and `next build`; it never touches the database
+  schema.
+- **Database migrations:** production migrations run separately, from the
+  *Production DB Migrations* GitHub Actions workflow (`prisma migrate deploy`
+  over Neon's direct connection, never reset). See
+  [`platform/README.md`](platform/README.md#database-migrations).
+- **Smoke Test (CI):** on every push and pull request to `main`: type check,
+  lint, unit tests, production build and the full Playwright e2e suite against
+  a throwaway PostgreSQL database.
+- **Latest verified state (8 October 2026):** commit `4251e43` deployed to
+  production (Vercel status *Ready*), and its Smoke Test run passed. The
+  production database is up to date (10 of 10 migrations applied).
+
+Still limited in production at this stage:
+
+- payments run in **Stripe test mode** only — no real charges;
+- the Reset Programs are shown through preview feature flags and their
+  content is still placeholder;
+- outgoing email uses a temporary test sender until `kukoway.com` is verified
+  for sending, so verification emails only reach the sending account's own
+  address;
+- the app is served on the Vercel URL; the `kukoway.com` domain is not
+  connected yet.
 
 ## Getting started
 
