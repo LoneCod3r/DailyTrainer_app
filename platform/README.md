@@ -253,6 +253,22 @@ npm run db:migrate   # create + apply a new migration (development)
 npm run db:deploy    # apply existing migrations (production/CI)
 ```
 
+**Production (Vercel + Neon).** The Vercel build never runs migrations; it
+only runs `prisma generate` (postinstall) and `next build`. Production
+migrations run from the **Production DB Migrations** GitHub Actions workflow
+(`.github/workflows/migrate-production.yml`): automatically when a push to
+`main` changes `prisma/migrations/`, or manually with `action: status`
+(read-only) or `action: deploy`. It connects with the
+`PRODUCTION_DIRECT_DATABASE_URL` secret on the `production` environment —
+Neon's **direct** connection string (host without `-pooler`), because Prisma
+Migrate's advisory lock doesn't work through the pooler. The app itself keeps
+using the pooled `DATABASE_URL` set in Vercel.
+
+A migration and the code that needs it reach production independently. Keep
+migrations additive (new tables/columns, nullable or defaulted fields) so
+old code keeps working on the new schema, and new code isn't deployed before
+its migration has run.
+
 ## Project structure
 
 ```

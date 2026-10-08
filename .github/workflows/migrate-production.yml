@@ -1,0 +1,115 @@
+name: Production DB Migrations
+
+# Applies committed Prisma migrations to the production (Neon) database.
+# Vercel builds never run migrations; this workflow is the only place that
+# does. It runs `prisma migrate deploy` only — never `migrate dev` or
+# `migrate reset` — which applies committed, not-yet-applied migrations and
+# nothing else.
+#
+# Runs automatically when a push to main changes platform/prisma/migrations,
+# or manually (Actions → Production DB Migrations → Run workflow) with
+# `action: status` (read-only check) or `action: deploy`.
+#
+# Requires the `PRODUCTION_DIRECT_DATABASE_URL` secret on the `production`
+# environment: Neon's DIRECT connection string (host WITHOUT `-pooler`).
+# Prisma Migrate takes a session-level advisory lock, which doesn't work
+# through the PgBouncer pooler. The app on Vercel keeps using the pooled
+# DATABASE_URL.
+#
+# This repository is public, so workflow logs are public: nothing below
+# prints the connection string (GitHub also masks the secret value).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'platform/prisma/migrations/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'status = read-only check, deploy = apply pending migrations'
+        type: choice
+        options: [status, deploy]
+        default: status
+
+permissions:
+  contents: read
+
+# Never run two migrations at once, and never cancel one halfway.
+concurrency:
+  group: production-db-migrations
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: platform
+
+jobs:
+  migrate:
+    name: prisma migrate ${{ github.event_name == 'push' && 'deploy' || inputs.action }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Add required reviewers to this environment in GitHub to gate every run.
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.PRODUCTION_DIRECT_DATABASE_URL }}
+      ACTION: ${{ github.event_name == 'push' && 'deploy' || inputs.action }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+
+      - name: Check the database secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::PRODUCTION_DIRECT_DATABASE_URL is not set on the 'production' environment."
+            exit 1
+          fi
+          host="$(node -e 'console.log(new URL(process.env.DATABASE_URL).hostname)')"
+          case "$host" in
+            *-pooler*)
+              echo "::error::PRODUCTION_DIRECT_DATABASE_URL points at the Neon pooler. Use the direct connection string (host without '-pooler')."
+              exit 1
+              ;;
+          esac
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Read-only. Reports any session holding Prisma Migrate's advisory lock
+      # (72707369), e.g. one left behind by an earlier run through the pooler,
+      # which would make `migrate deploy` time out with P1002.
+      - name: Check for a held migration lock
+        run: |
+          psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c "
+            SELECT 'advisory lock 72707369 held by pid ' || l.pid
+                   || ' (state: ' || coalesce(a.state, '?')
+                   || ', application: ' || coalesce(nullif(a.application_name, ''), '?')
+                   || ', since: ' || coalesce(a.state_change::text, '?') || ')'
+            FROM pg_locks l
+            LEFT JOIN pg_stat_activity a ON a.pid = l.pid
+            WHERE l.locktype = 'advisory' AND l.granted
+              AND ((l.classid::bigint << 32) | l.objid::bigint) = 72707369;
+          " | tee lock.txt
+          if [ -s lock.txt ]; then
+            echo "::warning::Prisma's migration lock is currently held (see above). migrate deploy will wait for it."
+          else
+            echo "No session holds the migration lock."
+          fi
+
+      - name: Migration status (before)
+        run: npx prisma migrate status || true
+
+      - name: Apply pending migrations
+        if: env.ACTION == 'deploy'
+        run: npx prisma migrate deploy
+
+      # Fails the job if anything is still pending or the history diverges.
+      - name: Migration status (after)
+        run: npx prisma migrate status
