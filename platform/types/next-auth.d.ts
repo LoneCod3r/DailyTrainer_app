@@ -18,6 +18,7 @@ declare module 'next-auth' {
     role: Role;
     status: UserStatus;
     emailVerified: Date | null;
+    passwordFingerprint?: string | null;
   }
 }
 
@@ -27,5 +28,7 @@ declare module 'next-auth/jwt' {
     role: Role;
     status: UserStatus;
     emailVerified: Date | null;
+    // See passwordFingerprint() in lib/auth.ts. Never copied into the session.
+    passwordFingerprint?: string | null;
   }
 }

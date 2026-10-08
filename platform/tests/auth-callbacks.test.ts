@@ -7,10 +7,14 @@ vi.mock('@/lib/prisma', () => ({ prisma: { user: { findUnique: vi.fn(), update: 
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: vi.fn(() => true) }));
 
 const { prisma } = await import('@/lib/prisma');
-const { authOptions } = await import('@/lib/auth');
+const { authOptions, passwordFingerprint } = await import('@/lib/auth');
 
 const jwt = authOptions.callbacks!.jwt!;
 const sessionCb = authOptions.callbacks!.session!;
+
+// Stored hash for user u1; every session issued for it carries this
+// fingerprint (see passwordFingerprint in lib/auth.ts).
+const PASSWORD_HASH = '$2a$12$abcdefghijklmnopqrstuvABCDEFGHIJKLMNOPQRSTUVWXYZ01234';
 
 const baseToken = {
   id: 'u1',
@@ -19,13 +23,14 @@ const baseToken = {
   emailVerified: null,
   name: 'Ada',
   email: 'ada@example.dev',
+  passwordFingerprint: passwordFingerprint(PASSWORD_HASH),
 } as any;
 
 function runJwt(token = { ...baseToken }) {
   return (jwt as any)({ token });
 }
-function dbReturns(row: unknown) {
-  (prisma.user.findUnique as any).mockResolvedValue(row);
+function dbReturns(row: Record<string, unknown> | null) {
+  (prisma.user.findUnique as any).mockResolvedValue(row && { passwordHash: PASSWORD_HASH, ...row });
 }
 
 beforeEach(() => {
@@ -69,13 +74,40 @@ describe('jwt callback — session revocation', () => {
     await expect(runJwt()).rejects.toBe(dbError);
   });
 
-  it('fresh sign-in (user present) skips the DB lookup', async () => {
+  it('fresh sign-in (user present) skips the DB lookup and stores the password fingerprint', async () => {
     const result = await (jwt as any)({
       token: {},
-      user: { id: 'u2', role: 'USER', status: 'ACTIVE', emailVerified: null },
+      user: {
+        id: 'u2',
+        role: 'USER',
+        status: 'ACTIVE',
+        emailVerified: null,
+        passwordFingerprint: passwordFingerprint(PASSWORD_HASH),
+      },
     });
-    expect(result).toMatchObject({ id: 'u2', role: 'USER', status: 'ACTIVE' });
+    expect(result).toMatchObject({
+      id: 'u2',
+      role: 'USER',
+      status: 'ACTIVE',
+      passwordFingerprint: passwordFingerprint(PASSWORD_HASH),
+    });
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('password changed since sign-in (fingerprint mismatch): throws', async () => {
+    dbReturns({ role: 'ADMIN', status: 'ACTIVE', emailVerified: null, passwordHash: '$2a$12$a-different-hash' });
+    await expect(runJwt()).rejects.toThrow('SESSION_REVOKED');
+  });
+
+  it('legacy session without a password fingerprint: throws instead of adopting the current one', async () => {
+    dbReturns({ role: 'ADMIN', status: 'ACTIVE', emailVerified: null });
+    const { passwordFingerprint: _omitted, ...legacy } = baseToken;
+    await expect(runJwt(legacy)).rejects.toThrow('SESSION_REVOKED');
+  });
+
+  it.each(['USER', 'MODERATOR', 'ADMIN'])('%s: a current session keeps its role after the fingerprint check', async (role) => {
+    dbReturns({ role, status: 'ACTIVE', emailVerified: null });
+    await expect(runJwt({ ...baseToken, role })).resolves.toMatchObject({ id: 'u1', role });
   });
 });
 
@@ -85,6 +117,12 @@ describe('session callback — fail closed', () => {
   it('valid token: populates the session user', async () => {
     const result: any = await (sessionCb as any)({ session: baseSession(), token: baseToken });
     expect(result.user).toMatchObject({ id: 'u1', role: 'ADMIN', status: 'ACTIVE' });
+  });
+
+  it('never copies the password fingerprint into the browser-visible session', async () => {
+    const result: any = await (sessionCb as any)({ session: baseSession(), token: baseToken });
+    expect(JSON.stringify(result)).not.toContain(baseToken.passwordFingerprint);
+    expect(result.user).not.toHaveProperty('passwordFingerprint');
   });
 
   it.each([

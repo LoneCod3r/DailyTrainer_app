@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+// The one password rule for every place a password is chosen (registration,
+// reset, change). 72 is bcrypt's input limit: longer input would be silently
+// truncated when hashed.
+export const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(72, 'Password must be at most 72 characters');
+
 export const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
@@ -17,10 +25,7 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().email().toLowerCase(),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(72, 'Password must be at most 72 characters'),
+  password: passwordSchema,
   captchaToken: z.string().min(1, 'Captcha verification is required'),
   // Deliberately NOT constrained to empty here — a non-empty value is a
   // meaningful signal (an automated client filled it), not a validation
@@ -64,11 +69,25 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(72, 'Password must be at most 72 characters'),
+  password: passwordSchema,
 });
+
+// Signed-in password change. The refinement messages are stable codes that
+// the settings form maps to localized text (components/account/ChangePasswordForm.tsx).
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(200),
+    newPassword: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'PASSWORD_MISMATCH',
+  })
+  .refine((d) => d.newPassword !== d.currentPassword, {
+    path: ['newPassword'],
+    message: 'SAME_AS_CURRENT',
+  });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -76,3 +95,4 @@ export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getProfileByUserId } from '@/modules/profiles/profiles.service';
 import { ProfileForm } from '@/components/account/ProfileForm';
+import { ChangePasswordForm } from '@/components/account/ChangePasswordForm';
 import { ResendVerificationForm } from '@/components/auth/ResendVerificationForm';
 import { Container, Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -47,6 +48,11 @@ export default async function AccountSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="max-w-xl">
+        <h2 className="mb-3 text-base font-semibold text-ink-900">{t('account.settings.passwordSectionTitle')}</h2>
+        <ChangePasswordForm email={session.user.email ?? ''} />
+      </div>
 
       {!session.user.emailVerified && (
         <Card className="max-w-xl">

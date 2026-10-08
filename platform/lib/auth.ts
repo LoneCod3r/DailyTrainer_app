@@ -5,8 +5,17 @@ import { prisma } from '@/lib/prisma';
 import { createLogger } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { loginSchema } from '@/lib/validations/auth';
+import { hashToken } from '@/lib/tokens';
 
 const log = createLogger('auth');
+
+// Short fingerprint of the stored bcrypt hash, kept in the (encrypted)
+// session JWT. A password change or reset writes a new hash, so every
+// session issued under the old one stops matching and is revoked in the
+// jwt callback below — no schema change or session table needed.
+export function passwordFingerprint(passwordHash: string | null | undefined): string | null {
+  return passwordHash ? hashToken(passwordHash).slice(0, 16) : null;
+}
 
 // Coarse, IP-keyed volumetric guard against credential-stuffing across many
 // accounts from one source — resets quickly since it's meant to catch bursts,
@@ -102,6 +111,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           status: user.status,
           emailVerified: user.emailVerified,
+          passwordFingerprint: passwordFingerprint(user.passwordHash),
         };
       },
     }),
@@ -113,6 +123,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.status = user.status;
         token.emailVerified = user.emailVerified;
+        token.passwordFingerprint = user.passwordFingerprint;
         return token;
       }
 
@@ -130,7 +141,7 @@ export const authOptions: NextAuthOptions = {
       if (token.id) {
         const current = await prisma.user.findUnique({
           where: { id: token.id },
-          select: { role: true, status: true, emailVerified: true },
+          select: { role: true, status: true, emailVerified: true, passwordHash: true },
         });
         if (!current) {
           log.warn('session revoked: user no longer exists', { userId: token.id });
@@ -138,6 +149,19 @@ export const authOptions: NextAuthOptions = {
         }
         if (current.status !== 'ACTIVE') {
           log.warn('session revoked: inactive/suspended account', { userId: token.id, status: current.status });
+          throw new Error('SESSION_REVOKED');
+        }
+        // Every session is issued with the fingerprint of the password hash
+        // it was signed in under. One without a fingerprint predates this
+        // check and is revoked rather than trusted: adopting the current
+        // fingerprint would let it survive a password change made before
+        // its next request. Its owner simply signs in again.
+        if (token.passwordFingerprint === undefined) {
+          log.warn('session revoked: legacy session without password fingerprint', { userId: token.id });
+          throw new Error('SESSION_REVOKED');
+        }
+        if (token.passwordFingerprint !== passwordFingerprint(current.passwordHash)) {
+          log.warn('session revoked: password changed', { userId: token.id });
           throw new Error('SESSION_REVOKED');
         }
         token.role = current.role;

@@ -290,3 +290,28 @@ export async function resetPassword(rawToken: string, newPassword: string) {
 
   log.info('password reset', { userId: record.userId });
 }
+
+// Signed-in password change. Input shape (length rule, confirmation match,
+// new ≠ current) is already enforced by changePasswordSchema; this verifies
+// the current password against the stored hash before replacing it. The new
+// hash also ends every other session for this account: the session JWT
+// carries a fingerprint of the hash it was issued under (see lib/auth.ts).
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, passwordHash: true } });
+  if (!user?.passwordHash) {
+    throw Errors.badRequest('This account has no password to change.', { reason: 'NO_PASSWORD' });
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    log.warn('password change rejected: wrong current password', { userId });
+    throw Errors.badRequest('Current password is incorrect.', { reason: 'INVALID_CURRENT_PASSWORD' });
+  }
+  if (newPassword === currentPassword) {
+    throw Errors.badRequest('New password must be different from the current one.', { reason: 'SAME_AS_CURRENT' });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  log.info('password changed', { userId });
+}

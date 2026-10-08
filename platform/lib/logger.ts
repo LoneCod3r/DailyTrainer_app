@@ -13,6 +13,9 @@ type LogContext = Record<string, unknown>;
 
 const REDACT_KEYS = new Set([
   'password',
+  'currentPassword',
+  'newPassword',
+  'confirmPassword',
   'passwordHash',
   'token',
   'secret',
