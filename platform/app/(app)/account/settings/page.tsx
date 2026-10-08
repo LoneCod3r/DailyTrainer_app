@@ -28,84 +28,94 @@ export default async function AccountSettingsPage() {
         description={t('account.settings.description')}
       />
 
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>{t('account.settings.accountSectionTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <div>
-            <p className="text-ink-500">{t('account.settings.nameLabel')}</p>
-            <p className="text-ink-900">{session.user.name ?? '—'}</p>
-          </div>
-          <div>
-            <p className="text-ink-500">{t('account.settings.emailLabel')}</p>
-            <div className="flex items-center gap-2">
-              <p className="text-ink-900">{session.user.email}</p>
-              <Badge tone={session.user.emailVerified ? 'success' : 'warning'}>
-                {session.user.emailVerified ? t('auth.verifiedBadge') : t('auth.unverifiedBadge')}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Two columns on wide screens: account, public profile and
+          notifications on the left; password and display preferences on the
+          right (roughly equal heights). Below lg the columns stack in that
+          order, at the same max-w-xl width as before. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="flex w-full max-w-xl flex-col gap-6 lg:max-w-none">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('account.settings.accountSectionTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 text-sm">
+              <div>
+                <p className="text-ink-500">{t('account.settings.nameLabel')}</p>
+                <p className="text-ink-900">{session.user.name ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-ink-500">{t('account.settings.emailLabel')}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-ink-900">{session.user.email}</p>
+                  <Badge tone={session.user.emailVerified ? 'success' : 'warning'}>
+                    {session.user.emailVerified ? t('auth.verifiedBadge') : t('auth.unverifiedBadge')}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      <div className="max-w-xl">
-        <h2 className="mb-3 text-base font-semibold text-ink-900">{t('account.settings.passwordSectionTitle')}</h2>
-        <ChangePasswordForm email={session.user.email ?? ''} />
+          {!session.user.emailVerified && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('auth.unverifiedBadge')}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-sm text-ink-500">{t('auth.bannerUnverified')}</p>
+                <ResendVerificationForm initialEmail={session.user.email ?? ''} />
+              </CardContent>
+            </Card>
+          )}
+
+          <section>
+            <h2 className="mb-3 text-base font-semibold text-ink-900">{t('account.settings.profileSectionTitle')}</h2>
+            <ProfileForm
+              initialProfile={{
+                bio: profile?.bio ?? null,
+                avatarUrl: profile?.avatarUrl ?? null,
+                interests: profile?.interests ?? [],
+                visibility: profile?.visibility ?? 'MEMBERS',
+              }}
+            />
+          </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('account.settings.notificationsSectionTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-ink-500">{t('account.settings.notificationsPlaceholder')}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex w-full max-w-xl flex-col gap-6 lg:max-w-none">
+          <section>
+            <h2 className="mb-3 text-base font-semibold text-ink-900">{t('account.settings.passwordSectionTitle')}</h2>
+            <ChangePasswordForm email={session.user.email ?? ''} />
+          </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('account.settings.preferencesSectionTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between gap-3">
+              <p className="text-sm text-ink-500">{t('account.settings.languageLabel')}</p>
+              <LanguageSwitcher />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('account.settings.themeSectionTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between gap-3">
+              <p className="text-sm text-ink-500">{t('account.settings.themeDescription')}</p>
+              <ThemeToggle className="border border-sand-200" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      {!session.user.emailVerified && (
-        <Card className="max-w-xl">
-          <CardHeader>
-            <CardTitle>{t('auth.unverifiedBadge')}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <p className="text-sm text-ink-500">{t('auth.bannerUnverified')}</p>
-            <ResendVerificationForm initialEmail={session.user.email ?? ''} />
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="max-w-xl">
-        <h2 className="mb-3 text-base font-semibold text-ink-900">{t('account.settings.profileSectionTitle')}</h2>
-        <ProfileForm
-          initialProfile={{
-            bio: profile?.bio ?? null,
-            avatarUrl: profile?.avatarUrl ?? null,
-            interests: profile?.interests ?? [],
-            visibility: profile?.visibility ?? 'MEMBERS',
-          }}
-        />
-      </div>
-
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>{t('account.settings.preferencesSectionTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between gap-3">
-          <p className="text-sm text-ink-500">{t('account.settings.languageLabel')}</p>
-          <LanguageSwitcher />
-        </CardContent>
-      </Card>
-
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>{t('account.settings.themeSectionTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between gap-3">
-          <p className="text-sm text-ink-500">{t('account.settings.themeDescription')}</p>
-          <ThemeToggle className="border border-sand-200" />
-        </CardContent>
-      </Card>
-
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>{t('account.settings.notificationsSectionTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-ink-500">{t('account.settings.notificationsPlaceholder')}</p>
-        </CardContent>
-      </Card>
     </Container>
   );
 }

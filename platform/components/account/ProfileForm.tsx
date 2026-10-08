@@ -45,12 +45,14 @@ export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           {message && <Alert tone={message.tone}>{message.text}</Alert>}
           <Input
+            name="avatarUrl"
             label={t('account.settings.avatarUrlLabel')}
             placeholder="https://…"
             value={avatarUrl}
             onChange={(e) => setAvatarUrl(e.target.value)}
           />
           <Textarea
+            name="bio"
             label={t('account.settings.bioLabel')}
             rows={4}
             maxLength={1000}
@@ -58,6 +60,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: Profile }) {
             onChange={(e) => setBio(e.target.value)}
           />
           <Select
+            name="visibility"
             label={t('account.settings.visibilityLabel')}
             value={visibility}
             onChange={(e) => setVisibility(e.target.value as Profile['visibility'])}

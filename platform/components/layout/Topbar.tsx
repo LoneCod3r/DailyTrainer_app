@@ -209,6 +209,7 @@ export function Topbar({
                     <AccountIcon width={16} height={16} />
                   </span>
                   <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
+                  <span className="sr-only sm:hidden">{t('topbar.account')}</span>
                 </Link>
               ) : (
                 <button
@@ -220,6 +221,7 @@ export function Topbar({
                     <AccountIcon width={16} height={16} />
                   </span>
                   <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
+                  <span className="sr-only sm:hidden">{t('topbar.account')}</span>
                   {/* Subtle, tasteful plan indicator — visible app-wide (not
                       just /account), same restrained brand-tone badge used
                       elsewhere, never a different color system. */}
