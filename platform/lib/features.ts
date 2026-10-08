@@ -17,13 +17,12 @@ export const features = {
   membershipSales: flag(process.env.NEXT_PUBLIC_FEATURE_MEMBERSHIP_SALES),
 
   // Reset Program checkout — Stripe TEST MODE only. Requires the explicit
-  // opt-in AND a non-production build: production checkout stays off,
-  // whatever the env says, until the pricing/VAT/legal decisions are
-  // confirmed (enabling it then is a deliberate code change). The server
-  // additionally refuses unless the Stripe key is a test key — see
-  // isProgramCheckoutAvailable() in modules/commerce/checkout.service.ts.
-  programCheckout:
-    flag(process.env.NEXT_PUBLIC_FEATURE_PROGRAM_CHECKOUT) && process.env.NODE_ENV !== 'production',
+  // opt-in, in any build (so test-mode purchases can be exercised on a
+  // production build such as the Vercel deployment). Live payments stay
+  // impossible: the server refuses unless the Stripe key is a test key — see
+  // isProgramCheckoutAvailable() in modules/commerce/checkout.service.ts —
+  // and lib/stripe.ts refuses a non-test key in production altogether.
+  programCheckout: flag(process.env.NEXT_PUBLIC_FEATURE_PROGRAM_CHECKOUT),
 
   // Shows catalog prices (modules/commerce/catalog.ts) for product/UI review,
   // with every purchase action in a calm "coming soon" state. Display only —
