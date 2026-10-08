@@ -7,7 +7,7 @@ import { PriceTag } from './PriceTag';
 import { ComingSoonButton } from './ComingSoonButton';
 
 // An announced product that isn't part of V1 (Community, Trainer Program).
-// Visibly secondary to the Reset Programs, marked "Coming later", with an
+// Visibly secondary to the Reset Programs, marked "Coming soon", with an
 // inactive action — no link, no subscription, no checkout.
 export function FutureProductCard({
   product,

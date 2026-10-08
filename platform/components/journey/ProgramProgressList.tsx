@@ -16,18 +16,31 @@ export interface ProgramProgressRow {
 
 // "Your programs" on Journey and Profile (concept §10/§16: "28 Day Reset —
 // 17/28"). Server component; data comes from getProgramProgressOverview().
+// `variant="card"` is for use inside a card that already provides the frame
+// (Journey's dashboard grid): no dashed box around the empty state, which
+// keeps its link at the bottom, and a single-column list.
 export function ProgramProgressList({
   rows,
   locale,
   t,
+  variant = 'default',
 }: {
   rows: ProgramProgressRow[];
   locale: Locale;
   t: (key: DictKey, vars?: Record<string, string | number>) => string;
+  variant?: 'default' | 'card';
 }) {
+  const inCard = variant === 'card';
+
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-2 rounded-2xl border border-dashed border-sand-300 p-5">
+      <div
+        className={
+          inCard
+            ? 'flex flex-1 flex-col items-start justify-between gap-4'
+            : 'flex flex-col items-start gap-2 rounded-2xl border border-dashed border-sand-300 p-5'
+        }
+      >
         <p className="text-ink-700">{t('journey.programsEmpty')}</p>
         <Link href="/practices/programs" className="font-medium text-link hover:underline">
           {t('journey.exploreProgramsCta')} →
@@ -37,7 +50,7 @@ export function ProgramProgressList({
   }
 
   return (
-    <ul className="grid gap-4 sm:grid-cols-2">
+    <ul className={inCard ? 'grid gap-4' : 'grid gap-4 sm:grid-cols-2'}>
       {rows.map((row) => {
         const label = t('journey.daysCompleted', { count: row.completedDays, total: row.totalDays });
         return (

@@ -793,9 +793,9 @@ const en: typeof bg = {
     comingSoon: 'Coming soon',
     viewProgram: 'View program',
     previewNote: 'Purchasing isn’t open yet — prices are shown for preview.',
-    laterTitle: 'Coming later',
+    laterTitle: 'Coming soon',
     laterDesc: 'Ways to continue with KUKO WAY after a program. Not available yet.',
-    laterBadge: 'Coming later',
+    laterBadge: 'Coming soon',
     kinds: {
       PROGRAM: 'Reset Program',
       SUBSCRIPTION: 'Membership',

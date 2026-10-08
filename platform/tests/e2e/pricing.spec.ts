@@ -38,7 +38,7 @@ test.describe('Reset Programs pricing (EN)', () => {
 
   test('Community and Trainer are clearly future products with inactive actions', async ({ page }) => {
     await page.goto('/practices/programs');
-    await expect(page.getByRole('heading', { name: 'Coming later' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Coming soon' })).toBeVisible();
 
     const community = page.getByTestId('future-product-community');
     await expect(community).toContainText('KUKO WAY Community');
@@ -53,7 +53,8 @@ test.describe('Reset Programs pricing (EN)', () => {
     await expect(trainer.getByTestId('price-tag')).toContainText('€1,490');
 
     for (const card of [community, trainer]) {
-      await expect(card.getByText('Coming later', { exact: true })).toBeVisible();
+      // The status badge and the inactive action both read "Coming soon".
+      await expect(card.getByText('Coming soon', { exact: true })).toHaveCount(2);
       const cta = card.getByRole('button', { name: 'Coming soon' });
       await expect(cta).toBeDisabled();
       await expect(card.getByRole('link')).toHaveCount(0);
