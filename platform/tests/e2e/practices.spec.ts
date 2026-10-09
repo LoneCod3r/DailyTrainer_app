@@ -173,12 +173,18 @@ test.describe('Practice session (signed out — this device only)', () => {
     expect(stored).toBeNull();
   });
 
-  test("Home's progress reflects real completions, not fixed demo numbers", async ({ page }) => {
-    await page.goto('/');
+  test("Journey's progress reflects real completions, not fixed demo numbers", async ({ page }) => {
     const streakStat = page.getByTestId('streak-stat');
     const completedStat = page.getByTestId('practices-completed-stat');
 
+    // Home's progress section is signed-in only; visitors' device numbers
+    // live on /journey.
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Your progress' })).toHaveCount(0);
+    await expect(streakStat).toHaveCount(0);
+
     // A fresh browser context has completed nothing yet.
+    await page.goto('/journey');
     await expect(streakStat.locator('p').first()).toHaveText('0');
     await expect(completedStat.locator('p').first()).toHaveText('0');
 
@@ -187,7 +193,7 @@ test.describe('Practice session (signed out — this device only)', () => {
     await page.getByTestId('practice-mode').getByRole('button', { name: 'Finish', exact: true }).first().click();
     await expect(page.getByTestId('practice-complete')).toBeVisible();
 
-    await page.goto('/');
+    await page.goto('/journey');
     await expect(streakStat.locator('p').first()).toHaveText('1');
     await expect(completedStat.locator('p').first()).toHaveText('1');
   });
