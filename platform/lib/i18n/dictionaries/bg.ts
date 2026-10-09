@@ -228,6 +228,7 @@ const bg = {
     noResultsTitle: 'Нищо не съвпада с търсенето',
     noResultsDesc: 'Опитай с друга дума или разгледай всички категории.',
     resultsCount: '{count} резултата',
+    resultsCountOne: '1 резултат',
   },
   programs: {
     daysUnit: 'дни',

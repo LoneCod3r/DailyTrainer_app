@@ -19,6 +19,12 @@ export function getTopLevelPractices(): Practice[] {
   return getAllPractices().filter((p) => !p.parentId);
 }
 
+// Organ Reset sub-practices — not listed in Feel Better Now / Library
+// browsing, but searchable from the Library (see ./search.ts).
+export function getSubPractices(): Practice[] {
+  return getAllPractices().filter((p) => Boolean(p.parentId));
+}
+
 export function getPracticeBySlug(slug: string): Practice | undefined {
   return practices.find((p) => p.slug === slug);
 }

@@ -226,6 +226,7 @@ const en: typeof bg = {
     noResultsTitle: 'Nothing matches your search',
     noResultsDesc: 'Try a different word, or browse all categories.',
     resultsCount: '{count} results',
+    resultsCountOne: '1 result',
   },
   programs: {
     daysUnit: 'Days',
