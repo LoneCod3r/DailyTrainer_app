@@ -21,9 +21,10 @@ const MEMBERSHIP_SALES_OPEN = process.env.NEXT_PUBLIC_FEATURE_MEMBERSHIP_SALES =
 test.describe('Support navigation (authenticated)', () => {
   test.use({ storageState: AUTH_STORAGE_STATE });
 
-  test('Support is a direct header link to /account/donation, not inside the user menu', async ({ page }) => {
+  test('Support Us is a footer link to /account/donation, not in the main nav or the user menu', async ({ page }) => {
     await page.goto('/account');
-    const support = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Support', exact: true });
+    await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /support/i })).toHaveCount(0);
+    const support = page.getByRole('contentinfo').getByRole('link', { name: 'Support Us', exact: true });
     await expect(support).toBeVisible();
     await expect(support).toHaveAttribute('href', '/account/donation');
 
@@ -54,7 +55,7 @@ test.describe('Membership, Billing and Donation (authenticated)', () => {
 
   test('donation page loads and shows the unavailable state instead of a fake payment form', async ({ page }) => {
     await page.goto('/account/donation');
-    await expect(page.getByRole('heading', { name: 'Support DailyTrainer', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Support KUKO WAY', exact: true })).toBeVisible();
     test.skip(
       (await page.getByRole('radio').count()) > 0,
       'Stripe is configured in this environment, so the amount form renders instead',
@@ -80,7 +81,7 @@ test.describe('Donation amount selection (authenticated, Stripe configured)', ()
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/account/donation');
-    await expect(page.getByRole('heading', { name: 'Support DailyTrainer', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Support KUKO WAY', exact: true })).toBeVisible();
     const unavailable = await page
       .getByText('Donations are not available right now — payment configuration is incomplete.')
       .isVisible();

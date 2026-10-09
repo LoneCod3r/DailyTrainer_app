@@ -95,11 +95,11 @@ test.describe('Responsive — 375px viewport, authenticated pages', () => {
     await expect(page.getByRole('main').getByRole('link', { name: /Billing/ })).toBeVisible();
   });
 
-  test('Support is reachable from the mobile drawer without overflow', async ({ page }) => {
+  test('Support Us is reachable from the footer on mobile without overflow', async ({ page }) => {
     await page.goto('/account');
     await assertNoHorizontalOverflow(page);
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    const support = page.getByRole('link', { name: 'Support', exact: true });
+    const support = page.getByRole('contentinfo').getByRole('link', { name: 'Support Us', exact: true });
+    await support.scrollIntoViewIfNeeded();
     await expect(support).toBeVisible();
     await expect(support).toHaveAttribute('href', '/account/donation');
     await assertNoHorizontalOverflow(page);

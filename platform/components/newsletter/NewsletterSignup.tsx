@@ -43,43 +43,49 @@ export function NewsletterSignup() {
     }
   }
 
+  // Heading, description, then the field and a full-width Join button of the
+  // same width — centred when stacked, on the footer's shared left edge from
+  // lg up. Root font size is 18px (globals.css), so 22rem caps the form at
+  // ~396px and h-10 is ~45px.
   return (
-    <section aria-labelledby="newsletter-title">
-      <h2 id="newsletter-title" className="text-base font-semibold text-ink-900">
+    <section
+      aria-labelledby="newsletter-title"
+      className="mx-auto flex w-full max-w-md flex-col items-center text-center lg:mx-0 lg:items-start lg:text-left"
+    >
+      <h2 id="newsletter-title" className="font-serif text-2xl text-ink-900">
         {t('newsletter.title')}
       </h2>
-      <p className="mt-1 text-sm text-ink-500">{t('newsletter.description')}</p>
+      <p className="mt-2 max-w-sm text-sm leading-relaxed text-ink-500">{t('newsletter.description')}</p>
 
       <form
         aria-label={t('newsletter.formLabel')}
         onSubmit={handleSubmit}
         noValidate
-        className="mt-4 flex max-w-md flex-col gap-3 sm:flex-row sm:items-start"
+        className="mt-5 flex w-full max-w-[22rem] flex-col gap-2.5 text-left"
       >
         <label htmlFor="newsletter-email" className="sr-only">
           {t('newsletter.emailLabel')}
         </label>
-        <div className="min-w-0 flex-1">
-          <Input
-            ref={inputRef}
-            id="newsletter-email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            required
-            maxLength={254}
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (invalid) setInvalid(false);
-              if (status === 'success' || status === 'error') setStatus('idle');
-            }}
-            placeholder={t('newsletter.emailPlaceholder')}
-            error={invalid ? t('newsletter.invalidEmail') : undefined}
-          />
-        </div>
-        <Button type="submit" loading={status === 'submitting'} className="shrink-0">
+        <Input
+          ref={inputRef}
+          id="newsletter-email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          required
+          maxLength={254}
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (invalid) setInvalid(false);
+            if (status === 'success' || status === 'error') setStatus('idle');
+          }}
+          placeholder={t('newsletter.emailPlaceholder')}
+          error={invalid ? t('newsletter.invalidEmail') : undefined}
+          className="h-10 text-center placeholder:text-center"
+        />
+        <Button type="submit" loading={status === 'submitting'} className="h-10 w-full">
           {t('newsletter.submit')}
         </Button>
       </form>
@@ -88,7 +94,7 @@ export function NewsletterSignup() {
         role="status"
         aria-live="polite"
         className={clsx(
-          'mt-2 text-sm',
+          'mt-3 max-w-[22rem] text-sm',
           status === 'success' && 'text-ink-700',
           status === 'error' && 'text-red-600 dark:text-red-400',
         )}

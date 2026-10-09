@@ -126,7 +126,8 @@ export function DonationForm({ disabled }: { disabled?: boolean }) {
                 {t('account.donation.chooseAmount')}
               </p>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {/* €5 / €10 / €25 / €50 on one row at every width; Custom on its own row. */}
+              <div className="grid grid-cols-4 gap-2 sm:gap-3">
                 {PRESET_AMOUNTS_CENTS.map((cents) => (
                   <AmountOption
                     key={cents}
@@ -136,7 +137,7 @@ export function DonationForm({ disabled }: { disabled?: boolean }) {
                   />
                 ))}
                 <AmountOption
-                  className="col-span-2 sm:col-span-4"
+                  className="col-span-4"
                   checked={selected === 'custom'}
                   onSelect={() => select('custom')}
                   label={t('account.donation.customTile')}
@@ -149,7 +150,7 @@ export function DonationForm({ disabled }: { disabled?: boolean }) {
               <div className="relative">
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-3.5 top-0 z-10 flex h-10 items-center text-sm font-medium text-ink-500"
+                  className="pointer-events-none absolute left-3.5 top-0 z-10 flex h-10 items-center text-sm font-normal text-ink-500"
                 >
                   €
                 </span>
@@ -242,13 +243,15 @@ function AmountOption({
       />
       <span
         className={clsx(
-          'flex items-center justify-center rounded-2xl border bg-surface px-3 text-ink-900 transition-colors',
+          'flex items-center justify-center rounded-2xl border bg-surface px-1 text-ink-900 transition-colors sm:px-3',
           CONTROL_BORDER,
           'peer-[&:not(:checked)]:hover:bg-sand-100 peer-checked:border-link peer-checked:bg-link/[0.14] peer-checked:ring-1 peer-checked:ring-link dark:peer-checked:bg-brand-tint',
           'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-link',
-          compact ? 'py-3.5 text-sm font-medium' : 'py-5 text-2xl font-semibold tabular-nums',
+          // Regular-weight sans: the display serif has only a heavy 400 cut,
+          // so it reads bold at any weight. Size and full-strength ink keep
+          // the amounts legible.
+          compact ? 'py-3.5 text-sm font-normal' : 'py-5 text-xl font-normal tabular-nums sm:text-2xl',
         )}
-        style={compact ? undefined : { fontFamily: 'var(--font-serif), Georgia, serif' }}
       >
         {label}
       </span>

@@ -2,6 +2,8 @@
 
 # Local media / reference material - not tracked in repo
 *.png
+# ...except the footer's donation icon, which the app imports.
+!/platform/donate_icon.png
 *.webm
 *.mp4
 Website-цена.txt

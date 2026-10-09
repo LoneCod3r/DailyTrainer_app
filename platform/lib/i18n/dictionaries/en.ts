@@ -43,7 +43,7 @@ const en: typeof bg = {
     accountSettings: 'Profile & Settings',
     accountMembership: 'Membership',
     accountBilling: 'Billing',
-    support: 'Support',
+    supportUs: 'Support Us',
     menu: 'Menu',
     expand: 'Show',
     collapse: 'Hide',
@@ -413,8 +413,8 @@ const en: typeof bg = {
       portalUnavailableDesc: 'Stripe is not fully configured yet — payment management will become available once it is.',
     },
     donation: {
-      title: 'Support DailyTrainer',
-      description: 'If DailyTrainer has been useful to you, you can support its development.',
+      title: 'Support KUKO WAY',
+      description: 'If KUKO WAY has been useful to you, you can support its development.',
       intro: 'Entirely optional — it never affects your membership. Thank you for considering it.',
       chooseAmount: 'Choose an amount',
       customAmountLabel: 'Custom amount (EUR)',
@@ -429,7 +429,7 @@ const en: typeof bg = {
       checkoutError: 'Failed to start the donation checkout',
       configUnavailable: 'Donations are not available right now — payment configuration is incomplete.',
       successTitle: 'Thank you for your support!',
-      successDesc: 'Your donation has been received. It helps fund the KUKO WAY beyond membership dues.',
+      successDesc: 'Your donation has been received. It helps fund KUKO WAY beyond membership dues.',
       processingTitle: 'Confirming your donation',
       processingDesc:
         "We're confirming your payment with Stripe now — this can take a few seconds. Refresh this page shortly to see the final status.",
@@ -593,6 +593,15 @@ const en: typeof bg = {
     effectiveFrom: 'Effective from {date}',
     notPublishedTitle: 'Not yet published',
     notPublishedDesc: 'This document is being prepared and has not been published yet. It will appear here once it is finalized.',
+  },
+  footer: {
+    brandStatement: 'Come back to yourself.',
+    brandMission:
+      'KUKO WAY is a space to reconnect with yourself through movement, breathing, and awareness. Discover practices and knowledge that help you better understand your body and find more balance in everyday life. Take a small step toward yourself and build habits that support your well-being.',
+    supportText:
+      'If KUKO WAY brings value to your life, help us grow the project. Your support helps us create new practices and reach more people.',
+    supportEvery: 'Every contribution, no matter the size, makes a difference.',
+    rightsReserved: 'All rights reserved.',
   },
   newsletter: {
     title: 'Sign up for our newsletter',

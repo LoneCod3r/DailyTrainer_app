@@ -95,16 +95,15 @@ export default async function DonationPage({
 
       {confirmation && (
         <Card className="mx-auto w-full max-w-xl">
-          <CardContent className="flex flex-col gap-3">
-            <Alert tone={confirmation.tone} title={confirmation.title}>
+          {/* Centred: heading, message, amount and the "make another" action. */}
+          <CardContent className="flex flex-col items-center gap-3 text-center">
+            <Alert tone={confirmation.tone} title={confirmation.title} className="w-full">
               <p>{confirmation.description}</p>
               {confirmation.amountLabel && <p className="mt-1 font-semibold">{confirmation.amountLabel}</p>}
             </Alert>
-            <div>
-              <Link href="/account/donation">
-                <Button variant="secondary">{t('account.donation.makeAnother')}</Button>
-              </Link>
-            </div>
+            <Link href="/account/donation">
+              <Button variant="secondary">{t('account.donation.makeAnother')}</Button>
+            </Link>
           </CardContent>
         </Card>
       )}

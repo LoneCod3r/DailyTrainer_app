@@ -11,7 +11,8 @@ import { useT } from '@/lib/i18n/LocaleProvider';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ACCOUNT_NAV, PRIMARY_NAV, SUPPORT_NAV, isActive, isNavItemActive } from './nav';
+import { ACCOUNT_NAV, PRIMARY_NAV, isNavItemActive } from './nav';
+import { LIBRARY_PATH, librarySearchHref } from '@/modules/kuko-way/search';
 import {
   MenuIcon,
   SearchIcon,
@@ -80,16 +81,21 @@ export function Topbar({
   // Site search lives in the Library's existing filter (LibraryBrowser) —
   // this just navigates there with the query so Enter from anywhere in the
   // app opens real, working results instead of a disabled input.
+  // An empty (or whitespace-only) submit clears an active Library search —
+  // back to plain browsing without `?q=` — and is a no-op on other pages.
   const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    router.push(`/practices/library?q=${encodeURIComponent(q)}`);
+    if (!query.trim() && pathname !== LIBRARY_PATH) return;
+    router.push(librarySearchHref(query));
   };
 
   return (
     <header className="sticky top-0 z-20 border-b border-sand-200 bg-surface/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[100rem] items-center gap-1 px-2 sm:gap-3 sm:px-6 lg:px-10">
+      {/* lg–xl (1024–1279px) is a compact desktop range: the full nav plus
+          search only fit if the logo wordmark, account name and plan badge
+          collapse and the guest CTA uses its short label. The plan badge
+          returns at 1440px (it is also shown inside the account menu). */}
+      <div className="mx-auto flex h-16 max-w-[100rem] items-center gap-1 px-2 sm:gap-3 sm:px-6 lg:px-6 xl:px-10">
         <button
           type="button"
           onClick={onOpenMenu}
@@ -99,11 +105,11 @@ export function Topbar({
           <MenuIcon />
         </button>
 
-        <Link href="/" className="flex shrink-0 items-center gap-2 text-xl font-semibold text-ink-900">
+        <Link href="/" aria-label={appName} className="flex shrink-0 items-center gap-2 text-xl font-semibold text-ink-900">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
             {appName.charAt(0).toUpperCase()}
           </span>
-          <span className="hidden truncate sm:inline">{appName}</span>
+          <span className="hidden truncate sm:inline lg:hidden xl:inline">{appName}</span>
         </Link>
 
         {/* Centered between the logo and the account controls, same way
@@ -165,17 +171,6 @@ export function Topbar({
               </div>
             );
           })}
-          {session?.user && !isModeratorOnly(session.user.role) && (
-            <Link
-              href={SUPPORT_NAV.href}
-              className={clsx(
-                'rounded-lg px-2 py-2 text-base font-medium transition-colors',
-                isActive(pathname, SUPPORT_NAV.href) ? 'text-link' : 'text-ink-700 hover:bg-sand-100',
-              )}
-            >
-              {t(SUPPORT_NAV.labelKey)}
-            </Link>
-          )}
         </nav>
 
         <form onSubmit={handleSearchSubmit} className="relative hidden w-full max-w-xs lg:block">
@@ -208,8 +203,8 @@ export function Topbar({
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
                     <AccountIcon width={16} height={16} />
                   </span>
-                  <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
-                  <span className="sr-only sm:hidden">{t('topbar.account')}</span>
+                  <span className="hidden max-w-[8rem] truncate sm:inline lg:hidden xl:inline">{session.user.name ?? t('topbar.account')}</span>
+                  <span className="sr-only sm:hidden lg:inline xl:hidden">{t('topbar.account')}</span>
                 </Link>
               ) : (
                 <button
@@ -220,13 +215,13 @@ export function Topbar({
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
                     <AccountIcon width={16} height={16} />
                   </span>
-                  <span className="hidden max-w-[8rem] truncate sm:inline">{session.user.name ?? t('topbar.account')}</span>
-                  <span className="sr-only sm:hidden">{t('topbar.account')}</span>
+                  <span className="hidden max-w-[8rem] truncate sm:inline lg:hidden xl:inline">{session.user.name ?? t('topbar.account')}</span>
+                  <span className="sr-only sm:hidden lg:inline xl:hidden">{t('topbar.account')}</span>
                   {/* Subtle, tasteful plan indicator — visible app-wide (not
                       just /account), same restrained brand-tone badge used
                       elsewhere, never a different color system. */}
                   {planName && (
-                    <Badge tone="brand" className="hidden sm:inline-flex">
+                    <Badge tone="brand" className="hidden sm:inline-flex lg:hidden min-[1440px]:inline-flex">
                       {planName}
                     </Badge>
                   )}
@@ -298,8 +293,8 @@ export function Topbar({
                   short label keeps it on one line at 375px. */}
               <Link href="/register">
                 <Button variant="primary" size="sm" className="!px-2 sm:!px-3">
-                  <span className="sm:hidden">{t('topbar.join')}</span>
-                  <span className="hidden sm:inline">{t('topbar.startJourney')} →</span>
+                  <span className="sm:hidden lg:inline xl:hidden">{t('topbar.join')}</span>
+                  <span className="hidden sm:inline lg:hidden xl:inline">{t('topbar.startJourney')} →</span>
                 </Button>
               </Link>
             </div>

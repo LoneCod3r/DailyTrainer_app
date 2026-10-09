@@ -66,10 +66,11 @@ export const ACCOUNT_NAV: NavChild[] = [
   { href: '/account/billing', labelKey: 'nav.accountBilling' },
 ];
 
-// Voluntary support lives in the main header (and mobile drawer) as its own
-// destination rather than inside the account menu. Signed-in, non-Moderator
-// only — the Donation page itself enforces the same rule.
-export const SUPPORT_NAV: NavChild = { href: '/account/donation', labelKey: 'nav.support' };
+// Voluntary support ("Support Us") lives in the site footer, not the main
+// navigation. Shown to guests (the page sends them through login) and
+// signed-in users, never to Moderator-only staff — the Donation page itself
+// enforces the same rules.
+export const SUPPORT_NAV: NavChild = { href: '/account/donation', labelKey: 'nav.supportUs' };
 
 // One-handed reach to the practice (concept §2): Home | Practice | Programs |
 // Journey | Profile. Programs takes the concept's Community slot (V2).
