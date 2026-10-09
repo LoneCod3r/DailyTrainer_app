@@ -31,8 +31,8 @@ import { features } from '@/lib/features';
 // wiring as before, just a different visual composition around it. The
 // "continue" program is the signed-in user's real, started Reset Program
 // (modules/programs/progress.service.ts); streak/practice numbers come from
-// the hybrid progress facade (YourProgressStats) — account-wide when signed
-// in, this device otherwise.
+// the hybrid progress facade (YourProgressStats), account-wide. The progress
+// section is signed-in only; visitors' device numbers live on /journey.
 // Photography credit/license: public/images/home/CREDITS.md — placeholder
 // imagery until real KUKO WAY practice photography/video exists.
 const EXPLORE_ITEMS = [
@@ -223,53 +223,56 @@ export default async function HomePage() {
 
         {/* Progress — a continuation-of-practice moment: your program by
             name, a slim day-progress line, and your real streak/completed
-            numbers set as typography rather than stat tiles. */}
-        <section className="flex flex-col gap-6 border-t border-sand-200 pt-14 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
-          <div className="flex flex-1 flex-col gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('home.yourProgress')}</h2>
-            {activeProgram ? (
-              <>
-                <p className="font-serif text-3xl text-ink-900 sm:text-4xl">
-                  {t('home.continueProgram')} — {localize(activeProgram.program.title, locale).value}
-                </p>
-                <div className="flex max-w-xs flex-col gap-1.5">
-                  <ProgressBar
-                    value={activeProgram.completedDays}
-                    max={activeProgram.totalDays}
-                    label={t('journey.daysCompleted', { count: activeProgram.completedDays, total: activeProgram.totalDays })}
-                  />
-                  <p className="text-xs text-ink-500">
-                    {t('journey.daysCompleted', { count: activeProgram.completedDays, total: activeProgram.totalDays })}
+            numbers set as typography rather than stat tiles. Signed-in only:
+            for visitors it was an empty "no program / 0 days" panel. */}
+        {session && (
+          <section className="flex flex-col gap-6 border-t border-sand-200 pt-14 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+            <div className="flex flex-1 flex-col gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('home.yourProgress')}</h2>
+              {activeProgram ? (
+                <>
+                  <p className="font-serif text-3xl text-ink-900 sm:text-4xl">
+                    {t('home.continueProgram')} — {localize(activeProgram.program.title, locale).value}
                   </p>
-                </div>
-                <Link
-                  href={`/practices/programs/${activeProgram.program.slug}/day/${activeProgram.currentDay}`}
-                  className="w-fit pt-1"
-                >
-                  <Button variant="secondary" size="sm">
-                    {t('home.continue')}
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <>
-                <p className="text-base text-ink-500">{t('home.noActiveProgram')}</p>
-                <Link href="/practices/programs" className="w-fit text-base font-medium text-link hover:underline">
-                  {t('home.chooseProgram')} →
-                </Link>
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:border-l sm:border-sand-200 sm:pl-10">
-            <div className="flex gap-10">
-              <YourProgressStats />
+                  <div className="flex max-w-xs flex-col gap-1.5">
+                    <ProgressBar
+                      value={activeProgram.completedDays}
+                      max={activeProgram.totalDays}
+                      label={t('journey.daysCompleted', { count: activeProgram.completedDays, total: activeProgram.totalDays })}
+                    />
+                    <p className="text-xs text-ink-500">
+                      {t('journey.daysCompleted', { count: activeProgram.completedDays, total: activeProgram.totalDays })}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/practices/programs/${activeProgram.program.slug}/day/${activeProgram.currentDay}`}
+                    className="w-fit pt-1"
+                  >
+                    <Button variant="secondary" size="sm">
+                      {t('home.continue')}
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-base text-ink-500">{t('home.noActiveProgram')}</p>
+                  <Link href="/practices/programs" className="w-fit text-base font-medium text-link hover:underline">
+                    {t('home.chooseProgram')} →
+                  </Link>
+                </>
+              )}
             </div>
-            <Link href="/journey" className="w-fit text-sm font-medium text-link hover:underline">
-              {t('practiceSession.viewJourney')} →
-            </Link>
-          </div>
-        </section>
+
+            <div className="flex flex-col gap-3 sm:border-l sm:border-sand-200 sm:pl-10">
+              <div className="flex gap-10">
+                <YourProgressStats />
+              </div>
+              <Link href="/journey" className="w-fit text-sm font-medium text-link hover:underline">
+                {t('practiceSession.viewJourney')} →
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Membership sales are off in V1 (lib/features.ts); existing
             subscribers still see their plan. */}
