@@ -613,6 +613,7 @@ const en: typeof bg = {
     invalidEmail: 'Please enter a valid email address.',
     success: 'Almost there — check your inbox to confirm.',
     error: 'We couldn’t subscribe you right now. Please try again later.',
+    comingSoon: 'Coming soon — newsletter sign-ups aren’t open yet.',
   },
   cookieConsent: {
     regionLabel: 'Cookie consent',

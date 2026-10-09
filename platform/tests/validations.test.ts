@@ -9,7 +9,7 @@ import {
 } from '@/lib/validations/auth';
 import { donationAmountSchema, createDonationCheckoutSchema } from '@/lib/validations/billing';
 import { newsletterSignupSchema } from '@/lib/validations/newsletter';
-import { subscribeToNewsletter } from '@/lib/newsletter';
+import { NEWSLETTER_PROVIDER_CONFIGURED, subscribeToNewsletter } from '@/lib/newsletter';
 
 const VALID_REGISTER = {
   name: 'Test User',
@@ -157,6 +157,8 @@ describe('newsletter signup', () => {
   });
 
   it('never reports success while no subscription provider is configured', async () => {
+    // The footer form stays a disabled "coming soon" preview while this is false.
+    expect(NEWSLETTER_PROVIDER_CONFIGURED).toBe(false);
     expect(await subscribeToNewsletter('reader@example.com')).toEqual({ ok: false, reason: 'NOT_CONFIGURED' });
   });
 });
