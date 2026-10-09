@@ -8,6 +8,8 @@ import {
   resetPasswordSchema,
 } from '@/lib/validations/auth';
 import { donationAmountSchema, createDonationCheckoutSchema } from '@/lib/validations/billing';
+import { newsletterSignupSchema } from '@/lib/validations/newsletter';
+import { subscribeToNewsletter } from '@/lib/newsletter';
 
 const VALID_REGISTER = {
   name: 'Test User',
@@ -140,5 +142,21 @@ describe('billing validations', () => {
   it('defaults currency to eur when omitted', () => {
     const result = createDonationCheckoutSchema.parse({ amount: 1000 });
     expect(result.currency).toBe('eur');
+  });
+});
+
+describe('newsletter signup', () => {
+  it('normalises a valid email', () => {
+    expect(newsletterSignupSchema.parse({ email: '  Reader@Example.COM ' }).email).toBe('reader@example.com');
+  });
+
+  it('rejects invalid, empty and oversized emails', () => {
+    expect(newsletterSignupSchema.safeParse({ email: 'not-an-email' }).success).toBe(false);
+    expect(newsletterSignupSchema.safeParse({ email: '' }).success).toBe(false);
+    expect(newsletterSignupSchema.safeParse({ email: `${'a'.repeat(250)}@b.com` }).success).toBe(false);
+  });
+
+  it('never reports success while no subscription provider is configured', async () => {
+    expect(await subscribeToNewsletter('reader@example.com')).toEqual({ ok: false, reason: 'NOT_CONFIGURED' });
   });
 });

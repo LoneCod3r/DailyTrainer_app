@@ -7,6 +7,7 @@ import { LEGAL_DOCUMENT_IDS } from '@/modules/legal/types';
 import type { DictKey } from '@/lib/i18n/dictionaries';
 import { useLegal } from './LegalProvider';
 import { CookieSettingsButton } from './CookieSettingsButton';
+import { NewsletterSignup } from '@/components/newsletter/NewsletterSignup';
 
 const LABEL_KEYS: Record<(typeof LEGAL_DOCUMENT_IDS)[number], DictKey> = {
   terms: 'legal.terms',
@@ -20,12 +21,25 @@ const linkClass = 'rounded text-ink-500 underline-offset-2 hover:text-ink-900 ho
 // small: the legal links, cookie settings and the app name. It holds no
 // company details (those belong in the approved documents; see
 // modules/legal/company.ts).
-export function SiteFooter({ appName, className }: { appName: string; className?: string }) {
+export function SiteFooter({
+  appName,
+  className,
+  showNewsletter = false,
+}: {
+  appName: string;
+  className?: string;
+  showNewsletter?: boolean;
+}) {
   const t = useT();
   const { config } = useLegal();
 
   return (
     <footer className={clsx('border-t border-sand-200 bg-page', className)}>
+      {showNewsletter && (
+        <div className="mx-auto w-full max-w-6xl border-b border-sand-200 px-4 py-8 sm:px-6 lg:px-8">
+          <NewsletterSignup />
+        </div>
+      )}
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <nav aria-label={t('legal.footerNavLabel')}>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">

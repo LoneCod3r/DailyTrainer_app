@@ -593,6 +593,17 @@ const en: typeof bg = {
     notPublishedTitle: 'Not yet published',
     notPublishedDesc: 'This document is being prepared and has not been published yet. It will appear here once it is finalized.',
   },
+  newsletter: {
+    title: 'Sign up for our newsletter',
+    description: 'Stay up to date on new practices, articles, events & announcements',
+    formLabel: 'Newsletter signup',
+    emailLabel: 'Email address',
+    emailPlaceholder: 'Email address',
+    submit: 'Join',
+    invalidEmail: 'Please enter a valid email address.',
+    success: 'Almost there — check your inbox to confirm.',
+    error: 'We couldn’t subscribe you right now. Please try again later.',
+  },
   cookieConsent: {
     regionLabel: 'Cookie consent',
     bannerTitle: 'Cookies on KUKO WAY',

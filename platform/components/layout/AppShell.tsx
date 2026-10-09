@@ -7,6 +7,7 @@ import { MobileDrawer } from './MobileDrawer';
 import { VerificationBanner } from './VerificationBanner';
 import { SiteFooter } from '@/components/legal/SiteFooter';
 import { useDeviceProgressImport } from '@/lib/progress/client';
+import { features } from '@/lib/features';
 
 // The persistent application shell used by the Home / Practices / Community
 // / Account experience (app/(app)) — a topbar (logo + primary nav + search +
@@ -34,7 +35,7 @@ export function AppShell({
         <VerificationBanner />
         <main className="flex-1">{children}</main>
         {/* Bottom padding keeps the footer clear of the fixed mobile bottom nav. */}
-        <SiteFooter appName={appName} className="pb-20 lg:pb-0" />
+        <SiteFooter appName={appName} className="pb-20 lg:pb-0" showNewsletter={features.newsletter} />
       </div>
       <MobileBottomNav />
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

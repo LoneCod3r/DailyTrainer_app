@@ -40,4 +40,11 @@ export const features = {
   // in production only an explicit opt-in turns it on.
   programsPreview:
     flag(process.env.NEXT_PUBLIC_FEATURE_PROGRAMS_PREVIEW) || process.env.NODE_ENV !== 'production',
+
+  // Newsletter signup in the site footer. No subscription provider/backend
+  // exists yet (see lib/newsletter.ts), so this stays off: with it on, the
+  // form renders but every submission reports the service error rather than
+  // a success it can't deliver. Turn on only once lib/newsletter.ts is wired
+  // to a real provider.
+  newsletter: flag(process.env.NEXT_PUBLIC_FEATURE_NEWSLETTER),
 };
