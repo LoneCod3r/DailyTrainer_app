@@ -1,7 +1,8 @@
 import { practices } from './content/practices';
 import { startHereSections } from './content/start-here';
 import { freeVideos } from './content/free-videos';
-import type { FreeVideo, Practice, StartHereSection } from './types';
+import { practiceOverview } from './content/practice-overview';
+import type { FreeVideo, Practice, PracticeOverview, StartHereSection } from './types';
 import { LEARN_SECTION_IDS, START_HERE_SECTION_IDS } from './handbook';
 
 // Static content accessors. The KUKO WAY handbook is fixed reference
@@ -98,4 +99,10 @@ export function getTensionResetPractices(): Practice[] {
 
 export function getFreeVideos(): FreeVideo[] {
   return [...freeVideos].sort((a, b) => a.order - b.order);
+}
+
+// The Practice hub's "About the practice" content (intro, sections, quote,
+// welcome note).
+export function getPracticeOverview(): PracticeOverview {
+  return practiceOverview;
 }

@@ -191,6 +191,9 @@ const en: typeof bg = {
     programsDesc: 'Guided programs of one, three, seven or twenty-eight days.',
     libraryTitle: 'Library',
     libraryDesc: 'The full archive of practices and content — browsable and searchable.',
+    aboutTitle: 'About the Practice',
+    welcomeImageAlt:
+      'A group practising barefoot in a bright hall with a wooden floor, exposed ceiling beams and a large window onto the forest.',
     disclaimerNote: 'The content in this section is educational and does not replace medical advice.',
   },
   startHere: {

@@ -4,13 +4,27 @@ import Image from 'next/image';
 import { Container } from '@/components/ui';
 import { ProgramTile } from '@/components/programs/ProgramTile';
 import { getVisiblePrograms } from '@/modules/programs/service';
+import { getPracticeOverview } from '@/modules/kuko-way/service';
+import { localize } from '@/modules/kuko-way/types';
 import { getLocale } from '@/lib/i18n/get-locale';
+import type { Locale } from '@/lib/i18n/locale';
 import { getT } from '@/lib/i18n/dictionaries';
 
 export function generateMetadata(): Metadata {
   const t = getT(getLocale());
   return { title: t('practices.pageTitle'), description: t('practices.pageSubtitle') };
 }
+
+// The "welcome" photo carries no text, so one file serves both locales; its
+// quote and welcome note are page text (sources/credits:
+// public/images/practices/CREDITS.md).
+const WELCOME_IMAGE = '/images/practices/welcome.webp';
+
+// Each language's own quotation marks around the quote.
+const QUOTE_MARKS: Record<Locale, [string, string]> = {
+  bg: ['„', '“'],
+  en: ['“', '”'],
+};
 
 // Practices is the core personal experience: Practices → category →
 // practice/program → practice session. This page is the "category" level —
@@ -26,6 +40,7 @@ export function generateMetadata(): Metadata {
 export default function PracticesPage() {
   const locale = getLocale();
   const t = getT(locale);
+  const overview = getPracticeOverview();
 
   return (
     <Container className="flex flex-col gap-10 py-8 sm:gap-14">
@@ -86,6 +101,64 @@ export default function PracticesPage() {
             </div>
           </div>
         </Link>
+      </section>
+
+      {/* About the practice — the brochure's introduction and its five headed
+          sections (modules/kuko-way/content/practice-overview.ts) beside the
+          "welcome" photo, with the quote above the photo and the welcome note
+          below it. Placed after the entry tiles so Start Here stays the first
+          move, and before the programs. Phones: text first, then the photo
+          column at a capped width; wider screens: photo column on the left. */}
+      <section
+        aria-labelledby="about-the-practice-title"
+        data-testid="practices-about"
+        className="flex flex-col gap-8 border-t border-sand-200 pt-10 sm:flex-row-reverse sm:items-start sm:gap-10 sm:pt-14"
+      >
+        <div className="flex flex-col gap-6 sm:flex-1">
+          <div className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-link">{t('nav.practices')}</p>
+            <h2 id="about-the-practice-title" className="mt-1 font-serif text-2xl text-ink-900 sm:text-3xl">
+              {t('practices.aboutTitle')}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-ink-700">{localize(overview.intro, locale).value}</p>
+          </div>
+          {overview.sections.map((section) => (
+            <div key={section.id} data-testid="practices-about-section" className="mx-auto max-w-xl text-center">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-900">{localize(section.title, locale).value}</h3>
+              {section.paragraphs.map((paragraph, i) => (
+                <p key={i} className="mt-2 text-base leading-relaxed text-ink-700">
+                  {localize(paragraph, locale).value}
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+        {/* Desktop only: the photo column (quote, photo, welcome) starts ~6–7
+            body lines lower than the text column (lg:mt-44 = 198px at the
+            112.5% root size). */}
+        <div className="mx-auto flex w-full max-w-xs flex-col gap-4 sm:mx-0 sm:w-64 sm:max-w-none sm:shrink-0 lg:mt-44 lg:w-80">
+          <blockquote data-testid="practices-about-quote">
+            <p className="text-balance text-center font-serif text-lg italic leading-snug text-ink-700">
+              {QUOTE_MARKS[locale][0]}
+              {localize(overview.quote, locale).value}
+              {QUOTE_MARKS[locale][1]}
+            </p>
+          </blockquote>
+          <Image
+            src={WELCOME_IMAGE}
+            alt={t('practices.welcomeImageAlt')}
+            width={896}
+            height={1200}
+            // Rendered widths at the site's 112.5% root size: w-80 / w-64 /
+            // max-w-xs = 360 / 288 / 360 CSS px.
+            sizes="(min-width: 1024px) 360px, (min-width: 640px) 288px, 360px"
+            className="h-auto w-full rounded-2xl"
+          />
+          <div data-testid="practices-about-welcome" className="text-center">
+            <h3 className="text-base font-semibold text-ink-900">{localize(overview.welcome.title, locale).value}</h3>
+            <p className="mt-0.5 text-sm text-ink-500">{localize(overview.welcome.text, locale).value}</p>
+          </div>
+        </div>
       </section>
 
       {/* Reset Programs (1 / 3 / 7 / 28 days) — each opens its own overview;

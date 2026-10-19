@@ -63,3 +63,20 @@ export interface FreeVideo {
   order: number;
   title: LocalizedText;
 }
+
+// The Practice hub's "About the practice" block — the introduction and the
+// headed sections of the client's Fascial Maneuvers brochure. Brochure copy,
+// not a handbook chapter (content/start-here.ts stays the handbook's source).
+export interface PracticeSection {
+  id: string;
+  title: LocalizedText;
+  paragraphs: LocalizedText[];
+}
+
+export interface PracticeOverview {
+  intro: LocalizedText;
+  sections: PracticeSection[];
+  // Shown with the section's photo: the quote above it, the welcome note below.
+  quote: LocalizedText;
+  welcome: { title: LocalizedText; text: LocalizedText };
+}
