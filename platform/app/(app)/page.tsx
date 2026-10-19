@@ -95,33 +95,36 @@ export default async function HomePage() {
           its title, subtitle, logo and footer strip are baked into the
           artwork, so nothing is overlaid on it (no scrim, no text, no CTA) —
           anything layered on top would collide with that embedded text.
-          `aspect-video` matches the banner's 16:9 shape (1672×941) and
-          object-contain guarantees none of it is ever cropped at any
-          screen width. */}
-      <section className="border-b border-sand-200 bg-sand-50/60 px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+          The image is laid out at its own 1672×941 shape (w-full h-auto),
+          so it is never cropped or letterboxed and no container background
+          can show around it. It spans the full viewport width at every
+          screen size (edge to edge, square corners), per the client's
+          reference: left/right to the screen edges, height following the
+          artwork's shape. The heading keeps the section's
+          usual side padding. */}
+      <section className="bg-sand-50/60 pt-8 sm:pt-10">
         {/* The page's one <h1> (a11y: single top-level heading) lives
             above the banner as plain dark text on the page background, in
             both states: the signed-in greeting, or for visitors a real
             KUKO WAY philosophy line from the "Our Beliefs" handbook. */}
         {session ? (
-          <h1 className="mx-auto mb-4 w-full max-w-[90rem] text-xl font-serif text-ink-900 sm:mb-6 sm:text-2xl lg:text-3xl">
+          <h1 className="mb-4 px-4 text-xl font-serif text-ink-900 sm:mb-6 sm:px-6 sm:text-2xl lg:px-10 lg:text-3xl">
             {greetingName ? t('home.welcomeBack', { name: greetingName }) : t('home.welcome')}
           </h1>
         ) : (
-          <h1 className="mx-auto mb-4 w-full max-w-[90rem] font-serif text-xl italic leading-[1.2] text-ink-900 sm:mb-6 sm:text-2xl lg:text-3xl">
+          <h1 className="mb-4 px-4 font-serif text-xl italic leading-[1.2] text-ink-900 sm:mb-6 sm:px-6 sm:text-2xl lg:px-10 lg:text-3xl">
             “{beliefsQuote ? localize(beliefsQuote, locale).value : t('home.welcome')}”
           </h1>
         )}
-        <div className="relative mx-auto aspect-video w-full max-w-[90rem] overflow-hidden rounded-2xl bg-sand-100">
-          <Image
-            src={HERO_BANNER[locale]}
-            alt={t('home.heroBannerAlt')}
-            fill
-            priority
-            sizes="(min-width: 1440px) 1440px, 100vw"
-            className="object-contain"
-          />
-        </div>
+        <Image
+          src={HERO_BANNER[locale]}
+          alt={t('home.heroBannerAlt')}
+          width={1672}
+          height={941}
+          priority
+          sizes="100vw"
+          className="block h-auto w-full"
+        />
       </section>
 
       <Container className="flex flex-col gap-16 py-14 sm:gap-20 sm:py-20">
