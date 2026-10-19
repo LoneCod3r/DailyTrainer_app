@@ -136,7 +136,7 @@ export default function PracticesPage() {
         {/* Desktop only: the photo column (quote, photo, welcome) starts ~6–7
             body lines lower than the text column (lg:mt-44 = 198px at the
             112.5% root size). */}
-        <div className="mx-auto flex w-full max-w-xs flex-col gap-4 sm:mx-0 sm:w-64 sm:max-w-none sm:shrink-0 lg:mt-44 lg:w-80">
+        <div className="mx-auto flex w-full max-w-xs flex-col gap-4 sm:mx-0 sm:w-64 sm:max-w-none sm:shrink-0 lg:mt-44 lg:w-[22.5rem]">
           <blockquote data-testid="practices-about-quote">
             <p className="text-balance text-center font-serif text-lg italic leading-snug text-ink-700">
               {QUOTE_MARKS[locale][0]}
@@ -149,9 +149,9 @@ export default function PracticesPage() {
             alt={t('practices.welcomeImageAlt')}
             width={896}
             height={1200}
-            // Rendered widths at the site's 112.5% root size: w-80 / w-64 /
-            // max-w-xs = 360 / 288 / 360 CSS px.
-            sizes="(min-width: 1024px) 360px, (min-width: 640px) 288px, 360px"
+            // Rendered widths at the site's 112.5% root size: w-[22.5rem] /
+            // w-64 / max-w-xs = 405 / 288 / 360 CSS px.
+            sizes="(min-width: 1024px) 405px, (min-width: 640px) 288px, 360px"
             className="h-auto w-full rounded-2xl"
           />
           <div data-testid="practices-about-welcome" className="text-center">
