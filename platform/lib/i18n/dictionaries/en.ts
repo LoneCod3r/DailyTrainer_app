@@ -148,6 +148,8 @@ const en: typeof bg = {
   home: {
     welcomeBack: 'Welcome, {name}',
     welcome: 'Welcome to your space',
+    heroBannerAlt:
+      'Fascial Maneuvers — a journey back into connection with the body. Retreat in Bulgaria: nature, movement, presence, connection.',
     subtitle: "Here's what's on your practice today.",
     todaysPractice: "Today's practice",
     todaysPracticeFallbackTitle: 'Body scan',

@@ -12,9 +12,10 @@ import { MembershipStrip } from '@/components/account/MembershipStrip';
 import { listPublishedContent } from '@/modules/content/content.service';
 import { getActiveSubscriptionForUser } from '@/modules/membership/membership.service';
 import { getLocale } from '@/lib/i18n/get-locale';
+import type { Locale } from '@/lib/i18n/locale';
 import { getT } from '@/lib/i18n/dictionaries';
 import { toBulgarianCyrillic } from '@/lib/i18n/transliterate';
-import { getPracticeById, getStartHereSectionBySlug } from '@/modules/kuko-way/service';
+import { getStartHereSectionBySlug } from '@/modules/kuko-way/service';
 import { getProgramProgressOverview } from '@/modules/programs/progress.service';
 import { localize } from '@/modules/kuko-way/types';
 import { getNextUpcomingMeeting, getMeetingStatus } from '@/modules/events/service';
@@ -56,6 +57,14 @@ const EXPLORE_ITEMS = [
   },
 ] as const;
 
+// The hero banner has its text baked into the artwork, so each locale gets
+// its own rendition of the same design (sources/credits:
+// public/images/home/CREDITS.md).
+const HERO_BANNER: Record<Locale, string> = {
+  bg: '/images/home/home-page-banner-bg.webp',
+  en: '/images/home/home-page-banner-en.webp',
+};
+
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
   const locale = getLocale();
@@ -69,118 +78,49 @@ export default async function HomePage() {
 
   const firstName = session?.user?.name?.split(' ')[0];
   const greetingName = firstName && locale === 'bg' ? toBulgarianCyrillic(firstName) : firstName;
-  const todaysPractice = getPracticeById('body-scan-1');
   // The first started, unfinished program — real enrollment, not a default.
   const activeProgram = session?.user
     ? (await getProgramProgressOverview(session.user.id)).find((row) => !row.complete)
     : undefined;
 
-  const practiceTitle = todaysPractice ? localize(todaysPractice.title, locale) : undefined;
-  const practiceSummary = todaysPractice?.intro?.[0] ? localize(todaysPractice.intro[0], locale) : undefined;
-  const practiceStepCount = todaysPractice?.instructions?.reduce((n, group) => n + group.steps.length, 0);
-  const practiceHref = todaysPractice ? `/practices/${todaysPractice.slug}` : '/practices/start-here';
-
   // Signed-out visitors get a motivational line drawn from the real "Our
   // Beliefs" handbook content (modules/kuko-way/content/start-here.ts) —
-  // not invented marketing copy — instead of a personalized practice card
-  // that doesn't apply to them yet.
+  // not invented marketing copy — instead of a personalized greeting.
   const beliefsQuote = getStartHereSectionBySlug('nashite-ubezhdeniya')?.paragraphs?.[4];
 
   return (
     <div className="flex flex-col">
-      {/* Hero — a single, moderately-sized full-width photo (not a huge
-          full-viewport image) with the greeting/quote/CTA overlaid directly
-          on top of it, rather than split into a text column + side image.
-          `aspect-video` matches home-page.webp's real 16:9 shape exactly, so
-          object-cover barely has to crop anything at any screen width —
-          fixed pixel heights here previously fought the photo's shape
-          (over-cropping the top on wide desktop rows, and the sides down to
-          just the center person on narrow mobile ones). Greeting stays the
-          page's one <h1> (a11y: single top-level heading). A dark gradient
-          scrim keeps the overlaid text legible over any photo, in both
-          themes. */}
+      {/* Hero — the client's finished "Фасциални маневри" banner shown as
+          a complete image, in the active locale's rendition (HERO_BANNER):
+          its title, subtitle, logo and footer strip are baked into the
+          artwork, so nothing is overlaid on it (no scrim, no text, no CTA) —
+          anything layered on top would collide with that embedded text.
+          `aspect-video` matches the banner's 16:9 shape (1672×941) and
+          object-contain guarantees none of it is ever cropped at any
+          screen width. */}
       <section className="border-b border-sand-200 bg-sand-50/60 px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
-        {/* Signed-in greeting lives here, above the photo, as plain dark
-            text on the page background — not overlaid on the image, where
-            it competed with the practice title/CTA for attention. Keeps
-            this the page's one <h1> when signed in; the signed-out quote
-            below remains the <h1> in that state instead. */}
-        {session && (
+        {/* The page's one <h1> (a11y: single top-level heading) lives
+            above the banner as plain dark text on the page background, in
+            both states: the signed-in greeting, or for visitors a real
+            KUKO WAY philosophy line from the "Our Beliefs" handbook. */}
+        {session ? (
           <h1 className="mx-auto mb-4 w-full max-w-[90rem] text-xl font-serif text-ink-900 sm:mb-6 sm:text-2xl lg:text-3xl">
             {greetingName ? t('home.welcomeBack', { name: greetingName }) : t('home.welcome')}
           </h1>
+        ) : (
+          <h1 className="mx-auto mb-4 w-full max-w-[90rem] font-serif text-xl italic leading-[1.2] text-ink-900 sm:mb-6 sm:text-2xl lg:text-3xl">
+            “{beliefsQuote ? localize(beliefsQuote, locale).value : t('home.welcome')}”
+          </h1>
         )}
-        <div className="relative isolate mx-auto aspect-video w-full max-w-[90rem] overflow-hidden rounded-2xl bg-ink-900">
+        <div className="relative mx-auto aspect-video w-full max-w-[90rem] overflow-hidden rounded-2xl bg-sand-100">
           <Image
-            src="/images/home/home-page.webp"
-            alt=""
+            src={HERO_BANNER[locale]}
+            alt={t('home.heroBannerAlt')}
             fill
             priority
-            sizes="100vw"
-            className="object-cover"
+            sizes="(min-width: 1440px) 1440px, 100vw"
+            className="object-contain"
           />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10"
-          />
-
-          {/* Absolutely positioned (not a normal flex child) so the text's
-              own content height can never stretch this box past its
-              aspect-ratio — that mismatch was what broke the crop fix above
-              on narrow screens the first time around. */}
-          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-10 lg:p-14">
-            {session ? (
-              // Signed in: the personal, practice-specific experience.
-              <div className="flex max-w-lg flex-col gap-2 sm:gap-4">
-                <Badge tone="brand" className="w-fit">
-                  {t('home.todaysPractice')}
-                </Badge>
-
-                <h2 className="text-2xl font-medium leading-[1.1] text-white sm:text-4xl lg:text-6xl">
-                  {practiceTitle?.value ?? t('home.todaysPracticeFallbackTitle')}
-                </h2>
-                <p className="max-w-md text-sm leading-relaxed text-white/85 sm:text-base lg:text-lg">
-                  {practiceSummary?.value ?? t('home.todaysPracticeFallbackDesc')}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-3 pt-1 sm:gap-5 sm:pt-2">
-                  <Link href={practiceHref} className="motion-safe:transition-transform motion-safe:hover:-translate-y-0.5">
-                    <Button size="sm" className="sm:hidden">
-                      {t('home.startPractice')}
-                    </Button>
-                    <Button size="lg" className="hidden sm:inline-flex">
-                      {t('home.startPractice')}
-                    </Button>
-                  </Link>
-                  {!!practiceStepCount && (
-                    <span className="text-sm text-white/80 sm:text-base">
-                      {practiceStepCount} {t('common.steps')}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ) : (
-              // Signed out: an inspirational entry point (real KUKO WAY
-              // philosophy, not a personalized dashboard that doesn't apply
-              // yet) — closer to how app.humangarage.net greets a visitor.
-              <div className="flex max-w-lg flex-col gap-2 sm:gap-4">
-                <h1 className="font-serif text-xl italic leading-[1.2] text-white sm:text-3xl lg:text-5xl">
-                  “{beliefsQuote ? localize(beliefsQuote, locale).value : t('home.welcome')}”
-                </h1>
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/80 sm:text-sm">KUKO WAY</p>
-                <div className="flex flex-wrap items-center gap-3 pt-1 sm:gap-5 sm:pt-2">
-                  <Link href="/practices/start-here" className="motion-safe:transition-transform motion-safe:hover:-translate-y-0.5">
-                    <Button size="sm" className="sm:hidden">
-                      {t('nav.startHere')}
-                    </Button>
-                    <Button size="lg" className="hidden sm:inline-flex">
-                      {t('nav.startHere')}
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </section>
 
