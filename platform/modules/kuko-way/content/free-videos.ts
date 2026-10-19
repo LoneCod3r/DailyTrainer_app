@@ -33,4 +33,58 @@ export const freeVideos: FreeVideo[] = [
       en: '15 Minutes a Day That Will CHANGE Your Body Forever',
     },
   },
+  {
+    id: 'born-by-c-section',
+    youtubeId: 'o5tppe_Le1Q',
+    order: 4,
+    title: {
+      bg: 'Родени Сте Със СЕКЦИО? Това Упражнение Ще Промени Живота Ви',
+      en: 'Born by C-SECTION? This Exercise Will Change Your Life',
+    },
+  },
+  {
+    id: 'natural-facelift',
+    youtubeId: 'D06Q-BJGzLc',
+    order: 5,
+    title: {
+      bg: 'Как Да Си Направиш ЕСТЕСТВЕН Фейслифт (Без Ботокс)',
+      en: 'How to Give Yourself a NATURAL Facelift (Without Botox)',
+    },
+  },
+  {
+    id: 'vagus-7-minutes',
+    youtubeId: 'NOSfRx606Nw',
+    order: 6,
+    title: {
+      bg: 'Освободи Се От Умората И Напрежението За 7 Минути | Регулирай ВАГУСА',
+      en: 'Release Fatigue and Tension in 7 Minutes | Regulate the VAGUS Nerve',
+    },
+  },
+  {
+    id: 'unexpressed-emotions',
+    youtubeId: 'nLJyEGIcNNs',
+    order: 7,
+    title: {
+      bg: 'Тайната На Тялото: Как Неизразените Емоции Водят До Хронични Болести',
+      en: "The Body's Secret: How Unexpressed Emotions Lead to Chronic Illness",
+    },
+  },
+  {
+    id: 'morning-detox-hydration',
+    youtubeId: 'b7d2vLduuZc',
+    order: 8,
+    title: {
+      bg: 'Сутрешен Ритуал За ДЕТОКС и Пълна ХИДРАТАЦИЯ',
+      en: 'Morning Ritual for DETOX and Full HYDRATION',
+    },
+  },
+  {
+    id: 'reset-your-body',
+    youtubeId: 'O6glEQHMW-w',
+    order: 9,
+    title: {
+      bg: 'Как Напълно Да "РЕСТАРТИРАШ" Тялото Си (Лесна рутина)',
+      en: 'How to Fully "RESET" Your Body (Easy Routine)',
+    },
+  },
 ];

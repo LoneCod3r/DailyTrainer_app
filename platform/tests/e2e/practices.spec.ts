@@ -109,11 +109,26 @@ test.describe('Practices — Free Videos', () => {
     // No inline YouTube player — videos link out to YouTube instead.
     await expect(page.locator('iframe[src*="youtube.com/embed/"]')).toHaveCount(0);
 
-    const expectedIds = ['3FtN_xW-qDg', 'CoAToeX8z8c', 'VDyDyBqiHF4'];
+    const expectedIds = [
+      '3FtN_xW-qDg',
+      'CoAToeX8z8c',
+      'VDyDyBqiHF4',
+      'o5tppe_Le1Q',
+      'D06Q-BJGzLc',
+      'NOSfRx606Nw',
+      'nLJyEGIcNNs',
+      'b7d2vLduuZc',
+      'O6glEQHMW-w',
+    ];
     for (const id of expectedIds) {
       await expect(page.locator(`img[src*="img.youtube.com/vi/${id}/"]`)).toHaveCount(1);
       await expect(page.locator(`a[href*="watch?v=${id}"][target="_blank"]`)).toHaveCount(2);
     }
+
+    // Cards render in the configured order.
+    const thumbs = page.locator('main img[src*="img.youtube.com/vi/"]');
+    const srcs = await thumbs.evaluateAll((imgs) => imgs.map((img) => img.getAttribute('src') ?? ''));
+    expect(srcs.map((src) => src.split('/vi/')[1].split('/')[0])).toEqual(expectedIds);
   });
 
   test('is reachable from the Practices submenu', async ({ page }) => {
