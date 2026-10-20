@@ -16,3 +16,14 @@ Client-chat-requirements/
 # daily working folders at the repo root (dd.mm.yyyy/). PDFs elsewhere stay
 # trackable.
 /[0-9][0-9].[0-9][0-9].[0-9][0-9][0-9][0-9]/**/*.pdf
+
+# Local notes holding live credentials (SMTP key, demo password). Never commit.
+/08.10.2026/сеттингс.txt
+
+# Python bytecode caches (qr-artwork scripts).
+__pycache__/
+*.pyc
+
+# QR artwork: console logs of the superseded iterations' verification runs
+# (regenerable by the verify_*.py scripts). Markdown reports stay trackable.
+/qr-artwork/out/*-verification.txt
