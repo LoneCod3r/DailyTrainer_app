@@ -119,27 +119,45 @@ test.describe('Responsive — 375px viewport, authenticated pages', () => {
     ).toBeVisible();
   });
 
-  test('donation amount tiles form a 2x2 grid with no overflow (Stripe configured only)', async ({ page }) => {
+  test('donation preset tiles share one row with a full-width Custom row below, no overflow (Stripe configured only)', async ({ page }) => {
     await page.goto('/account/donation');
     const unavailable = await page
       .getByText('Donations are not available right now — payment configuration is incomplete.')
       .isVisible();
     test.skip(unavailable, 'Stripe is not configured in this environment');
 
-    const boxes = await Promise.all(
-      ['€5', '€10', '€25', '€50'].map((name) =>
-        page.getByRole('radio', { name, exact: true }).locator('xpath=..').boundingBox(),
-      ),
-    );
-    // 2x2: the first two share a row, the second two share the next row.
-    expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThanOrEqual(1);
-    expect(boxes[2]!.y).toBeGreaterThan(boxes[0]!.y + 1);
+    // The tile is the <label> wrapping each visually hidden native radio.
+    const tile = (name: string) =>
+      page.locator('label', { has: page.getByRole('radio', { name, exact: true }) });
+    const presets = ['€5', '€10', '€25', '€50'].map(tile);
+    const custom = tile('Custom');
+
+    for (const preset of presets) await expect(preset).toBeVisible();
+    await expect(custom).toBeVisible();
+
+    const boxes = await Promise.all(presets.map((preset) => preset.boundingBox()));
+    const customBox = (await custom.boundingBox())!;
+
+    // One row: every preset shares the first tile's top edge, in €5 → €50 order.
+    for (let i = 1; i < boxes.length; i++) {
+      expect(Math.abs(boxes[i]!.y - boxes[0]!.y), `${i}th preset is not on the first row`).toBeLessThanOrEqual(2);
+      expect(boxes[i]!.x).toBeGreaterThan(boxes[i - 1]!.x + boxes[i - 1]!.width - 2);
+    }
+
+    // Custom sits on its own row below the presets and spans their full width.
+    const rowBottom = Math.max(...boxes.map((b) => b!.y + b!.height));
+    const rowLeft = boxes[0]!.x;
+    const rowRight = boxes[3]!.x + boxes[3]!.width;
+    expect(customBox.y).toBeGreaterThanOrEqual(rowBottom - 1);
+    expect(Math.abs(customBox.x - rowLeft)).toBeLessThanOrEqual(2);
+    expect(Math.abs(customBox.x + customBox.width - rowRight)).toBeLessThanOrEqual(2);
     await assertNoHorizontalOverflow(page);
 
-    await page
-      .locator('label', { has: page.getByRole('radio', { name: 'Custom', exact: true }) })
-      .click();
-    await page.getByRole('textbox', { name: 'Custom amount (EUR)' }).fill('0.5');
+    await custom.click();
+    const customInput = page.getByRole('textbox', { name: 'Custom amount (EUR)' });
+    await expect(customInput).toBeVisible();
+    await customInput.fill('0.5');
+    await expect(page.getByText('Minimum donation is €1.')).toBeVisible();
     await assertNoHorizontalOverflow(page);
   });
 });
