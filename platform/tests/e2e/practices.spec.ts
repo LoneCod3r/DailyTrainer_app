@@ -13,9 +13,10 @@ test.describe('Practices — Start Here', () => {
     await page.goto('/practices/start-here');
     await expect(page.getByRole('heading', { name: 'Start Here', exact: true })).toBeVisible();
 
-    const firstCard = page.getByRole('main').getByRole('link').filter({ hasText: 'Read' }).first();
-    await expect(firstCard).toBeVisible();
-    await firstCard.click();
+    // Each chapter's title is its link (no separate "Read" label).
+    const firstChapter = page.getByRole('main').locator('a[href^="/practices/start-here/"]').first();
+    await expect(firstChapter).toBeVisible();
+    await firstChapter.click();
 
     await expect(page).toHaveURL(/\/practices\/start-here\/[a-z-]+/);
     const paragraph = page.locator('article p').first();
@@ -29,12 +30,25 @@ test.describe('Practices — Start Here', () => {
 
   test('sequential section navigation works', async ({ page }) => {
     await page.goto(`/practices/start-here/${START_HERE_FIRST_SLUG}`);
-    const next = page.getByRole('link', { name: /→$/ });
+    const next = page.getByRole('link', { name: /^Next\b/ });
     await expect(next).toBeVisible();
     const before = page.url();
     await next.click();
     await expect(page).not.toHaveURL(before);
     await expect(page.locator('article p').first()).toBeVisible();
+  });
+
+  test('closing CTA: the question itself links to the first practice', async ({ page }) => {
+    await page.goto('/practices/start-here');
+    const main = page.getByRole('main');
+    await expect(main.getByRole('link', { name: 'Ready to begin?', exact: true })).toHaveAttribute(
+      'href',
+      '/practices/body-scan-1',
+    );
+    // No separate "Body Scan #1" button any more — the question is the only way in.
+    await expect(main.getByRole('button', { name: 'Body Scan #1' })).toHaveCount(0);
+    await expect(main.getByRole('link', { name: 'Body Scan #1' })).toHaveCount(0);
+    await expect(main.locator('a[href="/practices/body-scan-1"]')).toHaveCount(1);
   });
 });
 

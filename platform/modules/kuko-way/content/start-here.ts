@@ -56,31 +56,38 @@ export const startHereSections: StartHereSection[] = [
     title: { bg: 'Нашите убеждения', en: 'Our Beliefs' },
     paragraphs: [
       {
+        list: 'ordered',
         bg: 'Човешкото тяло е създадено с естествена способност да се възстановява.',
         en: 'The human body is designed with a natural ability to recover.',
       },
       {
+        list: 'ordered',
         bg: 'Осъзнаването на несъзнателните поведения е първата стъпка към цялостна житейска промяна.',
         en: 'Becoming aware of unconscious behaviors is the first step toward meaningful change in life.',
       },
       {
+        list: 'ordered',
         bg: 'Убежденията, намерението и възприятието са сред най-влиятелните фактори върху начина, по който преживяваме тялото си.',
         en: 'Beliefs, intention, and perception are among the most influential factors affecting how we experience our bodies.',
       },
       {
+        list: 'ordered',
         bg: 'Според философията на оригиналния материал, задържаните емоции могат да бъдат важен фактор за дисфункция и напрежение.',
         en: 'According to the philosophy of the original material, held emotions can be an important factor in dysfunction and tension.',
       },
-      { bg: 'Силата да променяте тялото и живота си принадлежи на вас.', en: 'The power to change your body and your life belongs to you.' },
+      { list: 'ordered', bg: 'Силата да променяте тялото и живота си принадлежи на вас.', en: 'The power to change your body and your life belongs to you.' },
       {
+        list: 'ordered',
         bg: 'Фасциалните маневри са предназначени да подпомагат естествените процеси на адаптация, движение и възстановяване.',
         en: 'Fascial maneuvers are intended to support the body’s natural processes of adaptation, movement, and recovery.',
       },
       {
+        list: 'ordered',
         bg: 'Телата се адаптират към средата си. Колкото по-екстремни са условията, толкова по-изразени могат да бъдат адаптациите.',
         en: 'Bodies adapt to their environment. The more extreme the conditions, the more pronounced these adaptations may become.',
       },
       {
+        list: 'ordered',
         bg: 'Диагнозата може да бъде полезен ориентир, но не описва цялостно човека. Прекаленото идентифициране със симптомите понякога може да ограничи начина, по който човек възприема възможностите си за промяна и възстановяване.',
         en: 'A diagnosis can be a useful point of reference, but it does not fully describe a person. Over-identifying with symptoms can sometimes limit the way a person perceives their possibilities for change and recovery.',
       },
@@ -156,9 +163,9 @@ export const startHereSections: StartHereSection[] = [
         bg: 'В практиката тялото условно се разделя на три зони, които участват във фасциалните маневри:',
         en: 'In the practice, the body is conditionally divided into three zones that participate in fascial maneuvers:',
       },
-      { bg: 'Зона 1 — глава и врат.', en: 'Zone 1 — head and neck.' },
-      { bg: 'Зона 2 — рамене, торс и таз.', en: 'Zone 2 — shoulders, torso, and pelvis.' },
-      { bg: 'Зона 3 — крака.', en: 'Zone 3 — legs.' },
+      { list: 'ordered', bg: 'Зона 1 — глава и врат.', en: 'Zone 1 — head and neck.' },
+      { list: 'ordered', bg: 'Зона 2 — рамене, торс и таз.', en: 'Zone 2 — shoulders, torso, and pelvis.' },
+      { list: 'ordered', bg: 'Зона 3 — крака.', en: 'Zone 3 — legs.' },
       {
         bg: 'В идеалния случай натискът и движението се разпределят сравнително равномерно между трите зони. На практика много хора имат различни нива на напрежение и ограничение в отделните части на тялото. Един от основните инструменти за работа между зоните е контра-ротацията.',
         en: 'Ideally, pressure and movement are distributed relatively evenly among the three zones. In practice, many people have different levels of tension and restriction in different parts of the body. One of the primary tools for working between the zones is counter-rotation.',
@@ -264,10 +271,12 @@ export const startHereSections: StartHereSection[] = [
             bg: 'Важно е да наблюдавате промените след всяка маневра. Това подпомага интеграцията и ви учи да различавате какво работи добре за вашето тяло.',
             en: 'It is important to observe the changes after each maneuver. This supports integration and teaches you to distinguish what works well for your body.',
           },
-          {
-            bg: 'След движение се запитайте: Чувствам ли се по-свободен или по-стегнат? Имам ли повече енергия или усещам умора? Променило ли се е дишането ми? Чувствам ли повече стабилност? Променило ли се е възприятието ми за пространството и тялото?',
-            en: 'After moving, ask yourself: Do I feel freer or more tense? Do I have more energy, or do I feel tired? Has my breathing changed? Do I feel more stable? Has my perception of space and my body changed?',
-          },
+          { bg: 'След движение се запитайте:', en: 'After moving, ask yourself:' },
+          { list: 'bullet', bg: 'Чувствам ли се по-свободен или по-стегнат?', en: 'Do I feel freer or more tense?' },
+          { list: 'bullet', bg: 'Имам ли повече енергия или усещам умора?', en: 'Do I have more energy, or do I feel tired?' },
+          { list: 'bullet', bg: 'Променило ли се е дишането ми?', en: 'Has my breathing changed?' },
+          { list: 'bullet', bg: 'Чувствам ли повече стабилност?', en: 'Do I feel more stable?' },
+          { list: 'bullet', bg: 'Променило ли се е възприятието ми за пространството и тялото?', en: 'Has my perception of space and my body changed?' },
           {
             bg: 'Разпознаването на тези промени развива телесната осъзнатост и помага да адаптирате практиката към собствените си нужди.',
             en: 'Recognizing these changes develops body awareness and helps you adapt the practice to your own needs.',
@@ -398,26 +407,32 @@ export const startHereSections: StartHereSection[] = [
     title: { bg: 'Съвети за начало', en: 'Tips for Getting Started' },
     paragraphs: [
       {
+        list: 'bullet',
         bg: 'Гръбначно-тазово заключване: приберете пъпа към гръбначния стълб и едновременно активирайте тазовото дъно нагоре, подобно на усещането, когато се опитвате да задържите уриниране. Опитайте да запазите лека активност по време на движението, без да стискате прекомерно.',
         en: 'Spinal-pelvic lock: draw the navel toward the spine while simultaneously activating the pelvic floor upward, similar to the sensation of trying to stop urination. Try to maintain light activation during movement without excessive squeezing.',
       },
       {
+        list: 'bullet',
         bg: 'Етапно дишане: вдишайте, задръжте; вдишайте още малко, задръжте; вдишайте още малко. Задръжте за кратко и после издишайте спокойно. Целта е постепенно разширяване, а не насилване.',
         en: 'Step breathing: inhale, hold; inhale a little more, hold; inhale a little more. Hold briefly and then exhale calmly. The goal is gradual expansion, not forcing.',
       },
       {
+        list: 'bullet',
         bg: 'При издишване не изтласквайте въздуха насила — оставете го да излезе естествено.',
         en: 'When exhaling, do not forcefully push the air out — allow it to leave naturally.',
       },
       {
+        list: 'bullet',
         bg: 'Ако почувствате замайване, спрете. Седнете или легнете безопасно и изчакайте усещането да отмине. Не продължавайте, ако се чувствате нестабилни.',
         en: 'If you feel dizzy, stop. Sit or lie down safely and wait for the sensation to pass. Do not continue if you feel unstable.',
       },
       {
+        list: 'bullet',
         bg: 'Докато ходите между движенията, сканирайте тялото. Чувствате ли се по-леко? Има ли разлика между ляво и дясно? Има ли гадене, енергия, топлина, промяна в дишането?',
         en: 'While walking between movements, scan your body. Do you feel lighter? Is there a difference between the left and right sides? Is there nausea, energy, warmth, or a change in breathing?',
       },
       {
+        list: 'bullet',
         bg: 'След по-дълга практика или индивидуална сесия може да направите спокойна разходка около 30 минути, ако се чувствате добре.',
         en: 'After a longer practice or individual session, you may take a relaxed walk of around 30 minutes if you feel well.',
       },

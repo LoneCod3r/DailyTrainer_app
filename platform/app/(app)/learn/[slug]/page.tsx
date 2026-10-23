@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { Container } from '@/components/ui';
 import { HandbookSectionArticle } from '@/components/practices/HandbookSectionArticle';
@@ -34,7 +33,7 @@ export default function LearnSectionPage({ params }: { params: { slug: string } 
   const index = sections.findIndex((s) => s.id === section.id);
 
   return (
-    <Container className="flex max-w-3xl flex-col gap-6 py-8">
+    <Container className="py-8 sm:py-12">
       <HandbookSectionArticle
         section={section}
         locale={locale}
@@ -43,11 +42,7 @@ export default function LearnSectionPage({ params }: { params: { slug: string } 
         eyebrow={t('learn.bodyTitle')}
         prev={sections[index - 1]}
         next={sections[index + 1]}
-        end={
-          <Link href="/practices" className="text-sm font-medium text-link hover:underline">
-            {t('practiceSession.nextQuestion')} →
-          </Link>
-        }
+        end={{ href: '/practices', label: t('practiceSession.nextQuestion') }}
       />
     </Container>
   );

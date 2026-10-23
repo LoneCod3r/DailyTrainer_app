@@ -1,5 +1,6 @@
 import { practices } from './content/practices';
 import { startHereSections } from './content/start-here';
+import { startHereSummaries } from './content/start-here-summaries';
 import { freeVideos } from './content/free-videos';
 import { practiceOverview } from './content/practice-overview';
 import type { FreeVideo, Practice, PracticeOverview, StartHereSection } from './types';
@@ -71,9 +72,14 @@ function sectionsByIds(ids: readonly string[]): StartHereSection[] {
     .filter((s): s is StartHereSection => Boolean(s));
 }
 
-// Start Here's own chapters (orientation and first steps), in reading order.
+// Start Here's own chapters (orientation and first steps), in reading order,
+// each with its website-only listing summary attached (the chapter text
+// itself is untouched).
 export function getStartHereSections(): StartHereSection[] {
-  return sectionsByIds(START_HERE_SECTION_IDS);
+  return sectionsByIds(START_HERE_SECTION_IDS).map((s) => ({
+    ...s,
+    summary: startHereSummaries[s.id as (typeof START_HERE_SECTION_IDS)[number]],
+  }));
 }
 
 export function getStartHereSectionBySlug(slug: string): StartHereSection | undefined {

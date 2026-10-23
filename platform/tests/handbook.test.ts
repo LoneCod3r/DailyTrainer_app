@@ -26,6 +26,22 @@ describe('handbook chapter ownership', () => {
     expect(phased).toEqual([...START_HERE_SECTION_IDS]);
   });
 
+  it('gives every Start Here chapter a website-only summary in both languages, never handbook text', () => {
+    const handbookText = getHandbookSections().flatMap((s) => [
+      ...(s.paragraphs ?? []),
+      ...(s.subsections ?? []).flatMap((sub) => sub.paragraphs),
+    ]);
+    for (const s of getStartHereSections()) {
+      expect(s.summary?.bg).toBeTruthy();
+      expect(s.summary?.en).toBeTruthy();
+      expect(handbookText.some((p) => p.bg === s.summary!.bg || p.en === s.summary!.en)).toBe(false);
+    }
+    // Summaries belong to the Start Here listing only — never to the
+    // handbook chapters themselves or to Learn.
+    expect(getHandbookSections().some((s) => s.summary)).toBe(false);
+    expect(getLearnSections().some((s) => s.summary)).toBe(false);
+  });
+
   it('links each chapter to its owning page only', () => {
     for (const s of getStartHereSections()) expect(handbookSectionHref(s)).toBe(`/practices/start-here/${s.slug}`);
     for (const s of getLearnSections()) expect(handbookSectionHref(s)).toBe(`/learn/${s.slug}`);

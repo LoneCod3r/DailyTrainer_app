@@ -40,9 +40,16 @@ export interface Practice {
   childIds?: string[];
 }
 
+// One handbook paragraph. `list` marks an item of a numbered or bulleted list
+// in the source document; consecutive items of the same kind render as one
+// list. Structure only — the text stays exactly as transcribed.
+export type HandbookParagraph = LocalizedText & {
+  list?: 'ordered' | 'bullet';
+};
+
 export interface StartHereSubsection {
   title: LocalizedText;
-  paragraphs: LocalizedText[];
+  paragraphs: HandbookParagraph[];
 }
 
 export interface StartHereSection {
@@ -50,8 +57,11 @@ export interface StartHereSection {
   slug: string;
   order: number;
   title: LocalizedText;
-  paragraphs?: LocalizedText[];
+  paragraphs?: HandbookParagraph[];
   subsections?: StartHereSubsection[];
+  // Website-only listing summary (content/start-here-summaries.ts) — not
+  // handbook text. Set only on Start Here chapters, shown only on its index.
+  summary?: LocalizedText;
 }
 
 // External YouTube content (KUKO WAY's own channel), embedded rather than

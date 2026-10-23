@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Container, Card, Badge, Button } from '@/components/ui';
+import { Container } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT } from '@/lib/i18n/dictionaries';
@@ -20,53 +20,85 @@ export default function StartHerePage() {
 
   return (
     <Container className="flex flex-col gap-10 py-8">
-      <PageHeader eyebrow={t('nav.practices')} title={t('startHere.title')} description={t('startHere.subtitle')} />
+      <PageHeader centered eyebrow={t('nav.practices')} title={t('startHere.title')} description={t('startHere.subtitle')} />
 
-      <div className="flex flex-col gap-8">
+      {/* The two phases side by side from lg up (stacked below, in order).
+          Each chapter is one compact unit: its small step number on the
+          title's line, the serif title as the only link, and its short
+          website-only summary (content/start-here-summaries.ts) flush
+          beneath, shown in full. The chapter pages keep the full source
+          text. */}
+      {/* From lg up the two phases share one 4-row grid (heading + three
+          chapters), each phase and its list taking those rows via subgrid —
+          so heading pairs with heading and 01↔04, 02↔05, 03↔06 always start
+          on the same row, whichever summary is longer. */}
+      <div className="grid gap-12 lg:grid-cols-2 lg:gap-x-12 lg:gap-y-6">
         {START_HERE_PHASES.map((phase, phaseIndex) => (
-          <div key={phase.labelKey} className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xs font-semibold text-link">
-                {phaseIndex + 1}
-              </span>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">
-                {t(phase.labelKey)}
-              </h2>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+          <section
+            key={phase.labelKey}
+            aria-labelledby={`start-here-phase-${phaseIndex + 1}`}
+            className="flex min-w-0 flex-col gap-5 lg:row-span-4 lg:grid lg:grid-rows-subgrid lg:gap-y-6"
+          >
+            <h2
+              id={`start-here-phase-${phaseIndex + 1}`}
+              className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-500"
+            >
+              {t(phase.labelKey)}
+            </h2>
+            <ol className="flex flex-col gap-6 lg:row-span-3 lg:grid lg:grid-rows-subgrid">
               {phase.sectionIds.map((id) => {
                 const section = byId.get(id);
                 if (!section) return null;
+                const step = sections.findIndex((s) => s.id === id) + 1;
                 const title = localize(section.title, locale);
-                const preview = section.paragraphs?.[0] ?? section.subsections?.[0]?.paragraphs[0];
+                // The chapter's website-only summary; its opening paragraph
+                // only as a fallback.
+                const preview = section.summary ?? section.paragraphs?.[0] ?? section.subsections?.[0]?.paragraphs[0];
                 const previewText = preview ? localize(preview, locale) : undefined;
                 return (
-                  <Link key={id} href={`/practices/start-here/${section.slug}`}>
-                    <Card className="flex h-full flex-col gap-1.5 p-5 transition-shadow hover:shadow-soft">
-                      <h3 className="font-medium text-ink-900">{title.value}</h3>
-                      {previewText && <p className="line-clamp-2 text-sm text-ink-500">{previewText.value}</p>}
-                      <span className="mt-auto pt-1 text-sm font-medium text-link">{t('startHere.readSection')} →</span>
-                    </Card>
-                  </Link>
+                  <li key={id} className="flex flex-col gap-1">
+                    <div className="flex items-baseline gap-2.5">
+                      <span aria-hidden className="shrink-0 text-xs font-semibold tabular-nums text-clay">
+                        {String(step).padStart(2, '0')}
+                      </span>
+                      <Link
+                        href={`/practices/start-here/${section.slug}`}
+                        className="group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                      >
+                        <h3 className="font-serif text-xl leading-snug text-ink-900 underline decoration-sand-300 decoration-1 underline-offset-[0.25em] motion-safe:transition-colors group-hover:text-link group-hover:decoration-clay-fill">
+                          {title.value}
+                        </h3>
+                      </Link>
+                    </div>
+                    {previewText && (
+                      <p className="max-w-[36rem] text-[15px] leading-[1.6] text-ink-500">{previewText.value}</p>
+                    )}
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ol>
+          </section>
         ))}
       </div>
 
-      <Card className="flex flex-col items-start gap-3 bg-brand-tint p-6">
-        <Badge tone="brand">{t('nav.startHere')}</Badge>
-        <p className="text-base font-medium text-ink-900">{t('startHere.startPracticing')}</p>
-        <Link href="/practices/body-scan-1">
-          <Button>{t('startHere.goToFirstPractice')}</Button>
+      {/* Closing CTA: the question itself is the link to the first practice —
+          plain centred text, no card around it. */}
+      <div className="py-6 text-center text-xl leading-snug sm:text-2xl">
+        <Link
+          href="/practices/body-scan-1"
+          className="font-semibold text-link decoration-clay-fill decoration-2 underline-offset-[6px] motion-safe:transition-colors hover:text-ink-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-600"
+        >
+          {t('startHere.startPracticing')}
         </Link>
-      </Card>
+      </div>
 
-      <p className="text-sm text-ink-500">
+      <p className="text-center text-sm text-ink-500">
         {t('startHere.learnMore')}{' '}
-        <Link href="/learn" className="font-medium text-link hover:underline">
-          {t('startHere.learnMoreCta')} →
+        <Link
+          href="/learn"
+          className="font-medium text-link hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+        >
+          {t('startHere.learnMoreCta')}
         </Link>
       </p>
     </Container>

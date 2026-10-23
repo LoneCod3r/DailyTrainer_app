@@ -39,12 +39,21 @@ test('a Start Here chapter requested under Learn redirects to Start Here', async
   await expect(page).toHaveURL('/practices/start-here/vavedenie');
 });
 
-test('Start Here walks only its own chapters and ends at the first practice', async ({ page }) => {
+test('Start Here walks only its own chapters and ends without a "next" step', async ({ page }) => {
   await page.goto('/practices/start-here/kakvo-da-ochakvate');
   await expect(page.getByText('Step 6 of 6')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Body Scan #1 →' })).toBeVisible();
+  // The sequence ends here: no "next" link, no Body Scan prompt — only a way
+  // back to the Start Here index.
+  const main = page.getByRole('main');
+  await expect(main.getByRole('link', { name: /^Next\b/ })).toHaveCount(0);
+  await expect(main.locator('a[href="/practices/body-scan-1"]')).toHaveCount(0);
+  await expect(main.getByRole('link', { name: 'Explore KUKO WAY →', exact: true })).toHaveAttribute(
+    'href',
+    '/practices/start-here',
+  );
+  await expect(main.getByRole('link', { name: 'Our Beliefs', exact: true })).toHaveCount(0);
   // Its previous chapter is a Start Here one, not a Learn chapter.
-  await expect(page.getByRole('link', { name: '← Tips for Getting Started' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Previous Tips for Getting Started' })).toHaveAttribute(
     'href',
     '/practices/start-here/saveti-za-nachalo',
   );
