@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Container } from '@/components/ui';
+import { clsx } from '@/lib/clsx';
 import { ProgramTile } from '@/components/programs/ProgramTile';
 import { getVisiblePrograms } from '@/modules/programs/service';
 import { getPracticeOverview } from '@/modules/kuko-way/service';
@@ -19,6 +20,19 @@ export function generateMetadata(): Metadata {
 // quote and welcome note are page text (sources/credits:
 // public/images/practices/CREDITS.md).
 const WELCOME_IMAGE = '/images/practices/welcome.webp';
+
+// The two entry tiles share the Card look (components/ui/Card.tsx) as a
+// clickable column: photo, then the text body.
+const TILE_CARD =
+  'group flex flex-col overflow-hidden rounded-2xl border border-sand-200 bg-surface shadow-card motion-safe:transition motion-safe:hover:-translate-y-0.5 hover:shadow-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
+
+// Fades the bottom of a tile photo into the card's `surface` colour, so
+// the photo and the text below it read as one piece. Built from the theme
+// variable (not a fixed hex), so it lands on the right colour in light and
+// dark mode; sized as a share of the photo box, so it follows each
+// breakpoint's crop. Eased stops avoid the visible band of a 2-stop fade.
+const TILE_PHOTO_FADE =
+  'pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-[linear-gradient(to_top,rgb(var(--surface))_0%,rgb(var(--surface)/0.86)_10%,rgb(var(--surface)/0.56)_28%,rgb(var(--surface)/0.28)_50%,rgb(var(--surface)/0.09)_74%,rgb(var(--surface)/0)_100%)]';
 
 // Each language's own quotation marks around the quote.
 const QUOTE_MARKS: Record<Locale, [string, string]> = {
@@ -51,54 +65,45 @@ export default function PracticesPage() {
 
       {/* Entry point — Start Here is the large tile so it's the obvious
           first move; Feel Better Now sits alongside as a smaller, secondary
-          option for anyone who needs relief right now instead of onboarding. */}
+          option for anyone who needs relief right now instead of onboarding.
+          Each tile is a card: the photo on top melts into the card's own
+          surface (TILE_PHOTO_FADE), and the text sits below the photo in the
+          card body — never on the photo — at every breakpoint. */}
       <section className="flex flex-col gap-4 sm:flex-row">
-        <Link
-          href="/practices/start-here"
-          className="group relative flex-[2] overflow-hidden rounded-2xl bg-ink-900 motion-safe:transition-transform motion-safe:hover:-translate-y-0.5"
-        >
-          <div className="relative aspect-[4/3] w-full sm:aspect-auto sm:h-80">
+        <Link href="/practices/start-here" className={clsx(TILE_CARD, 'flex-[2]')}>
+          <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden sm:aspect-auto sm:h-72">
             <Image
-              src="/images/home/explore-start-here.jpg"
+              src="/images/home/start-here-full-twist.jpg"
               alt=""
               fill
               sizes="(min-width: 640px) 60vw, 100vw"
-              className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
+              className="object-cover object-[50%_15%] motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
             />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10"
-            />
-            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
-              <h2 className="font-serif text-2xl leading-tight text-white sm:text-4xl">{t('nav.startHere')}</h2>
-              <p className="mt-2 max-w-sm text-sm text-white/85 sm:text-base">{t('practices.startHereDesc')}</p>
-              <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-white motion-safe:transition-transform motion-safe:group-hover:translate-x-1">
-                {t('nav.startHere')} →
-              </span>
-            </div>
+            <div aria-hidden="true" className={TILE_PHOTO_FADE} />
+          </div>
+          <div className="flex flex-1 flex-col px-5 pb-5 sm:px-8 sm:pb-8">
+            <h2 className="font-serif text-2xl leading-tight text-ink-900 sm:text-4xl">{t('nav.startHere')}</h2>
+            <p className="mt-2 max-w-md text-sm text-ink-500 sm:text-base">{t('practices.startHereDesc')}</p>
+            <span className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-medium text-link motion-safe:transition-transform motion-safe:group-hover:translate-x-1">
+              {t('nav.startHere')} →
+            </span>
           </div>
         </Link>
 
-        <Link
-          href="/practices/feel-better-now"
-          className="group relative flex-1 overflow-hidden rounded-2xl bg-ink-900 motion-safe:transition-transform motion-safe:hover:-translate-y-0.5"
-        >
-          <div className="relative aspect-[4/3] w-full sm:aspect-auto sm:h-80">
+        <Link href="/practices/feel-better-now" className={clsx(TILE_CARD, 'flex-1')}>
+          <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden sm:aspect-auto sm:h-72">
             <Image
-              src="/images/home/explore-feel-better-now.jpg"
+              src="/images/home/feel-better-now-antigravity.jpg"
               alt=""
               fill
               sizes="(min-width: 640px) 30vw, 100vw"
-              className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
+              className="object-cover object-[50%_28%] motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
             />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10"
-            />
-            <div className="absolute inset-x-0 bottom-0 p-5">
-              <h2 className="font-serif text-xl leading-tight text-white">{t('nav.feelBetterNow')}</h2>
-              <p className="mt-1 max-w-xs text-sm text-white/85 line-clamp-2">{t('practices.feelBetterNowDesc')}</p>
-            </div>
+            <div aria-hidden="true" className={TILE_PHOTO_FADE} />
+          </div>
+          <div className="flex flex-1 flex-col px-5 pb-5">
+            <h2 className="font-serif text-xl leading-tight text-ink-900 sm:text-2xl">{t('nav.feelBetterNow')}</h2>
+            <p className="mt-2 text-sm text-ink-500">{t('practices.feelBetterNowDesc')}</p>
           </div>
         </Link>
       </section>

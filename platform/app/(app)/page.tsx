@@ -34,26 +34,31 @@ import { features } from '@/lib/features';
 // (modules/programs/progress.service.ts); streak/practice numbers come from
 // the hybrid progress facade (YourProgressStats), account-wide. The progress
 // section is signed-in only; visitors' device numbers live on /journey.
-// Photography credit/license: public/images/home/CREDITS.md — placeholder
-// imagery until real KUKO WAY practice photography/video exists.
+// Photography credit/license: public/images/home/CREDITS.md — the client's
+// own practice photographs for Start Here and Feel Better Now.
+// `imageClassName` is the photo's focal point: the portrait shots are cropped
+// into wide boxes, so a centered crop would cut off the head.
 const EXPLORE_ITEMS = [
   {
     href: '/practices/start-here',
     labelKey: 'nav.startHere',
     descKey: 'practices.startHereDesc',
-    image: '/images/home/explore-start-here.jpg',
+    image: '/images/home/start-here-full-twist.jpg',
+    imageClassName: 'object-[50%_15%]',
   },
   {
     href: '/practices/feel-better-now',
     labelKey: 'nav.feelBetterNow',
     descKey: 'practices.feelBetterNowDesc',
-    image: '/images/home/explore-feel-better-now.jpg',
+    image: '/images/home/feel-better-now-antigravity.jpg',
+    imageClassName: 'object-[50%_28%]',
   },
   {
     href: '/practices/library',
     labelKey: 'nav.library',
     descKey: 'practices.libraryDesc',
     image: '/images/home/library.jpeg',
+    imageClassName: undefined,
   },
 ] as const;
 
@@ -149,7 +154,10 @@ export default async function HomePage() {
                     alt=""
                     fill
                     sizes="(min-width: 640px) 11rem, 100vw"
-                    className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
+                    className={clsx(
+                      'object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105',
+                      item.imageClassName,
+                    )}
                   />
                 </div>
                 <div className="flex flex-1 flex-col gap-2">
