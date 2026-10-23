@@ -130,11 +130,18 @@ export function PracticeSession({
 
   return (
     <section ref={sectionRef} aria-label={t('practiceSession.inProgress')} className="scroll-mt-24" data-testid="practice-session">
+      {/* Idle: a plain, prominent text control — no panel or button box.
+          It stays a <button> (it starts practice mode, it doesn't navigate). */}
       {phase === 'idle' && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-sand-200 bg-sand-50 px-5 py-8 text-center">
-          <Button size="lg" onClick={begin} className="min-w-[12rem] gap-3 text-lg" data-testid="practice-begin">
+        <div className="py-2 text-center text-xl leading-snug sm:text-2xl">
+          <button
+            type="button"
+            onClick={begin}
+            data-testid="practice-begin"
+            className="inline font-semibold text-link decoration-clay-fill decoration-2 underline-offset-[6px] motion-safe:transition-colors hover:text-ink-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-600"
+          >
             <span aria-hidden="true">▶</span> {t('practiceSession.begin')}
-          </Button>
+          </button>
         </div>
       )}
 

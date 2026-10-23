@@ -13,6 +13,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { countSessionsForPractice, isFavoritePractice } from '@/modules/kuko-way/progress.service';
 
+// The handbook chapters' long-form body text (HandbookSectionArticle).
+const BODY_TEXT = 'text-[16px] leading-[1.75] text-ink-700 sm:text-[17px]';
+
 export function generateStaticParams() {
   return getAllPractices().map((p) => ({ slug: p.slug }));
 }
@@ -43,113 +46,121 @@ export default async function PracticeDetailPage({ params }: { params: { slug: s
   const children = getChildPractices(practice);
   const related = getRelatedPractices(practice);
 
+  // Reading layout: the page's own centred column (the shared Container
+  // always adds max-w-6xl, so a max-w on it has no effect) and the same body
+  // size and list markers as the handbook chapters.
   return (
-    <Container className="flex max-w-3xl flex-col gap-6 py-8">
-      <Link
-        href={parent ? `/practices/${parent.slug}` : '/practices/feel-better-now'}
-        className="text-sm font-medium text-link hover:underline"
-      >
-        ← {parent ? localize(parent.title, locale).value : t('practiceDetail.backToFeelBetterNow')}
-      </Link>
+    <Container className="py-8 sm:py-12">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+        <Link
+          href={parent ? `/practices/${parent.slug}` : '/practices/feel-better-now'}
+          className="text-sm font-medium text-link hover:underline"
+        >
+          ← {parent ? localize(parent.title, locale).value : t('practiceDetail.backToFeelBetterNow')}
+        </Link>
 
-      <div>
-        {parent && (
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-link">{t('practiceDetail.partOfOrganReset')}</p>
-        )}
-        <h1 className="font-serif text-3xl text-ink-900 sm:text-4xl">{title.value}</h1>
-        {title.isFallback && <p className="mt-1 text-sm italic text-ink-300">{t('language.contentInBulgarian')}</p>}
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <FavoriteButton practiceSlug={practice.slug} initialFavorite={favorite} signedIn={Boolean(userId)} />
-          {timesPractised > 0 && (
-            <span className="text-sm text-ink-500">{t('practiceSession.timesPractised', { count: timesPractised })}</span>
+        <div>
+          {parent && (
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-link">{t('practiceDetail.partOfOrganReset')}</p>
           )}
+          <h1 className="font-serif text-3xl text-ink-900 sm:text-4xl">{title.value}</h1>
+          {title.isFallback && <p className="mt-1 text-sm italic text-ink-300">{t('language.contentInBulgarian')}</p>}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <FavoriteButton practiceSlug={practice.slug} initialFavorite={favorite} signedIn={Boolean(userId)} />
+            {timesPractised > 0 && (
+              <span className="text-sm text-ink-500">{t('practiceSession.timesPractised', { count: timesPractised })}</span>
+            )}
+          </div>
         </div>
-      </div>
 
-      {practice.safetyNote && (
-        <Alert tone="warning" title={t('practiceDetail.safetyNote')}>
-          {localize(practice.safetyNote, locale).value}
-        </Alert>
-      )}
+        {practice.safetyNote && (
+          <Alert tone="warning" title={t('practiceDetail.safetyNote')}>
+            {localize(practice.safetyNote, locale).value}
+          </Alert>
+        )}
 
-      {practice.intro && practice.intro.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.introduction')}</h2>
-          {practice.intro.map((p, i) => (
-            <p key={i} className="text-[15px] leading-relaxed text-ink-700">
-              {localize(p, locale).value}
-            </p>
-          ))}
-        </section>
-      )}
-
-      {practice.benefits && practice.benefits.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.benefits')}</h2>
-          <ul className="flex flex-col gap-1.5">
-            {practice.benefits.map((b, i) => (
-              <li key={i} className="flex gap-2 text-[15px] leading-relaxed text-ink-700">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />
-                {localize(b, locale).value}
-              </li>
+        {practice.intro && practice.intro.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.introduction')}</h2>
+            {practice.intro.map((p, i) => (
+              <p key={i} className={BODY_TEXT}>
+                {localize(p, locale).value}
+              </p>
             ))}
-          </ul>
-        </section>
-      )}
+          </section>
+        )}
 
-      {children.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.includedResets')}</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {children.map((child) => (
-              <PracticeCard key={child.id} practice={child} locale={locale} t={t} />
-            ))}
-          </div>
-        </section>
-      )}
+        {practice.benefits && practice.benefits.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.benefits')}</h2>
+            <ul className="flex flex-col gap-2.5">
+              {practice.benefits.map((b, i) => (
+                <li key={i} className={`flex gap-3 ${BODY_TEXT}`}>
+                  <span aria-hidden className="mt-[0.7em] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />
+                  {localize(b, locale).value}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      {sessionSteps.length > 0 && (
-        <PracticeSession practiceSlug={practice.slug} steps={sessionSteps} signedIn={Boolean(userId)} />
-      )}
-
-      {practice.instructions && practice.instructions.length > 0 && (
-        <section id="instructions" className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.instructions')}</h2>
-          {practice.instructions.map((group, i) => (
-            <div key={i} className="flex flex-col gap-2">
-              {group.label && <h3 className="text-sm font-semibold text-ink-900">{localize(group.label, locale).value}</h3>}
-              <ol className="flex flex-col gap-2">
-                {group.steps.map((step, j) => (
-                  <li key={j} className="flex gap-3 text-[15px] leading-relaxed text-ink-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sand-100 text-xs font-semibold text-ink-500">
-                      {j + 1}
-                    </span>
-                    {localize(step, locale).value}
-                  </li>
-                ))}
-              </ol>
+        {children.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.includedResets')}</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {children.map((child) => (
+                <PracticeCard key={child.id} practice={child} locale={locale} t={t} />
+              ))}
             </div>
-          ))}
-        </section>
-      )}
+          </section>
+        )}
 
-      {!practice.instructions && children.length === 0 && (
-        <Card className="p-5 text-sm text-ink-500">{t('practiceDetail.stepsComingSoon')}</Card>
-      )}
+        {sessionSteps.length > 0 && (
+          <PracticeSession practiceSlug={practice.slug} steps={sessionSteps} signedIn={Boolean(userId)} />
+        )}
 
-
-      {related.length > 0 && (
-        <section className="flex flex-col gap-3 border-t border-sand-200 pt-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.relatedPractices')}</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {related.map((p) => (
-              <PracticeCard key={p.id} practice={p} locale={locale} t={t} />
+        {practice.instructions && practice.instructions.length > 0 && (
+          <section id="instructions" className="flex flex-col gap-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.instructions')}</h2>
+            {practice.instructions.map((group, i) => (
+              <div key={i} className="flex flex-col gap-2">
+                {group.label && <h3 className="text-sm font-semibold text-ink-900">{localize(group.label, locale).value}</h3>}
+                <ol className="flex flex-col gap-3">
+                  {group.steps.map((step, j) => (
+                    <li key={j} className={`flex gap-3 ${BODY_TEXT}`}>
+                      <span
+                        aria-hidden
+                        className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sand-100 text-xs font-semibold text-ink-500"
+                      >
+                        {j + 1}
+                      </span>
+                      <span>{localize(step, locale).value}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             ))}
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      <Disclaimer t={t} />
+        {!practice.instructions && children.length === 0 && (
+          <Card className="p-5 text-sm text-ink-500">{t('practiceDetail.stepsComingSoon')}</Card>
+        )}
+
+
+        {related.length > 0 && (
+          <section className="flex flex-col gap-3 border-t border-sand-200 pt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">{t('practiceDetail.relatedPractices')}</h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {related.map((p) => (
+                <PracticeCard key={p.id} practice={p} locale={locale} t={t} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <Disclaimer t={t} />
+      </div>
     </Container>
   );
 }
