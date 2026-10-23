@@ -11,6 +11,17 @@ export function isLegalPublishingEnabled(): boolean {
   return process.env.LEGAL_DOCUMENTS_PUBLISHED === 'true';
 }
 
+// Local review of unpublished draft text (getLegalDraftPreview in
+// legal.service.ts). ONLY under `next dev`, where NODE_ENV is
+// 'development'. Every other environment never shows a draft: production
+// builds (`next build` / `next start`, every Vercel deployment) run as
+// 'production' and tests as 'test'. Next inlines NODE_ENV when it builds,
+// so in a production build this is the constant `false`. It is not an
+// environment switch on purpose: no setting can turn it on in production.
+export function isLegalDraftPreviewAllowed(): boolean {
+  return process.env.NODE_ENV === 'development';
+}
+
 // Google reCAPTCHA (registration bot protection) sets the third-party cookie
 // `_GRECAPTCHA` and writes `_grecaptcha` to localStorage. Whether that needs
 // prior consent or counts as strictly necessary security is a legal decision,

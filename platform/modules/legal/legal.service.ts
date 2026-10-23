@@ -6,10 +6,14 @@ import { Errors } from '@/lib/api-response';
 import { createLogger } from '@/lib/logger';
 import type { RegisterInput } from '@/lib/validations/auth';
 import { COMPANY_INFO, type CompanyInfo } from './company';
+import { COOKIES_EN } from './content/cookies.en';
+import { PRIVACY_EN } from './content/privacy.en';
+import { TERMS_EN } from './content/terms.en';
 import { LEGAL_DOCUMENTS } from './documents';
 import {
   getPrivacyAcknowledgementMode,
   getRecaptchaConsentCategory,
+  isLegalDraftPreviewAllowed,
   isLegalPublishingEnabled,
   type PrivacyAcknowledgementMode,
 } from './config';
@@ -22,20 +26,33 @@ import {
   type LegalDocumentContent,
   type LegalDocumentId,
   type LegalDocumentState,
+  type LegalText,
 } from './types';
 
 const log = createLogger('legal');
 
 const TOKEN = /\{(\w+)\}/g;
 
+// A bracketed field the source document leaves to be filled in, such as
+// `[●]` or `[имейл]`. Approved text must not contain any.
+const UNRESOLVED_FIELD = /\[[^\]]*\]/g;
+
+function textStrings(text: LegalText): string[] {
+  if (typeof text === 'string') return [text];
+  return text.flatMap((run) => (typeof run === 'string' ? [run] : 'text' in run ? [run.text] : []));
+}
+
 function blockStrings(block: LegalContentBlock): string[] {
-  return block.type === 'paragraph' ? [block.text] : block.items;
+  return block.type === 'list' ? block.items.flatMap(textStrings) : textStrings(block.text);
 }
 
 function contentStrings(content: LegalDocumentContent): string[] {
   return [
+    ...(content.title ? [content.title] : []),
+    ...(content.info ? textStrings(content.info) : []),
     ...(content.intro ?? []).flatMap(blockStrings),
     ...content.sections.flatMap((s) => [s.heading, ...s.blocks.flatMap(blockStrings)]),
+    ...(content.closing ?? []).flatMap(blockStrings),
   ];
 }
 
@@ -54,6 +71,7 @@ export function validateLegalDocument(doc: LegalDocument, company: CompanyInfo =
       continue;
     }
     for (const text of contentStrings(content)) {
+      for (const [field] of text.matchAll(UNRESOLVED_FIELD)) problems.push(`${locale}: unresolved field ${field}`);
       for (const [, key] of text.matchAll(TOKEN)) {
         if (!(key in company)) problems.push(`${locale}: unknown placeholder {${key}}`);
         else if (!company[key as keyof CompanyInfo]) problems.push(`${locale}: company value "${key}" is not set (company.ts)`);
@@ -96,10 +114,21 @@ export function interpolateCompanyInfo(text: string, company: CompanyInfo = COMP
   });
 }
 
+function interpolateText(text: LegalText): LegalText {
+  if (typeof text === 'string') return interpolateCompanyInfo(text);
+  return text.map((run) =>
+    typeof run === 'string'
+      ? interpolateCompanyInfo(run)
+      : 'text' in run
+        ? { ...run, text: interpolateCompanyInfo(run.text) }
+        : run,
+  );
+}
+
 function interpolateBlock(block: LegalContentBlock): LegalContentBlock {
-  return block.type === 'paragraph'
-    ? { type: 'paragraph', text: interpolateCompanyInfo(block.text) }
-    : { type: 'list', items: block.items.map((i) => interpolateCompanyInfo(i)) };
+  return block.type === 'list'
+    ? { type: 'list', items: block.items.map(interpolateText) }
+    : { type: block.type, text: interpolateText(block.text) };
 }
 
 // The renderable, company-filled content of an ACTIVE document, or null when
@@ -116,13 +145,53 @@ export function getActiveLegalDocument(
     version: doc.version,
     effectiveDate: doc.effectiveDate!,
     content: {
+      title: content.title && interpolateCompanyInfo(content.title),
+      info: content.info && interpolateText(content.info),
       intro: content.intro?.map(interpolateBlock),
       sections: content.sections.map((s) => ({
         heading: interpolateCompanyInfo(s.heading),
         blocks: s.blocks.map(interpolateBlock),
       })),
+      closing: content.closing?.map(interpolateBlock),
     },
   };
+}
+
+// The language of the supplied source documents. A draft preview falls back
+// to it when there is no text in the requested language.
+export const LEGAL_SOURCE_LOCALE: Locale = 'bg';
+
+// Unreviewed translations, used ONLY by the draft preview below. They are
+// deliberately kept out of the registry (documents.ts keeps `en: null`), so
+// they never count towards activation and are never published.
+export const LEGAL_DRAFT_TRANSLATIONS: Record<LegalDocumentId, Partial<Record<Locale, LegalDocumentContent>>> = {
+  terms: { en: TERMS_EN },
+  privacy: { en: PRIVACY_EN },
+  cookies: { en: COOKIES_EN },
+};
+
+export interface LegalDraftPreview {
+  content: LegalDocumentContent;
+  // The language actually shown.
+  locale: Locale;
+  // True when the requested language has no text, so the source is shown.
+  isFallback: boolean;
+}
+
+// The unpublished text of a document in the visitor's language, for
+// reviewing it locally before approval: the registry text, else a draft
+// translation, else the source text (flagged as a fallback). Null outside
+// `next dev` (config.ts), for an active document (its published version is
+// shown instead), and when there is no text at all. Reading it changes
+// nothing about activation: the document stays a draft, unpublished and
+// unenforced.
+export function getLegalDraftPreview(id: LegalDocumentId, locale: Locale): LegalDraftPreview | null {
+  if (!isLegalDraftPreviewAllowed() || isLegalDocumentActive(id)) return null;
+  const registry = LEGAL_DOCUMENTS[id].content;
+  const requested = registry[locale] ?? LEGAL_DRAFT_TRANSLATIONS[id][locale] ?? null;
+  if (requested) return { content: requested, locale, isFallback: false };
+  const source = registry[LEGAL_SOURCE_LOCALE];
+  return source ? { content: source, locale: LEGAL_SOURCE_LOCALE, isFallback: true } : null;
 }
 
 // Everything the client needs (footer, cookie banner, registration form),

@@ -12,7 +12,8 @@ import { serializeConsent, createConsent, ALL_OPTIONAL_CONSENT } from '@/modules
 // The activation path itself (published documents, mandatory acceptance,
 // recorded versions) is covered by unit tests (tests/legal-documents.test.ts,
 // tests/auth-service.test.ts), because it needs approved content this
-// repository deliberately doesn't contain.
+// repository doesn't contain: the Bulgarian source text in
+// modules/legal/content is an unapproved draft, and there is no English text.
 
 const PAGES = [
   { path: '/terms', en: 'Terms & Conditions', bg: 'Общи условия' },
@@ -21,7 +22,22 @@ const PAGES = [
 ];
 
 // Text that would mean draft wording leaked onto a public page.
-const DRAFT_MARKERS = [/DRAFT/, /ЧЕРНОВА/, /\[LEGAL ENTITY NAME\]/, /\[ИМЕ НА ЮРИДИЧЕСКОТО ЛИЦЕ\]/, /REQUIRES LEGAL REVIEW/];
+const DRAFT_MARKERS = [
+  /DRAFT/,
+  /ЧЕРНОВА/,
+  /\[LEGAL ENTITY NAME\]/,
+  /\[ИМЕ НА ЮРИДИЧЕСКОТО ЛИЦЕ\]/,
+  /REQUIRES LEGAL REVIEW/,
+  // The current Bulgarian source drafts (modules/legal/content).
+  /проект 1\.0/,
+  /\[ТОЧНО ЮРИДИЧЕСКО ЛИЦЕ/,
+  /\[●\]/,
+  /не за публикуване/,
+  // The unreviewed English drafts (shown only in the dev preview).
+  /draft 1\.0/,
+  /not for publication/,
+  /\[EXACT LEGAL ENTITY\]/,
+];
 
 async function withoutStoredConsent(context: BrowserContext) {
   await context.clearCookies({ name: CONSENT_COOKIE });
@@ -55,6 +71,93 @@ test.describe('Legal pages', () => {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1, name: bg })).toBeVisible();
       await expect(page.getByTestId('legal-document-unpublished')).toContainText('Все още не е публикуван');
+      // The Bulgarian draft text exists in the registry but must not leak.
+      await expect(page.getByTestId('legal-document-content')).toHaveCount(0);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+      const text = await page.locator('main').innerText();
+      for (const marker of DRAFT_MARKERS) expect(text).not.toMatch(marker);
+    }
+  });
+});
+
+// The E2E server is `next dev`, the one environment where the local draft
+// preview exists (production never renders it: tests/legal-document-page.test.ts).
+test.describe('Draft preview (local development only)', () => {
+  // The preview follows the interface language: the Bulgarian source text, or
+  // its unreviewed English translation (never connected to the registry).
+  const DRAFTS = {
+    en: [
+      { path: '/terms', title: 'TERMS AND CONDITIONS OF USE OF KUKO WAY', sections: 14, last: '14. Contacts and date' },
+      { path: '/privacy', title: 'PRIVACY POLICY OF KUKO WAY', sections: 14, last: '14. Changes and contact' },
+      { path: '/cookies', title: 'COOKIE AND LOCAL STORAGE POLICY OF KUKO WAY', sections: 6, last: '6. Updates and contact' },
+    ],
+    bg: [
+      { path: '/terms', title: 'ОБЩИ УСЛОВИЯ ЗА ИЗПОЛЗВАНЕ НА KUKO WAY', sections: 14, last: '14. Контакти и дата' },
+      { path: '/privacy', title: 'ПОЛИТИКА ЗА ПОВЕРИТЕЛНОСТ НА KUKO WAY', sections: 14, last: '14. Промени и контакт' },
+      { path: '/cookies', title: 'ПОЛИТИКА ЗА БИСКВИТКИТЕ И ЛОКАЛНОТО СЪХРАНЕНИЕ НА KUKO WAY', sections: 6, last: '6. Актуализации и контакт' },
+    ],
+  };
+  const UI = {
+    en: { notice: 'Unpublished draft (local preview)', language: 'Shown in English: an unreviewed translation', quote: 'not for publication:', contents: 'Contents' },
+    bg: { notice: 'Непубликувана чернова (локален преглед)', language: 'Показан на български: изходният текст', quote: 'не за публикуване:', contents: 'Съдържание' },
+  };
+
+  for (const locale of ['en', 'bg'] as const) {
+    for (const { path, title, sections, last } of DRAFTS[locale]) {
+      test(`${path} (${locale}) links from the unpublished notice to the full ${locale.toUpperCase()} draft, marked as a draft and not indexable`, async ({
+        page,
+        context,
+        baseURL,
+      }) => {
+        await context.addCookies([{ name: 'ptd_locale', value: locale, url: baseURL! }]);
+        await page.goto(path);
+        await expect(page.getByTestId('legal-document-unpublished')).toBeVisible();
+        await page.getByTestId('legal-draft-preview-link').click();
+        await expect(page).toHaveURL(`${path}?preview=draft`);
+
+        await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+        await expect(page.getByTestId('legal-draft-preview-notice')).toContainText(UI[locale].notice);
+        await expect(page.getByTestId('legal-draft-preview-language')).toContainText(UI[locale].language);
+        const draft = page.getByTestId('legal-document-draft-preview');
+        await expect(draft).toHaveAttribute('lang', locale);
+        await expect(draft.getByRole('heading', { level: 2 })).toHaveCount(sections);
+        await expect(draft.locator('blockquote')).toContainText(UI[locale].quote);
+        await expect(page.getByTestId('legal-document-content')).toHaveCount(0);
+        await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+        // The contents list jumps to each section.
+        await page.getByRole('navigation', { name: UI[locale].contents }).getByRole('link', { name: last }).click();
+        await expect(page).toHaveURL(new RegExp(`#section-${sections}$`));
+        await expect(draft.getByRole('heading', { level: 2, name: last })).toBeInViewport();
+      });
+    }
+  }
+
+  test('switching the interface language on a preview switches the document language', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: 'ptd_locale', value: 'en', url: baseURL! }]);
+    await page.goto('/cookies?preview=draft');
+    const draft = page.getByTestId('legal-document-draft-preview');
+    await expect(draft).toHaveAttribute('lang', 'en');
+    await expect(page.getByRole('heading', { level: 1, name: DRAFTS.en[2].title })).toBeVisible();
+
+    await page.locator('header button[aria-haspopup="listbox"]').first().click();
+    await page.getByRole('option').first().click(); // Bulgarian
+    await expect(draft).toHaveAttribute('lang', 'bg');
+    await expect(page.getByRole('heading', { level: 1, name: DRAFTS.bg[2].title })).toBeVisible();
+    await expect(page.getByTestId('legal-draft-preview-language')).toContainText(UI.bg.language);
+
+    await page.locator('header button[aria-haspopup="listbox"]').first().click();
+    await page.getByRole('option').nth(1).click(); // English
+    await expect(draft).toHaveAttribute('lang', 'en');
+    await expect(page.getByRole('heading', { level: 1, name: DRAFTS.en[2].title })).toBeVisible();
+  });
+
+  test('the preview is opt-in: the plain routes still show only the notice', async ({ page }) => {
+    for (const { path } of DRAFTS.en) {
+      await page.goto(path);
+      await expect(page.getByTestId('legal-document-draft-preview')).toHaveCount(0);
+      const text = await page.locator('main').innerText();
+      for (const marker of DRAFT_MARKERS) expect(text).not.toMatch(marker);
     }
   });
 });

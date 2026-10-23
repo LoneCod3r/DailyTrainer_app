@@ -4,13 +4,27 @@ Technical infrastructure for exactly three documents: **Terms & Conditions**
 (`/terms`), **Privacy Policy** (`/privacy`) and **Cookie Policy** (`/cookies`),
 plus cookie consent and registration agreements.
 
-It contains **no legal wording**. The drafts in
-`KUKO_WAY_Legal_Documents/DRAFT` are not approved, so every document here is
-`status: 'draft'` with empty content, and every company detail is `null`.
+`content/*.bg.ts` holds the verbatim Bulgarian text of the source documents
+(the only exception: in `terms.bg.ts` the brackets around the
+client-confirmed provider details were removed with the client's
+authorization)
+in `terms and conditions, privacy policy и cookie policy/`
+(`01_Obshti_usloviya.docx`, `02_Politika_poveritelnost.docx`,
+`03_Politika_biskvitki.docx`, which stay unchanged). Passages that look like
+internal editorial material are kept as supplied and marked with
+`// EDITORIAL` comments until the owner/lawyer decide; open items are in
+`PRE_PUBLICATION_CHECKLIST.md` (internal, never published). The texts still
+have unfilled `[...]` fields and no English version, so every document here
+is `status: 'draft'` and inactive, and every company detail is `null`. The
+older `KUKO_WAY_Legal_Documents/DRAFT` package is not used.
 
 | File | Purpose |
 | --- | --- |
-| `types.ts` | Document model: id, version, status, effectiveDate, bg/en content |
+| `types.ts` | Document model: id, version, status, effectiveDate, bg/en content (title, info line, sections, quotes, closing; bold, monospace, links, line breaks) |
+| `content/*.bg.ts` | Verbatim Bulgarian source text, converted from the .docx; editorial passages marked `// EDITORIAL` |
+| `content/*.en.ts` | Unreviewed English translations; NOT connected to the registry (`en: null`), shown only in the development draft preview (`LEGAL_DRAFT_TRANSLATIONS` in `legal.service.ts`) |
+| `PRE_PUBLICATION_CHECKLIST.md` | Internal: editorial passages, missing information, technical audit |
+| `TRANSLATION_REVIEW.md` | Internal: translation decisions and questions for legal review |
 | `documents.ts` | The registry. Approved text goes here (see its header for the steps) |
 | `company.ts` | Operator details referenced as `{legalEntityName}` etc. All unset |
 | `config.ts` | Environment switches: `LEGAL_DOCUMENTS_PUBLISHED`, `LEGAL_PRIVACY_ACKNOWLEDGEMENT`, `RECAPTCHA_CONSENT_CATEGORY` |
@@ -29,6 +43,7 @@ All of these must be true:
 2. The document has `status: 'published'`, a `version` and an `effectiveDate`.
 3. Approved content exists for **both** `bg` and `en`.
 4. Every `{placeholder}` used in that content has a value in `company.ts`.
+5. The content has no unresolved bracketed field such as `[●]` or `[имейл]`.
 
 If (1) is on but anything else is missing, the document stays inactive and an
 error is logged. A half-finished document is never shown.

@@ -5,6 +5,6 @@ export function generateMetadata() {
   return legalDocumentMetadata('cookies');
 }
 
-export default function CookiesPage() {
-  return <LegalDocumentPage id="cookies" />;
+export default function CookiesPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  return <LegalDocumentPage id="cookies" searchParams={searchParams} />;
 }

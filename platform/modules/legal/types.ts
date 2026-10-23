@@ -2,9 +2,10 @@
 // Pure types/constants, with no server-only dependencies, so client
 // components can import them too.
 //
-// Wording comes ONLY from the owner- and lawyer-approved final text (see
-// KUKO_WAY_Legal_Documents/README.md). This module models the structure
-// that text is rendered into; it never supplies the text itself.
+// Wording comes ONLY from the supplied source documents, verbatim, and is
+// shown only once the owner and a lawyer have approved it (see documents.ts).
+// This module models the structure that text is rendered into; it never
+// supplies the text itself.
 import type { Locale } from '@/lib/i18n/locale';
 
 export type LegalDocumentId = 'terms' | 'privacy' | 'cookies';
@@ -25,13 +26,28 @@ export const LEGAL_DOCUMENT_PATHS: Record<LegalDocumentId, string> = {
 // modules/legal/config.ts).
 export type LegalDocumentStatus = 'draft' | 'published';
 
-// A block of approved text. Strings may reference company details as
-// `{legalEntityName}`, `{contactEmail}`, ... (see company.ts). They are
-// filled in at render time, so those facts live in one place instead of
-// being copied into every document and language.
+// A run of text with the source document's own inline formatting: bold
+// (`strong`), monospace names such as cookie keys (`code`) and hyperlinks
+// (`href`, exactly as in the source). `lineBreak` is a line break inside a
+// paragraph, not a new paragraph.
+export type LegalInline =
+  | string
+  | { text: string; strong?: boolean; code?: boolean; href?: string }
+  | { lineBreak: true };
+
+// Plain text, or a sequence of formatted runs when the source formats part
+// of it. Strings may reference company details as `{legalEntityName}`,
+// `{contactEmail}`, ... (see company.ts). They are filled in at render time,
+// so those facts live in one place instead of being copied into every
+// document and language.
+export type LegalText = string | LegalInline[];
+
+// A block of approved text. `blockquote` is a paragraph the source sets off
+// as a block quotation.
 export type LegalContentBlock =
-  | { type: 'paragraph'; text: string }
-  | { type: 'list'; items: string[] };
+  | { type: 'paragraph'; text: LegalText }
+  | { type: 'list'; items: LegalText[] }
+  | { type: 'blockquote'; text: LegalText };
 
 export interface LegalContentSection {
   heading: string;
@@ -39,9 +55,19 @@ export interface LegalContentSection {
 }
 
 export interface LegalDocumentContent {
+  // The document's own title. When set, it is the page heading in place of
+  // the short title used in navigation, so the title never appears twice.
+  title?: string;
+  // The document's own version/date/status line. When set, it is shown in
+  // place of the generated "Version · Effective from" line, so that
+  // information never appears twice.
+  info?: LegalText;
   // Optional intro shown above the first section.
   intro?: LegalContentBlock[];
   sections: LegalContentSection[];
+  // Blocks after the document's closing horizontal rule, outside the last
+  // section.
+  closing?: LegalContentBlock[];
 }
 
 export interface LegalDocument {
@@ -52,9 +78,9 @@ export interface LegalDocument {
   status: LegalDocumentStatus;
   // ISO date (YYYY-MM-DD) from which this version applies. Null until approved.
   effectiveDate: string | null;
-  // Approved text per language. Null means no approved text yet. A document
-  // can only be active when every language is filled in, so BG and EN can't
-  // drift apart (README: "Keeping BG and EN synchronized").
+  // Source text per language. Null means there is no text in that language.
+  // A document can only be active when every language is filled in, so BG
+  // and EN can't drift apart (README: "Keeping BG and EN synchronized").
   content: Record<Locale, LegalDocumentContent | null>;
 }
 

@@ -5,6 +5,6 @@ export function generateMetadata() {
   return legalDocumentMetadata('terms');
 }
 
-export default function TermsPage() {
-  return <LegalDocumentPage id="terms" />;
+export default function TermsPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  return <LegalDocumentPage id="terms" searchParams={searchParams} />;
 }

@@ -5,6 +5,6 @@ export function generateMetadata() {
   return legalDocumentMetadata('privacy');
 }
 
-export default function PrivacyPage() {
-  return <LegalDocumentPage id="privacy" />;
+export default function PrivacyPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  return <LegalDocumentPage id="privacy" searchParams={searchParams} />;
 }

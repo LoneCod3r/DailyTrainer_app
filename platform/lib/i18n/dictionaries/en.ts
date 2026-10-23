@@ -599,6 +599,16 @@ const en: typeof bg = {
     effectiveFrom: 'Effective from {date}',
     notPublishedTitle: 'Not yet published',
     notPublishedDesc: 'This document is being prepared and has not been published yet. It will appear here once it is finalized.',
+    // Draft preview: shown only under `next dev`, never in production.
+    draftPreviewLink: 'Preview the unpublished draft (local development only)',
+    draftPreviewTitle: 'Unpublished draft (local preview)',
+    draftPreviewDesc:
+      'Shown only in local development, for review before approval. It is not approved or published, and in production this page shows "Not yet published" instead.',
+    draftPreviewSource: 'Shown in Bulgarian: the source text exactly as supplied.',
+    draftPreviewTranslation:
+      'Shown in English: an unreviewed translation of the Bulgarian source text, not connected to the published site.',
+    draftPreviewFallback: 'No English translation of this draft is available, so it is shown in Bulgarian, the source language.',
+    draftPreviewContents: 'Contents',
   },
   footer: {
     brandStatement: 'Come back to yourself.',
