@@ -6,35 +6,45 @@
 
 ## Latest status (24.10.2026, supersedes the rows below where they differ)
 
-Client decisions applied to the texts in both languages:
+**Published.** Client decision (24.10.2026): publish the shortened BG and
+EN texts now, on the non-launched progress site, and refine them in later
+versions. All three documents are `status: 'published'`, version `1.0`,
+effective 24.10.2026. They are served once `LEGAL_DOCUMENTS_PUBLISHED=true`
+is set in the deployment. A changed text needs a new version.
 
-- **Contact email removed** from Terms 1, Privacy 1 and Cookies 2, and
-  `{contactEmail}` is no longer used. The six clauses that pointed to "the
-  email in clause/section 1" (Terms 3.3, 5.4, 5.5; Privacy §4, §8, §10) now
-  say "the contact details in clause/section 1" (the address and phone in
-  clause 1), as Terms 10.1 already did. **For the lawyer:** whether a site
-  without any email address meets ЗЕТ чл. 4 (provider details, incl. email)
-  and DSA Art. 12 (electronic point of contact for users), and whether the
-  reworded clauses are approved.
-- **Privacy §9:** check-ins and notes "12 months" (the placeholder is gone).
+What the published texts say, matching production (`c25d9f2` / `e37e850`):
 
-Still blocks publication: the documents stay `draft`. The texts must match
-production (`c25d9f2`), and they don't yet:
+- No contact email: the six clauses that referred to one (Terms 3.3, 5.4,
+  5.5; Privacy §4, §8, §10) say "the contact details in clause/section 1"
+  (address and phone).
+- Privacy §2/§4 describe the optional before/after check-ins and personal
+  notes as they exist today: stored for signed-in users, visible only to the
+  author. There is no consent mechanism, so the texts make no consent or
+  withdrawal claim. §3 has no separate line for them; they fall under the
+  existing "saving progress" line (Art. 6(1)(b)).
+- Privacy §9: check-ins and notes are kept with the account data, "as long
+  as the account exists". Nothing is deleted automatically.
 
-1. **Privacy §3 and §4 (consent).** They state that check-ins and notes are
-   stored only with explicit consent (Art. 6(1)(a), 9(2)(a)) and can be
-   withdrawn, after which they are deleted. Production has no consent
-   mechanism: it stores check-ins and notes without consent. Removing the
-   statement would leave health data without a stated legal basis, so this
-   can't be fixed by wording alone. Resolve by deploying the consent rollout
-   (A3, A5) and deciding A2, or by a lawyer decision.
-2. **Privacy §9 (12 months).** Production deletes nothing after 12 months.
-   The purge in `modules/consent/retention.ts` is not approved, switched off,
-   scheduled by nothing, and covers consented rows only. Resolve by approving
-   and scheduling it (after the consent rollout), committing to a manual
-   process, or having the lawyer reword §9.
-3. **Not verifiable without production access:** whether `STRIPE_SECRET_KEY`
+Open, for later versions (known limitations of version 1.0):
+
+1. **Legal basis for check-ins and notes (lawyer).** They may reveal health
+   information. The lawyer's source (`02_Politika_poveritelnost.docx` §3)
+   says such data needs an Art. 9 exception, e.g. explicit consent, or the
+   feature should not collect it. Version 1.0 does not settle Art. 9. Terms
+   2.3 ("not consent to the processing of health data") belongs in the same
+   review. If the labels or notes are removed from the product, update §2,
+   §4 and §9.
+2. **Contact email** (ЗЕТ чл. 4, Directive 2000/31 Art. 5(1)(c), DSA
+   Art. 12): required before public launch. Set it in `company.ts`, add it
+   to the provider clauses and point the six clauses back to it (new
+   version).
+3. **Manual processes** the texts promise (section C below): account
+   deletion on request, access/portability requests, report decisions,
+   notice of changes.
+4. **Not verifiable without production access:** whether `STRIPE_SECRET_KEY`
    is set in production (B, donation test checkout vs. Terms 6 and Privacy 7).
+5. `modules/consent/` (uncommitted) and its retention purge are not part of
+   version 1.0 and are not described by it.
 
 ## Earlier notes
 

@@ -11,9 +11,9 @@ policy/` (`01_Obshti_usloviya.docx`, `02_Politika_poveritelnost.docx`,
 the app actually does. They contain public wording only: no team notes or
 draft status lines, and no `[...]` fields or `{tokens}`: the contact email
 was removed (client decision, 24.10.2026) and the clauses that pointed to it
-now refer to the contact details in clause/section 1. Every document is still
-`status: 'draft'` and inactive, because Privacy §3, §4 and §9 describe
-check-in consent and a 12-month retention that production does not have yet.
+now refer to the contact details in clause/section 1. All three are
+`status: 'published'`, version 1.0 (24.10.2026), and are served once
+`LEGAL_DOCUMENTS_PUBLISHED=true` is set.
 Everything still open is in `CLIENT_CONFIRMATION.md` (internal, never
 published). Every company detail in `company.ts` is `null`. The older
 `KUKO_WAY_Legal_Documents/DRAFT` package is not used.

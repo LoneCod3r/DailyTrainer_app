@@ -13,7 +13,7 @@ import { serializeConsent, createConsent, ALL_OPTIONAL_CONSENT } from '@/modules
 // recorded versions) is covered by unit tests (tests/legal-documents.test.ts,
 // tests/auth-service.test.ts, and "all six document versions at their
 // routes" in tests/legal-document-page.test.ts), because the real texts can't
-// be activated: they are still in draft status.
+// be activated: the E2E server runs without LEGAL_DOCUMENTS_PUBLISHED.
 
 const PAGES = [
   { path: '/terms', en: 'Terms & Conditions', bg: 'Общи условия' },

@@ -128,7 +128,7 @@ describe.each(LEGAL_DOCUMENT_IDS)('English translation of %s', (id) => {
     });
   });
 
-  it('has no pending (bracketed) fields left in either language', () => {
+  it('has no pending (bracketed) fields in either language', () => {
     expect(brackets(bg)).toEqual([]);
     expect(brackets(en)).toEqual([]);
   });
@@ -174,11 +174,8 @@ describe('English translations and publication', () => {
     }
   });
 
-  it('are still blocked by the safeguard: draft status', () => {
+  it('pass every publication check together with the Bulgarian text', () => {
     vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
-    for (const id of LEGAL_DOCUMENT_IDS) {
-      const problems = validateLegalDocument(LEGAL_DOCUMENTS[id]);
-      expect(problems).toContain('status is not "published"');
-    }
+    for (const id of LEGAL_DOCUMENT_IDS) expect(validateLegalDocument(LEGAL_DOCUMENTS[id])).toEqual([]);
   });
 });

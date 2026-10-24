@@ -29,8 +29,8 @@ const FIXTURE_CONTENT = {
 const original = structuredClone(LEGAL_DOCUMENTS);
 const originalCompany = { ...COMPANY_INFO };
 
-// No bracketed fields are left in the texts: Privacy §9 states 12 months
-// (client decision, 24.10.2026). Any new one would block activation.
+// The published texts hold no bracketed field. Any new one would block
+// activation.
 const PENDING_FIELDS: Record<LegalDocumentId, { bg: string[]; en: string[] }> = {
   terms: { bg: [], en: [] },
   privacy: { bg: [], en: [] },
@@ -59,7 +59,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('legal document registry (current, unapproved state)', () => {
+describe('legal document registry (current, published state)', () => {
   it('defines exactly Terms, Privacy and Cookies, each with id/version/status/effectiveDate/bg+en content', () => {
     expect(Object.keys(LEGAL_DOCUMENTS).sort()).toEqual(['cookies', 'privacy', 'terms']);
     for (const id of LEGAL_DOCUMENT_IDS) {
@@ -73,11 +73,11 @@ describe('legal document registry (current, unapproved state)', () => {
     }
   });
 
-  it('ships every document as an unpublished draft, with its Bulgarian text and its English version', () => {
+  it('ships every document as published version 1.0, effective 24.10.2026, with its Bulgarian text and its English version', () => {
     for (const id of LEGAL_DOCUMENT_IDS) {
-      expect(LEGAL_DOCUMENTS[id].status).toBe('draft');
-      expect(LEGAL_DOCUMENTS[id].version).toBe('0.1-draft');
-      expect(LEGAL_DOCUMENTS[id].effectiveDate).toBeNull();
+      expect(LEGAL_DOCUMENTS[id].status).toBe('published');
+      expect(LEGAL_DOCUMENTS[id].version).toBe('1.0');
+      expect(LEGAL_DOCUMENTS[id].effectiveDate).toBe('2026-10-24');
       expect(LEGAL_DOCUMENTS[id].content.bg).not.toBeNull();
       expect(LEGAL_DOCUMENTS[id].content.en).not.toBeNull();
     }
@@ -170,12 +170,17 @@ describe('legal document registry (current, unapproved state)', () => {
     }
   });
 
-  it('keeps the current texts inactive only through their draft status: no unset company value or unresolved field is left', () => {
-    vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
+  it('activates every current text in both languages once the master switch is on, and not before', () => {
     for (const id of LEGAL_DOCUMENT_IDS) {
-      expect(validateLegalDocument(LEGAL_DOCUMENTS[id])).toEqual(['status is not "published"', 'effectiveDate is missing or invalid']);
+      expect(validateLegalDocument(LEGAL_DOCUMENTS[id])).toEqual([]);
       expect(isLegalDocumentActive(id)).toBe(false);
       expect(getActiveLegalDocument(id, 'bg')).toBeNull();
+    }
+    vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
+    for (const id of LEGAL_DOCUMENT_IDS) {
+      expect(isLegalDocumentActive(id)).toBe(true);
+      expect(getActiveLegalDocument(id, 'bg')?.content.title).toBe(LEGAL_DOCUMENTS[id].content.bg!.title);
+      expect(getActiveLegalDocument(id, 'en')?.content.title).toBe(LEGAL_DOCUMENTS[id].content.en!.title);
     }
   });
 
@@ -198,6 +203,7 @@ describe('activation rules', () => {
 
   it('a draft never becomes active, even with the master switch on', () => {
     vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
+    for (const id of LEGAL_DOCUMENT_IDS) LEGAL_DOCUMENTS[id].status = 'draft';
     for (const id of LEGAL_DOCUMENT_IDS) expect(isLegalDocumentActive(id)).toBe(false);
   });
 
@@ -373,16 +379,16 @@ describe('draft preview (local development only)', () => {
     }
   });
 
-  it('does not activate, publish or enforce anything: the drafts stay blocked by their status', () => {
+  it('does not activate, publish or enforce anything: drafts stay blocked by their status', () => {
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
+    for (const id of LEGAL_DOCUMENT_IDS) LEGAL_DOCUMENTS[id].status = 'draft';
     for (const id of LEGAL_DOCUMENT_IDS) {
       expect(getLegalDraftPreview(id, 'bg')).not.toBeNull();
       expect(getLegalDraftPreview(id, 'en')).not.toBeNull();
       expect(isLegalDocumentActive(id)).toBe(false);
       expect(getActiveLegalDocument(id, 'en')).toBeNull();
       expect(getActiveLegalDocument(id, 'bg')).toBeNull();
-      expect(LEGAL_DOCUMENTS[id]).toMatchObject({ status: 'draft', version: '0.1-draft', effectiveDate: null });
       expect(validateLegalDocument(LEGAL_DOCUMENTS[id])).toEqual(
         expect.arrayContaining(['status is not "published"']),
       );

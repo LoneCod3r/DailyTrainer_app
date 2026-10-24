@@ -320,6 +320,7 @@ describe('LegalDocumentPage draft preview', () => {
 });
 
 describe('LegalDocumentPage placeholders (draft preview)', () => {
+
   it('has no missing fact left to mark in the current texts, and never shows a raw {token}', () => {
     vi.stubEnv('NODE_ENV', 'development');
     for (const locale of ['bg', 'en'] as const) {
@@ -332,24 +333,24 @@ describe('LegalDocumentPage placeholders (draft preview)', () => {
     }
   });
 
-  it('keeps §9 in both languages, with the 12-month period for check-ins and notes', () => {
+  it('keeps check-ins and notes under the account data in §9, with no separate period', () => {
     vi.stubEnv('NODE_ENV', 'development');
-    expect(render('privacy', PREVIEW)).toMatch(/<h2[^>]*>9\. Срокове на съхранение<\/h2><ul[^>]*>.*<li>Проверки и бележки: 12 месеца\.<\/li>.*<\/ul>/);
+    const bg = render('privacy', PREVIEW);
+    expect(bg).toMatch(/<h2[^>]*>9\. Срокове на съхранение<\/h2><ul[^>]*><li>Профил и свързаните с него данни, включително проверките, личните бележки и записите за приети документи: докато профилът съществува\./);
+    expect(bg).not.toMatch(/12 месеца/);
     vi.mocked(getLocale).mockReturnValue('en');
-    expect(render('privacy', PREVIEW)).toMatch(/<h2[^>]*>9\. Retention<\/h2><ul[^>]*>.*<li>Check-ins and notes: 12 months\.<\/li>.*<\/ul>/);
+    const en = render('privacy', PREVIEW);
+    expect(en).toMatch(/<h2[^>]*>9\. Retention<\/h2><ul[^>]*><li>Account and related data, including check-ins, personal notes and records of accepted documents: for as long as the account exists\./);
+    expect(en).not.toMatch(/12 months/);
   });
 });
 
-// What publication will serve: the real texts, activated in a test-only way
-// (status, version and date set here). None of this ships.
+// What publication serves: the real, published texts, with the master switch
+// on (as LEGAL_DOCUMENTS_PUBLISHED=true does in the deployment).
 describe('publication: all six document versions at their routes', () => {
   const ROUTES = { terms: TermsPage, privacy: PrivacyPage, cookies: CookiesPage } as const;
-
   function activateReal() {
     vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
-    for (const id of LEGAL_DOCUMENT_IDS) {
-      Object.assign(LEGAL_DOCUMENTS[id], { status: 'published', version: '1.0', effectiveDate: '2026-11-01' });
-    }
   }
 
   const renderRoute = (id: LegalDocumentId) => renderToStaticMarkup(createElement(ROUTES[id], {}));
@@ -359,8 +360,8 @@ describe('publication: all six document versions at their routes', () => {
     for (const id of LEGAL_DOCUMENT_IDS) {
       const { bg, en } = LEGAL_DOCUMENTS[id].content;
       for (const [locale, content, other, versionLine] of [
-        ['bg', bg!, en!, 'Версия 1.0 · В сила от 1 ноември 2026'],
-        ['en', en!, bg!, 'Version 1.0 · Effective from November 1, 2026'],
+        ['bg', bg!, en!, 'Версия 1.0 · В сила от 24 октомври 2026'],
+        ['en', en!, bg!, 'Version 1.0 · Effective from October 24, 2026'],
       ] as const) {
         vi.mocked(getLocale).mockReturnValue(locale);
         const html = renderRoute(id);
@@ -378,16 +379,16 @@ describe('publication: all six document versions at their routes', () => {
     }
   });
 
-  it('a published Privacy Policy keeps §9 in both languages', () => {
+  it('a published Privacy Policy describes check-ins and notes in §4, in both languages', () => {
     activateReal();
     vi.mocked(getLocale).mockReturnValue('bg');
-    expect(renderRoute('privacy')).toContain('<li>Проверки и бележки: 12 месеца.</li>');
+    expect(renderRoute('privacy')).toMatch(/<h2[^>]*>4\. Проверки и лични бележки<\/h2>/);
     vi.mocked(getLocale).mockReturnValue('en');
-    expect(renderRoute('privacy')).toContain('<li>Check-ins and notes: 12 months.</li>');
+    expect(renderRoute('privacy')).toMatch(/<h2[^>]*>4\. Check-ins and personal notes<\/h2>/);
   });
 
-  it('with the real texts still in draft, every route stays "not yet published" in both languages, even with the switch on', () => {
-    vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
+  it('with the master switch off, every route stays "not yet published" in both languages', () => {
+    vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'false');
     for (const [locale, notice] of [
       ['bg', 'Все още не е публикуван'],
       ['en', 'Not yet published'],
