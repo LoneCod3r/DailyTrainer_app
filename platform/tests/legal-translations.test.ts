@@ -15,7 +15,7 @@ import {
   type LegalText,
 } from '@/modules/legal/types';
 
-// The English files are unreviewed translations of the Bulgarian source
+// The English files are the English versions of the Bulgarian source
 // texts. These checks catch omissions and drift mechanically; they don't
 // judge the quality of the translation.
 const PAIRS: Record<LegalDocumentId, { bg: LegalDocumentContent; en: LegalDocumentContent }> = {
@@ -25,46 +25,12 @@ const PAIRS: Record<LegalDocumentId, { bg: LegalDocumentContent; en: LegalDocume
 };
 
 // Approved details that stay in Bulgarian in the English text: the company
-// name in 1.2 and the address of the Terms.
+// name and the address.
 const KEPT_IN_BULGARIAN = ['3Д ЛУК ООД', 'ж.к. Хр. Смирненски, блок 31б, вх. Б, ет. 2'];
 
-// Client-confirmed details of the Terms. They appear without brackets in
-// both languages, so they are not treated as unfilled fields.
-const CONFIRMED_TERMS_DETAILS = [
-  '3Д ЛУК ООД',
-  '3DLOOK LTD',
-  '175172901',
-  'BG175172901',
-  '0895720370',
-  'ж.к. Хр. Смирненски, блок 31б, вх. Б, ет. 2',
-];
-
-// Unresolved placeholders: the English text keeps the brackets and
-// translates only the descriptive label. `[●]` is the same in both.
-const PLACEHOLDER_EN: Record<string, string> = {
-  '[●]': '[●]',
-  '[ТОЧНО ЮРИДИЧЕСКО ЛИЦЕ]': '[EXACT LEGAL ENTITY]',
-  '[●/не е приложимо]': '[●/not applicable]',
-  '[имейл за лични данни]': '[personal data email]',
-  '[адрес/форма за сигнали]': '[reporting address/form]',
-  '[имейл за обслужване]': '[customer service email]',
-  '[имейл за контакт]': '[contact email]',
-  '[имейл за GDPR]': '[GDPR email]',
-  '[имейл]': '[email]',
-  '[телефон]': '[phone]',
-  '[пощенски адрес]': '[postal address]',
-  '[попълнете]': '[to be completed]',
-  '[попълнете след технически одит]': '[to be completed after a technical audit]',
-  '[дата на действително публикуване]': '[actual publication date]',
-  '[действителна дата на публикуване]': '[actual publication date]',
-  '[утвърден срок, напр. до 30 дни]': '[approved period, e.g. up to 30 days]',
-  '[конкретен технически период]': '[specific technical period]',
-  '[период, обоснован с целта и защитата на правни претенции]':
-    '[period justified by the purpose and the protection of legal claims]',
-  '[срок, обоснован чрез оценка на риска]': '[period justified by a risk assessment]',
-  '[Потвърдете дали действително има профилиране или автоматизирани решения със значим ефект.]':
-    '[Confirm whether there actually is profiling or automated decision-making with a significant effect.]',
-};
+// Client-confirmed company details. Each appears the same number of times in
+// the Bulgarian and English version of every document that uses it.
+const CONFIRMED_DETAILS = ['3Д ЛУК ООД', '175172901', '0895720370', 'ж.к. Хр. Смирненски, блок 31б, вх. Б, ет. 2'];
 
 const original = structuredClone(LEGAL_DOCUMENTS);
 
@@ -109,20 +75,24 @@ function units(content: LegalDocumentContent): { where: string; text: LegalText 
 }
 
 const brackets = (c: LegalDocumentContent) => units(c).flatMap((u) => joined(u.text).match(/\[[^\]]*\]/g) ?? []).sort();
-const numbers = (c: LegalDocumentContent) => units(c).flatMap((u) => joined(u.text).match(/\d+/g) ?? []).sort();
+// The English text adds the Latin form of the company name once per
+// document; its "3" is not a number of the Bulgarian text.
+const LATIN_NAME = '3DLOOK LTD';
+const numbers = (c: LegalDocumentContent) =>
+  units(c).flatMap((u) => joined(u.text).split(LATIN_NAME).join('').match(/\d+/g) ?? []).sort();
 
-describe('Cookie Policy sections (owner-requested removal of the detailed list)', () => {
-  it('has the same six numbered sections in Bulgarian and English, without the former sections 4 and 5', () => {
+describe('Cookie Policy sections (no detailed list, at the owner\'s request)', () => {
+  it('has the same six numbered sections in Bulgarian and English, with no detailed list', () => {
     const numbers = (c: LegalDocumentContent) => c.sections.map((s) => s.heading.match(/^\d+\./)?.[0]);
     expect(numbers(COOKIES_BG)).toEqual(['1.', '2.', '3.', '4.', '5.', '6.']);
     expect(numbers(COOKIES_EN)).toEqual(numbers(COOKIES_BG));
     expect(COOKIES_EN.sections.map((s) => s.heading)).toEqual([
       '1. What cookies are',
-      '2. Who uses these technologies',
-      '3. What we use them for',
-      '4. How you manage your choice',
-      '5. Third-party cookies and embedded content',
-      '6. Updates and contact',
+      '2. Who uses them',
+      '3. What we use',
+      '4. Third-party services',
+      '5. Managing your choice',
+      '6. Changes',
     ]);
     expect(JSON.stringify(COOKIES_EN)).not.toMatch(/Detailed list|Necessary and optional technologies|next-auth\.session-token/);
   });
@@ -158,9 +128,9 @@ describe.each(LEGAL_DOCUMENT_IDS)('English translation of %s', (id) => {
     });
   });
 
-  it('keeps every unresolved placeholder in brackets, translating only its known label', () => {
-    for (const token of brackets(bg)) expect(PLACEHOLDER_EN, `unmapped placeholder ${token}`).toHaveProperty([token]);
-    expect(brackets(en)).toEqual(brackets(bg).map((token) => PLACEHOLDER_EN[token]).sort());
+  it('has no pending (bracketed) fields left in either language', () => {
+    expect(brackets(bg)).toEqual([]);
+    expect(brackets(en)).toEqual([]);
   });
 
   it('keeps every number exactly', () => {
@@ -176,55 +146,39 @@ describe.each(LEGAL_DOCUMENT_IDS)('English translation of %s', (id) => {
   });
 });
 
-describe('confirmed Terms details', () => {
+describe('confirmed company details', () => {
   const text = (c: LegalDocumentContent) => units(c).map((u) => joined(u.text)).join('\n');
 
-  it('appear without brackets, the same number of times, in the Bulgarian and English Terms', () => {
-    for (const detail of CONFIRMED_TERMS_DETAILS) {
-      const count = (c: LegalDocumentContent) => text(c).split(detail).length - 1;
-      expect(count(TERMS_BG), detail).toBeGreaterThan(0);
-      expect(count(TERMS_EN), detail).toBe(count(TERMS_BG));
-      for (const c of [TERMS_BG, TERMS_EN]) {
-        expect(text(c), detail).not.toContain(`[${detail}]`);
-        expect(text(c), detail).not.toMatch(new RegExp(`\\[\\s*${detail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  it('appear the same number of times in the Bulgarian and English version of each document', () => {
+    for (const id of LEGAL_DOCUMENT_IDS) {
+      const { bg, en } = PAIRS[id];
+      for (const detail of CONFIRMED_DETAILS) {
+        const count = (c: LegalDocumentContent) => text(c).split(detail).length - 1;
+        expect(count(en), `${id}: ${detail}`).toBe(count(bg));
       }
     }
-  });
-
-  it('are not flagged as unfilled, while the real placeholders still are', () => {
-    const problems = validateLegalDocument({ ...LEGAL_DOCUMENTS.terms, content: { bg: TERMS_BG, en: TERMS_EN } });
-    for (const detail of CONFIRMED_TERMS_DETAILS) {
-      expect(problems.some((p) => p.includes(detail)), detail).toBe(false);
+    // The Terms and the Privacy Policy carry the full provider/controller details.
+    for (const c of [TERMS_BG, TERMS_EN, PRIVACY_BG, PRIVACY_EN]) {
+      for (const detail of CONFIRMED_DETAILS) expect(text(c), detail).toContain(detail);
     }
-    expect(problems).toEqual(
-      expect.arrayContaining([
-        'bg: unresolved field [●]',
-        'bg: unresolved field [имейл за лични данни]',
-        'bg: unresolved field [адрес/форма за сигнали]',
-        'bg: unresolved field [дата на действително публикуване]',
-        // A translated placeholder is still a placeholder.
-        'en: unresolved field [●]',
-        'en: unresolved field [personal data email]',
-        'en: unresolved field [reporting address/form]',
-        'en: unresolved field [actual publication date]',
-      ]),
-    );
+    expect(text(TERMS_BG)).toContain('BG175172901');
+    expect(text(TERMS_EN)).toContain('BG175172901');
   });
 });
 
 describe('English translations and publication', () => {
-  it('are not connected to the registry, so nothing renders them', () => {
-    for (const id of LEGAL_DOCUMENT_IDS) expect(LEGAL_DOCUMENTS[id].content.en).toBeNull();
+  it('are connected to the registry next to the Bulgarian text', () => {
+    for (const id of LEGAL_DOCUMENT_IDS) {
+      expect(LEGAL_DOCUMENTS[id].content.en).toEqual(PAIRS[id].en);
+      expect(LEGAL_DOCUMENTS[id].content.bg).toEqual(PAIRS[id].bg);
+    }
   });
 
-  it('would still be blocked by the safeguards if they were connected', () => {
+  it('are still blocked by the safeguard: draft status', () => {
     vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
     for (const id of LEGAL_DOCUMENT_IDS) {
-      const doc = LEGAL_DOCUMENTS[id];
-      doc.content.en = structuredClone(PAIRS[id].en);
-      const problems = validateLegalDocument(doc);
+      const problems = validateLegalDocument(LEGAL_DOCUMENTS[id]);
       expect(problems).toContain('status is not "published"');
-      expect(problems).toEqual(expect.arrayContaining(['en: unresolved field [●]']));
     }
   });
 });

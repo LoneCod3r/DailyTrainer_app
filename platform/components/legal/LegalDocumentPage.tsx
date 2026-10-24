@@ -6,7 +6,12 @@ import { clsx } from '@/lib/clsx';
 import { getLocale } from '@/lib/i18n/get-locale';
 import { getT, type DictKey } from '@/lib/i18n/dictionaries';
 import { formatDate } from '@/lib/format-date';
-import { getActiveLegalDocument, getLegalDraftPreview, LEGAL_SOURCE_LOCALE } from '@/modules/legal/legal.service';
+import {
+  fillDraftPlaceholders,
+  getActiveLegalDocument,
+  getLegalDraftPreview,
+  LEGAL_SOURCE_LOCALE,
+} from '@/modules/legal/legal.service';
 import type { LegalContentBlock, LegalDocumentContent, LegalDocumentId, LegalText } from '@/modules/legal/types';
 
 const TITLE_KEYS: Record<LegalDocumentId, DictKey> = {
@@ -27,14 +32,38 @@ export function legalDocumentMetadata(id: LegalDocumentId): Metadata {
   };
 }
 
+// A bracketed field (`[…]`) is information still missing from the text. It
+// is highlighted so it can't be mistaken for final wording. An active
+// document never contains one (legal.service.ts refuses to activate it), so
+// in practice this shows only in the draft preview.
+const PLACEHOLDER = /(\[[^\]]+\])/;
+
+function WithPlaceholders({ text }: { text: string }) {
+  const parts = text.split(PLACEHOLDER);
+  if (parts.length === 1) return <>{text}</>;
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <mark key={i} data-testid="legal-placeholder" className="rounded bg-amber-100 px-1 text-ink-900 dark:bg-amber-900/60">
+            {part}
+          </mark>
+        ) : (
+          <Fragment key={i}>{part}</Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
 function Text({ text }: { text: LegalText }) {
-  if (typeof text === 'string') return <>{text}</>;
+  if (typeof text === 'string') return <WithPlaceholders text={text} />;
   return (
     <>
       {text.map((run, i) => {
-        if (typeof run === 'string') return <Fragment key={i}>{run}</Fragment>;
+        if (typeof run === 'string') return <WithPlaceholders key={i} text={run} />;
         if ('lineBreak' in run) return <br key={i} />;
-        let node: ReactNode = run.text;
+        let node: ReactNode = <WithPlaceholders text={run.text} />;
         if (run.code) node = <code className="font-mono text-[0.92em]">{node}</code>;
         if (run.strong) node = <strong className="font-semibold text-ink-900">{node}</strong>;
         if (run.href) {
@@ -81,24 +110,57 @@ function sectionAnchor(index: number) {
   return `section-${index + 1}`;
 }
 
+// A part of the source that is never published (the draft info line or an
+// internal team note), shown in the draft preview inside a labelled box.
+function InternalNote({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div
+      data-testid="legal-internal-note"
+      className="rounded-lg border border-dashed border-amber-300 p-3 dark:border-amber-800"
+    >
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{label}</p>
+      {children}
+    </div>
+  );
+}
+
 // The document itself: info line, intro, sections, and what follows the
-// closing rule. `anchored` gives each section an id to link to (draft
-// preview only; the published markup has none).
-function DocumentBody({ content, anchored = false }: { content: LegalDocumentContent; anchored?: boolean }) {
+// closing rule. `internalLabel` is set only by the draft preview: it shows
+// the draft info line and internal blocks, labelled. Without it (the
+// published page) they are left out, even if the content contained them.
+// `anchored` gives each section an id to link to (draft preview only; the
+// published markup has none).
+function DocumentBody({
+  content,
+  anchored = false,
+  internalLabel,
+}: {
+  content: LegalDocumentContent;
+  anchored?: boolean;
+  internalLabel?: string;
+}) {
+  const visible = (blocks: LegalContentBlock[] | undefined) =>
+    (blocks ?? []).filter((block) => internalLabel || !block.internal);
+  const render = (block: LegalContentBlock, key: number) =>
+    block.internal && internalLabel ? (
+      <InternalNote key={key} label={internalLabel}>
+        <Block block={block} />
+      </InternalNote>
+    ) : (
+      <Block key={key} block={block} />
+    );
+  const intro = visible(content.intro);
+  const closing = visible(content.closing);
   return (
     <>
-      {content.info && (
-        <p className="text-ink-500">
-          <Text text={content.info} />
-        </p>
+      {content.info && internalLabel && (
+        <InternalNote label={internalLabel}>
+          <p className="text-ink-500">
+            <Text text={content.info} />
+          </p>
+        </InternalNote>
       )}
-      {content.intro && (
-        <div className="flex flex-col gap-3">
-          {content.intro.map((block, i) => (
-            <Block key={i} block={block} />
-          ))}
-        </div>
-      )}
+      {intro.length > 0 && <div className="flex flex-col gap-3">{intro.map(render)}</div>}
       {content.sections.map((section, i) => (
         <section
           key={i}
@@ -106,19 +168,13 @@ function DocumentBody({ content, anchored = false }: { content: LegalDocumentCon
           className={clsx('flex flex-col gap-3', anchored && 'scroll-mt-24')}
         >
           <h2 className="text-base font-semibold text-ink-900">{section.heading}</h2>
-          {section.blocks.map((block, j) => (
-            <Block key={j} block={block} />
-          ))}
+          {visible(section.blocks).map(render)}
         </section>
       ))}
-      {content.closing && (
+      {closing.length > 0 && (
         <>
           <hr className="border-sand-200" />
-          <div className="flex flex-col gap-3">
-            {content.closing.map((block, i) => (
-              <Block key={i} block={block} />
-            ))}
-          </div>
+          <div className="flex flex-col gap-3">{closing.map(render)}</div>
         </>
       )}
     </>
@@ -148,7 +204,12 @@ export function LegalDocumentPage({ id, searchParams }: { id: LegalDocumentId; s
   const previewRequested = searchParams?.[DRAFT_PREVIEW_PARAM] === DRAFT_PREVIEW_VALUE;
 
   if (preview && previewRequested) {
-    const draft = preview.content;
+    // Missing company facts are shown as placeholders in the document's own
+    // language (it can differ from the interface language on a fallback).
+    const tDoc = getT(preview.locale);
+    const draft = fillDraftPlaceholders(preview.content, (key) =>
+      tDoc(key === 'contactEmail' ? 'legal.placeholderContactEmail' : 'legal.placeholderPending'),
+    );
     const languageNote: DictKey = preview.isFallback
       ? 'legal.draftPreviewFallback'
       : preview.locale === LEGAL_SOURCE_LOCALE
@@ -180,7 +241,7 @@ export function LegalDocumentPage({ id, searchParams }: { id: LegalDocumentId; s
           lang={preview.locale}
           className="flex flex-col gap-6 text-sm leading-relaxed text-ink-700"
         >
-          <DocumentBody content={draft} anchored />
+          <DocumentBody content={draft} anchored internalLabel={t('legal.draftPreviewInternal')} />
         </article>
       </Container>
     );

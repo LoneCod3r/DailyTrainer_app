@@ -43,11 +43,15 @@ export type LegalInline =
 export type LegalText = string | LegalInline[];
 
 // A block of approved text. `blockquote` is a paragraph the source sets off
-// as a block quotation.
+// as a block quotation. `internal: true` marks a whole block that the source
+// addresses to the team (e.g. „За екипа, не за публикуване“ or a
+// pre-publication checklist): it is never part of the public document, is
+// left out of the publication checks, and is shown only in the
+// development-only draft preview, labelled as internal.
 export type LegalContentBlock =
-  | { type: 'paragraph'; text: LegalText }
-  | { type: 'list'; items: LegalText[] }
-  | { type: 'blockquote'; text: LegalText };
+  | { type: 'paragraph'; text: LegalText; internal?: boolean }
+  | { type: 'list'; items: LegalText[]; internal?: boolean }
+  | { type: 'blockquote'; text: LegalText; internal?: boolean };
 
 export interface LegalContentSection {
   heading: string;
@@ -58,9 +62,10 @@ export interface LegalDocumentContent {
   // The document's own title. When set, it is the page heading in place of
   // the short title used in navigation, so the title never appears twice.
   title?: string;
-  // The document's own version/date/status line. When set, it is shown in
-  // place of the generated "Version · Effective from" line, so that
-  // information never appears twice.
+  // The source document's own version/date/status line. It is draft
+  // metadata ("Версия: проект 1.0 … Статус: проект …"): shown only in the
+  // development-only draft preview. A published page shows the registry's
+  // "Version · Effective from" line instead.
   info?: LegalText;
   // Optional intro shown above the first section.
   intro?: LegalContentBlock[];

@@ -1,5 +1,9 @@
 # Legal translations: internal review notes
 
+> **Superseded (24.10.2026).** This file describes the previous full-length draft texts.
+> The texts in `content/` were since shortened to public wording only; the current open
+> items are in `CLIENT_CONFIRMATION.md`. Kept for the record (the technical findings still apply).
+
 > INTERNAL. Not for publication. Not shown on the website.
 
 Covers the unreviewed English translations in `content/terms.en.ts`,

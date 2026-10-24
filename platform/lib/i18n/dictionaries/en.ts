@@ -606,11 +606,15 @@ const en: typeof bg = {
     draftPreviewTitle: 'Unpublished draft (local preview)',
     draftPreviewDesc:
       'Shown only in local development, for review before approval. It is not approved or published, and in production this page shows "Not yet published" instead.',
-    draftPreviewSource: 'Shown in Bulgarian: the source text exactly as supplied.',
+    draftPreviewSource: 'Shown in Bulgarian: the primary version of the document.',
     draftPreviewTranslation:
-      'Shown in English: an unreviewed translation of the Bulgarian source text, not connected to the published site.',
+      'Shown in English: the English version of the primary Bulgarian text. It is prepared for publication but not published.',
     draftPreviewFallback: 'No English translation of this draft is available, so it is shown in Bulgarian, the source language.',
     draftPreviewContents: 'Contents',
+    // Placeholder for a fact still missing from the document (draft preview).
+    placeholderContactEmail: 'CONTACT EMAIL – TO BE CONFIRMED',
+    placeholderPending: 'TO BE CONFIRMED',
+    draftPreviewInternal: 'Internal note — not published',
   },
   footer: {
     brandStatement: 'Come back to yourself.',

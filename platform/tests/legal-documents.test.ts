@@ -6,7 +6,6 @@ import {
   getActiveLegalDocument,
   getLegalDocumentState,
   getLegalDraftPreview,
-  LEGAL_DRAFT_TRANSLATIONS,
   getPublicLegalConfig,
   isLegalDocumentActive,
   resolveRegistrationAgreements,
@@ -29,6 +28,14 @@ const FIXTURE_CONTENT = {
 
 const original = structuredClone(LEGAL_DOCUMENTS);
 const originalCompany = { ...COMPANY_INFO };
+
+// No bracketed fields are left in the texts: Privacy §9 states 12 months
+// (client decision, 24.10.2026). Any new one would block activation.
+const PENDING_FIELDS: Record<LegalDocumentId, { bg: string[]; en: string[] }> = {
+  terms: { bg: [], en: [] },
+  privacy: { bg: [], en: [] },
+  cookies: { bg: [], en: [] },
+};
 
 function publish(doc: LegalDocument, version = '1.0') {
   doc.status = 'published';
@@ -66,70 +73,92 @@ describe('legal document registry (current, unapproved state)', () => {
     }
   });
 
-  it('ships every document as an unapproved draft with Bulgarian text only (no translation invented)', () => {
+  it('ships every document as an unpublished draft, with its Bulgarian text and its English version', () => {
     for (const id of LEGAL_DOCUMENT_IDS) {
       expect(LEGAL_DOCUMENTS[id].status).toBe('draft');
       expect(LEGAL_DOCUMENTS[id].version).toBe('0.1-draft');
       expect(LEGAL_DOCUMENTS[id].effectiveDate).toBeNull();
       expect(LEGAL_DOCUMENTS[id].content.bg).not.toBeNull();
-      expect(LEGAL_DOCUMENTS[id].content.en).toBeNull();
+      expect(LEGAL_DOCUMENTS[id].content.en).not.toBeNull();
     }
   });
 
-  it('holds each source document with its own title and all its numbered headings, in order', () => {
+  it('holds each document with its own title and all its numbered headings, in order', () => {
     const headings = (id: LegalDocumentId) => LEGAL_DOCUMENTS[id].content.bg!.sections.map((s) => s.heading);
     expect(LEGAL_DOCUMENTS.terms.content.bg!.title).toBe('ОБЩИ УСЛОВИЯ ЗА ИЗПОЛЗВАНЕ НА KUKO WAY');
     expect(LEGAL_DOCUMENTS.privacy.content.bg!.title).toBe('ПОЛИТИКА ЗА ПОВЕРИТЕЛНОСТ НА KUKO WAY');
     expect(LEGAL_DOCUMENTS.cookies.content.bg!.title).toBe('ПОЛИТИКА ЗА БИСКВИТКИТЕ И ЛОКАЛНОТО СЪХРАНЕНИЕ НА KUKO WAY');
     expect(headings('terms')).toEqual([
-      '1. Кой предоставя KUKO WAY',
-      '2. Обхват и приемане',
-      '3. Какво включва платформата',
-      '4. Профили и допустимост',
-      '5. Здраве, лична отговорност и граници на практиките',
-      '6. Общност, дискусии и срещи',
-      '7. Поръчки и плащания — при активиране на продажбите',
-      '8. Право на отказ, възстановяване и законови права',
-      '9. Доброволна подкрепа',
-      '10. Интелектуална собственост',
-      '11. Наличност, промени и прекратяване',
-      '12. Защита на данни и бисквитки',
-      '13. Жалби, спорове и приложимо право',
-      '14. Контакти и дата',
+      '1. Доставчик',
+      '2. Предмет и приемане',
+      '3. Профил',
+      '4. Здраве и безопасност',
+      '5. Общност',
+      '6. Плащания',
+      '7. Интелектуална собственост',
+      '8. Промени и прекратяване',
+      '9. Лични данни и бисквитки',
+      '10. Жалби, приложимо право и език',
     ]);
     expect(headings('privacy')).toEqual([
-      '1. Кой отговаря за личните данни',
-      '2. Какви данни може да обработваме',
-      '3. Специални категории данни – информация за здравето',
-      '4. За какви цели и на какво основание',
-      '5. Публична общност и видимост',
+      '1. Администратор',
+      '2. Какви данни обработваме',
+      '3. Цели и правни основания',
+      '4. Проверки и лични бележки',
+      '5. Видимост в общността',
       '6. Бисквитки и локално съхранение',
-      '7. Получатели и доставчици',
-      '8. Предаване извън Европейското икономическо пространство',
-      '9. Колко дълго съхраняваме данните',
-      '10. Права на потребителя',
-      '11. Деца и непълнолетни',
-      '12. Сигурност и инциденти',
-      '13. Автоматизация и индивидуални препоръки',
-      '14. Промени и контакт',
+      '7. Получатели',
+      '8. Предаване извън ЕИП',
+      '9. Срокове на съхранение',
+      '10. Вашите права',
+      '11. Непълнолетни',
+      '12. Сигурност',
+      '13. Автоматизирани решения',
+      '14. Промени',
     ]);
     expect(headings('cookies')).toEqual([
-      '1. Какво представляват бисквитките',
-      '2. Кой използва тези технологии',
-      '3. За какво ги използваме',
-      '4. Как управлявате избора си',
-      '5. Бисквитки от трети лица и вградено съдържание',
-      '6. Актуализации и контакт',
+      '1. Какво са бисквитките',
+      '2. Кой ги използва',
+      '3. Какво използваме',
+      '4. Външни услуги',
+      '5. Как управлявате избора си',
+      '6. Промени',
     ]);
   });
 
-  it('keeps the source notes for the team and the closing notes after the rule (nothing silently dropped)', () => {
+  it('holds public text only, in both languages: no draft info line, team notes, draft wording, or bracketed fields other than the pending ones', () => {
     for (const id of LEGAL_DOCUMENT_IDS) {
-      const bg = LEGAL_DOCUMENTS[id].content.bg!;
-      expect(bg.intro?.[0].type).toBe('blockquote');
-      expect(JSON.stringify(bg.intro)).toMatch(/не за публикуване:/);
-      expect(bg.closing).toHaveLength(1);
-      expect(JSON.stringify(bg.info)).toMatch(/проект 1\.0/);
+      for (const locale of ['bg', 'en'] as const) {
+        const content = LEGAL_DOCUMENTS[id].content[locale]!;
+        expect(content.info, id).toBeUndefined();
+        expect(content.intro, id).toBeUndefined();
+        expect(content.closing, id).toBeUndefined();
+        expect(content.sections.flatMap((s) => s.blocks).some((b) => b.internal), id).toBe(false);
+        const text = JSON.stringify(content);
+        // Every string value, without the JSON structure (whose arrays use brackets too).
+        const strings: string[] = [];
+        JSON.stringify(content, (_key, value) => (typeof value === 'string' && strings.push(value), value));
+        expect(strings.flatMap((s) => s.match(/\[[^\]]*\]/g) ?? []), `${id} ${locale}`).toEqual(PENDING_FIELDS[id][locale]);
+        expect(text, id).not.toMatch(
+          /не за публикуване|not for publication|проект|draft|за екипа|for the team|публичния преглед|public review|TODO|потвърдете дали|confirm whether/i,
+        );
+        // No company token is left: the contact email was removed from the
+        // texts (client decision, 24.10.2026).
+        expect([...new Set(text.match(/\{\w+\}/g))], id).toEqual([]);
+      }
+    }
+  });
+
+  it('links only to the site’s own routes (relative, so they survive the domain move) and to Google’s policies', () => {
+    for (const id of LEGAL_DOCUMENT_IDS) {
+      for (const content of [LEGAL_DOCUMENTS[id].content.bg!, LEGAL_DOCUMENTS[id].content.en!]) {
+        const text = JSON.stringify(content);
+        const hrefs = [...text.matchAll(/"href":"([^"]+)"/g)].map((m) => m[1]);
+        for (const href of hrefs) {
+          expect(['/privacy', '/cookies', 'https://policies.google.com/privacy', 'https://policies.google.com/terms']).toContain(href);
+        }
+        expect(text).not.toMatch(/vercel\.app|kukoway\.com/);
+      }
     }
   });
 
@@ -141,15 +170,10 @@ describe('legal document registry (current, unapproved state)', () => {
     }
   });
 
-  it('can never activate the supplied drafts: their unresolved [...] fields block them even if everything else were set', () => {
+  it('keeps the current texts inactive only through their draft status: no unset company value or unresolved field is left', () => {
     vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
-    fillCompany();
     for (const id of LEGAL_DOCUMENT_IDS) {
-      const doc = LEGAL_DOCUMENTS[id];
-      doc.status = 'published';
-      doc.effectiveDate = '2026-11-01';
-      doc.content.en = structuredClone(doc.content.bg);
-      expect(validateLegalDocument(doc)).toEqual(expect.arrayContaining(['bg: unresolved field [●]']));
+      expect(validateLegalDocument(LEGAL_DOCUMENTS[id])).toEqual(['status is not "published"', 'effectiveDate is missing or invalid']);
       expect(isLegalDocumentActive(id)).toBe(false);
       expect(getActiveLegalDocument(id, 'bg')).toBeNull();
     }
@@ -271,13 +295,40 @@ describe('activation rules', () => {
     expect(validateLegalDocument(LEGAL_DOCUMENTS.terms)).toEqual([]);
     const doc = getActiveLegalDocument('terms', 'en')!;
     expect(doc.content.title).toBe('Terms of Fixture Ltd');
-    expect(doc.content.info).toEqual(rich.info);
+    // The draft info line is never part of the published document.
+    expect(doc.content.info).toBeUndefined();
     expect(doc.content.intro).toEqual([{ type: 'blockquote', text: [{ text: 'Note:', strong: true }, ' by Fixture Ltd'] }]);
     expect(doc.content.sections[0].blocks).toEqual([
       rich.sections[0].blocks[0],
       { type: 'list', items: [[{ text: 'Mail:', strong: true }, ' legal@example.dev']] },
     ]);
     expect(doc.content.closing).toEqual([{ type: 'paragraph', text: [{ text: 'End', strong: true }, ' legal@example.dev'] }]);
+  });
+
+  it('checks only the public text: internal notes and the draft info line are ignored, public placeholders are not', () => {
+    vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
+    publish(LEGAL_DOCUMENTS.cookies);
+    fillCompany();
+    const content: LegalDocumentContent = {
+      info: 'Status: [draft only]',
+      intro: [{ type: 'blockquote', internal: true, text: 'Fields [●] must be filled' }],
+      sections: [{ heading: '1. Fixture', blocks: [{ type: 'paragraph', text: 'Public text.' }] }],
+      closing: [{ type: 'paragraph', internal: true, text: 'Check [before publication]' }],
+    };
+    LEGAL_DOCUMENTS.cookies.content = { bg: structuredClone(content), en: structuredClone(content) };
+    expect(validateLegalDocument(LEGAL_DOCUMENTS.cookies)).toEqual([]);
+    const published = getActiveLegalDocument('cookies', 'bg')!;
+    expect(published.content).toEqual({
+      title: undefined,
+      intro: undefined,
+      sections: [{ heading: '1. Fixture', blocks: [{ type: 'paragraph', text: 'Public text.' }] }],
+      closing: undefined,
+    });
+
+    // The same placeholder in public text still blocks activation.
+    LEGAL_DOCUMENTS.cookies.content.bg!.sections[0].blocks.push({ type: 'paragraph', text: 'Contact [●]' });
+    expect(validateLegalDocument(LEGAL_DOCUMENTS.cookies)).toEqual(['bg: unresolved field [●]']);
+    expect(isLegalDocumentActive('cookies')).toBe(false);
   });
 
   it('stays inactive while any bracketed field is unresolved, wherever it appears', () => {
@@ -295,7 +346,7 @@ describe('draft preview (local development only)', () => {
     vi.stubEnv('NODE_ENV', 'development');
     for (const id of LEGAL_DOCUMENT_IDS) {
       expect(getLegalDraftPreview(id, 'bg')).toEqual({ content: LEGAL_DOCUMENTS[id].content.bg, locale: 'bg', isFallback: false });
-      expect(getLegalDraftPreview(id, 'en')).toEqual({ content: LEGAL_DRAFT_TRANSLATIONS[id].en, locale: 'en', isFallback: false });
+      expect(getLegalDraftPreview(id, 'en')).toEqual({ content: LEGAL_DOCUMENTS[id].content.en, locale: 'en', isFallback: false });
     }
 
     for (const env of ['production', 'test', '', 'Development', 'dev']) {
@@ -309,20 +360,8 @@ describe('draft preview (local development only)', () => {
 
   it('falls back to the Bulgarian source, flagged as such, when a translation is missing', () => {
     vi.stubEnv('NODE_ENV', 'development');
-    const saved = LEGAL_DRAFT_TRANSLATIONS.privacy.en;
-    delete LEGAL_DRAFT_TRANSLATIONS.privacy.en;
-    try {
-      expect(getLegalDraftPreview('privacy', 'en')).toEqual({ content: LEGAL_DOCUMENTS.privacy.content.bg, locale: 'bg', isFallback: true });
-    } finally {
-      LEGAL_DRAFT_TRANSLATIONS.privacy.en = saved;
-    }
-  });
-
-  it('keeps the translations out of the registry, so they never count towards publication', () => {
-    for (const id of LEGAL_DOCUMENT_IDS) {
-      expect(LEGAL_DOCUMENTS[id].content.en).toBeNull();
-      expect(LEGAL_DRAFT_TRANSLATIONS[id].en).toBeTruthy();
-    }
+    LEGAL_DOCUMENTS.privacy.content.en = null;
+    expect(getLegalDraftPreview('privacy', 'en')).toEqual({ content: LEGAL_DOCUMENTS.privacy.content.bg, locale: 'bg', isFallback: true });
   });
 
   it('never turns on in production, whatever the legal switches say', () => {
@@ -334,7 +373,7 @@ describe('draft preview (local development only)', () => {
     }
   });
 
-  it('does not activate, publish or enforce anything: the drafts stay blocked by missing EN text and unresolved fields', () => {
+  it('does not activate, publish or enforce anything: the drafts stay blocked by their status', () => {
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('LEGAL_DOCUMENTS_PUBLISHED', 'true');
     for (const id of LEGAL_DOCUMENT_IDS) {
@@ -345,7 +384,7 @@ describe('draft preview (local development only)', () => {
       expect(getActiveLegalDocument(id, 'bg')).toBeNull();
       expect(LEGAL_DOCUMENTS[id]).toMatchObject({ status: 'draft', version: '0.1-draft', effectiveDate: null });
       expect(validateLegalDocument(LEGAL_DOCUMENTS[id])).toEqual(
-        expect.arrayContaining(['status is not "published"', 'no approved en content', 'bg: unresolved field [●]']),
+        expect.arrayContaining(['status is not "published"']),
       );
     }
     expect(getPublicLegalConfig().registration).toMatchObject({ termsRequired: false, privacyRequired: false });

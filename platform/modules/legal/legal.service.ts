@@ -6,9 +6,6 @@ import { Errors } from '@/lib/api-response';
 import { createLogger } from '@/lib/logger';
 import type { RegisterInput } from '@/lib/validations/auth';
 import { COMPANY_INFO, type CompanyInfo } from './company';
-import { COOKIES_EN } from './content/cookies.en';
-import { PRIVACY_EN } from './content/privacy.en';
-import { TERMS_EN } from './content/terms.en';
 import { LEGAL_DOCUMENTS } from './documents';
 import {
   getPrivacyAcknowledgementMode,
@@ -46,13 +43,20 @@ function blockStrings(block: LegalContentBlock): string[] {
   return block.type === 'list' ? block.items.flatMap(textStrings) : textStrings(block.text);
 }
 
+// Blocks that are part of the public document: internal team notes are not.
+function publicBlocks(blocks: LegalContentBlock[] | undefined): LegalContentBlock[] {
+  return (blocks ?? []).filter((block) => !block.internal);
+}
+
+// Every string of the PUBLIC document (the text a published page shows).
+// The draft info line and internal blocks are never published, so they are
+// not checked either; everything else, including every placeholder, is.
 function contentStrings(content: LegalDocumentContent): string[] {
   return [
     ...(content.title ? [content.title] : []),
-    ...(content.info ? textStrings(content.info) : []),
-    ...(content.intro ?? []).flatMap(blockStrings),
-    ...content.sections.flatMap((s) => [s.heading, ...s.blocks.flatMap(blockStrings)]),
-    ...(content.closing ?? []).flatMap(blockStrings),
+    ...publicBlocks(content.intro).flatMap(blockStrings),
+    ...content.sections.flatMap((s) => [s.heading, ...publicBlocks(s.blocks).flatMap(blockStrings)]),
+    ...publicBlocks(content.closing).flatMap(blockStrings),
   ];
 }
 
@@ -141,18 +145,19 @@ export function getActiveLegalDocument(
   if (!isLegalDocumentActive(id)) return null;
   const doc = LEGAL_DOCUMENTS[id];
   const content = doc.content[locale]!;
+  // Only the public document: no draft info line, no internal team notes.
+  const nonEmpty = (blocks: LegalContentBlock[]) => (blocks.length > 0 ? blocks : undefined);
   return {
     version: doc.version,
     effectiveDate: doc.effectiveDate!,
     content: {
       title: content.title && interpolateCompanyInfo(content.title),
-      info: content.info && interpolateText(content.info),
-      intro: content.intro?.map(interpolateBlock),
+      intro: nonEmpty(publicBlocks(content.intro).map(interpolateBlock)),
       sections: content.sections.map((s) => ({
         heading: interpolateCompanyInfo(s.heading),
-        blocks: s.blocks.map(interpolateBlock),
+        blocks: publicBlocks(s.blocks).map(interpolateBlock),
       })),
-      closing: content.closing?.map(interpolateBlock),
+      closing: nonEmpty(publicBlocks(content.closing).map(interpolateBlock)),
     },
   };
 }
@@ -160,15 +165,6 @@ export function getActiveLegalDocument(
 // The language of the supplied source documents. A draft preview falls back
 // to it when there is no text in the requested language.
 export const LEGAL_SOURCE_LOCALE: Locale = 'bg';
-
-// Unreviewed translations, used ONLY by the draft preview below. They are
-// deliberately kept out of the registry (documents.ts keeps `en: null`), so
-// they never count towards activation and are never published.
-export const LEGAL_DRAFT_TRANSLATIONS: Record<LegalDocumentId, Partial<Record<Locale, LegalDocumentContent>>> = {
-  terms: { en: TERMS_EN },
-  privacy: { en: PRIVACY_EN },
-  cookies: { en: COOKIES_EN },
-};
 
 export interface LegalDraftPreview {
   content: LegalDocumentContent;
@@ -179,8 +175,8 @@ export interface LegalDraftPreview {
 }
 
 // The unpublished text of a document in the visitor's language, for
-// reviewing it locally before approval: the registry text, else a draft
-// translation, else the source text (flagged as a fallback). Null outside
+// reviewing it locally before approval: the registry text, else the source
+// text (flagged as a fallback). Null outside
 // `next dev` (config.ts), for an active document (its published version is
 // shown instead), and when there is no text at all. Reading it changes
 // nothing about activation: the document stays a draft, unpublished and
@@ -188,10 +184,40 @@ export interface LegalDraftPreview {
 export function getLegalDraftPreview(id: LegalDocumentId, locale: Locale): LegalDraftPreview | null {
   if (!isLegalDraftPreviewAllowed() || isLegalDocumentActive(id)) return null;
   const registry = LEGAL_DOCUMENTS[id].content;
-  const requested = registry[locale] ?? LEGAL_DRAFT_TRANSLATIONS[id][locale] ?? null;
+  const requested = registry[locale] ?? null;
   if (requested) return { content: requested, locale, isFallback: false };
   const source = registry[LEGAL_SOURCE_LOCALE];
   return source ? { content: source, locale: LEGAL_SOURCE_LOCALE, isFallback: true } : null;
+}
+
+// For the draft preview: fills in the company values that are set and turns
+// every `{token}` that is still unset into a bracketed, human-readable
+// placeholder (`labelFor` gives its text in the page language), so a missing
+// fact reads as clearly as the bracketed fields of the text itself.
+export function fillDraftPlaceholders(
+  content: LegalDocumentContent,
+  labelFor: (key: string) => string,
+  company: CompanyInfo = COMPANY_INFO,
+): LegalDocumentContent {
+  const fill = (text: string) =>
+    text.replace(TOKEN, (_, key: string) => {
+      const value = key in company ? company[key as keyof CompanyInfo] : null;
+      return value ?? `[${labelFor(key)}]`;
+    });
+  const fillText = (text: LegalText): LegalText =>
+    typeof text === 'string'
+      ? fill(text)
+      : text.map((run) => (typeof run === 'string' ? fill(run) : 'text' in run ? { ...run, text: fill(run.text) } : run));
+  const fillBlock = (block: LegalContentBlock): LegalContentBlock =>
+    block.type === 'list' ? { ...block, items: block.items.map(fillText) } : { ...block, text: fillText(block.text) };
+  return {
+    ...content,
+    title: content.title && fill(content.title),
+    info: content.info && fillText(content.info),
+    intro: content.intro?.map(fillBlock),
+    sections: content.sections.map((s) => ({ heading: fill(s.heading), blocks: s.blocks.map(fillBlock) })),
+    closing: content.closing?.map(fillBlock),
+  };
 }
 
 // Everything the client needs (footer, cookie banner, registration form),

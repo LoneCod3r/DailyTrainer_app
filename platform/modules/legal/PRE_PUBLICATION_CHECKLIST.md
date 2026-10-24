@@ -1,5 +1,11 @@
 # Правни документи: вътрешен контролен списък преди публикуване
 
+> **Superseded (24.10.2026).** This file describes the previous full-length draft texts.
+> The texts in `content/` were since shortened to public wording only; the current open
+> items are in `CLIENT_CONFIRMATION.md`. Kept for the record (the technical findings still apply).
+>
+> **Open before publication:** see "Latest status" in `CLIENT_CONFIRMATION.md`.
+
 > ВЪТРЕШЕН ДОКУМЕНТ. Не се публикува и не се показва на сайта.
 
 Отнася се за българските текстове в `content/` (`terms.bg.ts`,

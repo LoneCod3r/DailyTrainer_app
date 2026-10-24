@@ -4,27 +4,28 @@ Technical infrastructure for exactly three documents: **Terms & Conditions**
 (`/terms`), **Privacy Policy** (`/privacy`) and **Cookie Policy** (`/cookies`),
 plus cookie consent and registration agreements.
 
-`content/*.bg.ts` holds the verbatim Bulgarian text of the source documents
-(the only exception: in `terms.bg.ts` the brackets around the
-client-confirmed provider details were removed with the client's
-authorization)
-in `terms and conditions, privacy policy и cookie policy/`
-(`01_Obshti_usloviya.docx`, `02_Politika_poveritelnost.docx`,
-`03_Politika_biskvitki.docx`, which stay unchanged). Passages that look like
-internal editorial material are kept as supplied and marked with
-`// EDITORIAL` comments until the owner/lawyer decide; open items are in
-`PRE_PUBLICATION_CHECKLIST.md` (internal, never published). The texts still
-have unfilled `[...]` fields and no English version, so every document here
-is `status: 'draft'` and inactive, and every company detail is `null`. The
-older `KUKO_WAY_Legal_Documents/DRAFT` package is not used.
+`content/*.bg.ts` holds the primary Bulgarian texts, shortened (24.10.2026)
+from the source documents in `terms and conditions, privacy policy и cookie
+policy/` (`01_Obshti_usloviya.docx`, `02_Politika_poveritelnost.docx`,
+`03_Politika_biskvitki.docx`, which stay unchanged) and checked against what
+the app actually does. They contain public wording only: no team notes or
+draft status lines, and no `[...]` fields or `{tokens}`: the contact email
+was removed (client decision, 24.10.2026) and the clauses that pointed to it
+now refer to the contact details in clause/section 1. Every document is still
+`status: 'draft'` and inactive, because Privacy §3, §4 and §9 describe
+check-in consent and a 12-month retention that production does not have yet.
+Everything still open is in `CLIENT_CONFIRMATION.md` (internal, never
+published). Every company detail in `company.ts` is `null`. The older
+`KUKO_WAY_Legal_Documents/DRAFT` package is not used.
 
 | File | Purpose |
 | --- | --- |
 | `types.ts` | Document model: id, version, status, effectiveDate, bg/en content (title, info line, sections, quotes, closing; bold, monospace, links, line breaks) |
-| `content/*.bg.ts` | Verbatim Bulgarian source text, converted from the .docx; editorial passages marked `// EDITORIAL` |
-| `content/*.en.ts` | Unreviewed English translations; NOT connected to the registry (`en: null`), shown only in the development draft preview (`LEGAL_DRAFT_TRANSLATIONS` in `legal.service.ts`) |
-| `PRE_PUBLICATION_CHECKLIST.md` | Internal: editorial passages, missing information, technical audit |
-| `TRANSLATION_REVIEW.md` | Internal: translation decisions and questions for legal review |
+| `content/*.bg.ts` | Primary Bulgarian texts, public wording only |
+| `content/*.en.ts` | English versions, matching the Bulgarian block by block. Connected to the registry with the Bulgarian text. Legal approval to be reconfirmed (`CLIENT_CONFIRMATION.md`) |
+| `CLIENT_CONFIRMATION.md` | Internal: the current open facts and decisions, manual processes, and activation steps |
+| `PRE_PUBLICATION_CHECKLIST.md` | Internal: earlier technical audit (23.10.2026) of the previous full-length draft; superseded by `CLIENT_CONFIRMATION.md` |
+| `TRANSLATION_REVIEW.md` | Internal: translation notes for the previous full-length draft; superseded by `CLIENT_CONFIRMATION.md` |
 | `documents.ts` | The registry. Approved text goes here (see its header for the steps) |
 | `company.ts` | Operator details referenced as `{legalEntityName}` etc. All unset |
 | `config.ts` | Environment switches: `LEGAL_DOCUMENTS_PUBLISHED`, `LEGAL_PRIVACY_ACKNOWLEDGEMENT`, `RECAPTCHA_CONSENT_CATEGORY` |

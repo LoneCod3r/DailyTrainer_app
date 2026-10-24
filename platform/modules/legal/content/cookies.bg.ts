@@ -1,184 +1,113 @@
-// Cookie Policy (Политика за бисквитките): Bulgarian text of `03_Politika_biskvitki.docx`
-// (folder `terms and conditions, privacy policy и cookie policy/`).
+// Cookie Policy (Политика за бисквитките), Bulgarian: the primary version.
 //
-// VERBATIM SOURCE TEXT, with one owner-requested change (23.10.2026): DOCX
-// sections 4 („Подробен списък“) and 5 („Необходими и незадължителни
-// технологии“) were removed in full, and sections 6–8 renumbered 4–6.
-// Everything else was converted mechanically from the .docx, keeping every
-// heading, paragraph, list, line break, bold run, monospace name and
-// hyperlink, in the source order. Do not edit, shorten or "fix" it here.
+// Shortened from `03_Politika_biskvitki.docx` (folder `terms and conditions,
+// privacy policy и cookie policy/`, unchanged) and checked against
+// storage-inventory.ts, the list of every cookie and localStorage key the app
+// really uses. As the owner asked (23.10.2026), the policy has no detailed
+// list: names and durations are shown in the cookie settings dialog, which
+// is generated from that inventory. Open items are listed in
+// ../CLIENT_CONFIRMATION.md (internal, never published). This file holds
+// public text only.
 //
-// The source is a draft (version "проект 1.0"). It still contains its
-// bracketed fields to be filled in and its notes for the team, exactly as
-// supplied, so it must not be published (see documents.ts).
-//
-// `// EDITORIAL [A|B|C]` comments mark passages that look like internal
-// editorial material rather than public legal text ([A] marked by the
-// document as not for publication, [B] addressed to the team, [C] tied to
-// the review date). They are comments only and change nothing; the text
-// stays as supplied until the owner/lawyer decide.
+// cookies.en.ts mirrors this file section by section and block by block.
 import type { LegalDocumentContent } from '../types';
 
 export const COOKIES_BG: LegalDocumentContent = {
   title: 'ПОЛИТИКА ЗА БИСКВИТКИТЕ И ЛОКАЛНОТО СЪХРАНЕНИЕ НА KUKO WAY',
-  // EDITORIAL [B] instruction or verification task addressed to the team: the version/date/site/status line ("Статус: изготвено по публично видимия панел ...; необходима е техническа проверка").
-  info: [
-    { text: 'Версия:', strong: true },
-    ' проект 1.0 · ',
-    { text: 'Дата:', strong: true },
-    ' 23 октомври 2026 г.',
-    { lineBreak: true },
-    { text: 'Сайт:', strong: true },
-    ' https://daily-trainer-app.vercel.app/',
-    { lineBreak: true },
-    { text: 'Статус:', strong: true },
-    ' изготвено по публично видимия панел за бисквитки; необходима е техническа проверка',
-  ],
-  intro: [
-    {
-      type: 'blockquote',
-      text: [
-        // EDITORIAL [A] marked by the document itself as not for publication: the whole quoted note ("За екипа, не за публикуване: ...").
-        { text: 'За екипа, не за публикуване:', strong: true },
-        ' Инвентарът по-долу е извлечен от видимия панел на сайта към 23.10.2026 г. Това не е независим технически скан на всички заявки, домейни и срокове. Доказателството за съответствие изисква проверка в браузър/мрежови инструменти и документация на доставчиците.',
-      ],
-    },
-  ],
   sections: [
     {
-      heading: '1. Какво представляват бисквитките',
+      heading: '1. Какво са бисквитките',
       blocks: [
         {
           type: 'paragraph',
           text: [
-            'Бисквитките са малки файлове или идентификатори, които браузърът съхранява при посещение на уебсайт. Подобни технологии включват ',
+            'Бисквитките са малки файлове, които сайтът записва в браузъра ви. Локалното съхранение (',
             { text: 'localStorage', code: true },
-            ', ',
-            { text: 'sessionStorage', code: true },
-            ' и други средства за съхраняване или достъп до информация на устройството. Не всички описани по-долу записи са HTTP бисквитки, но също могат да попаднат под правилата за поверителност и достъп до крайното устройство.',
+            ') е подобна технология, която пази информация само на устройството ви. Тази политика описва и двете.',
           ],
         },
       ],
     },
     {
-      heading: '2. Кой използва тези технологии',
+      heading: '2. Кой ги използва',
       blocks: [
         {
           type: 'paragraph',
           text: [
-            'Сайтът KUKO WAY се предоставя от ',
-            { text: '[ТОЧНО ЮРИДИЧЕСКО ЛИЦЕ]', strong: true },
-            ', ЕИК ',
-            { text: '[●]', strong: true },
-            ', контакт ',
-            { text: '[имейл]', strong: true },
-            '. За въпроси относно данните и правата ви вижте ',
-            { text: 'Политиката за поверителност', href: 'https://daily-trainer-app.vercel.app/privacy' },
+            'Сайтът KUKO WAY се предоставя от 3Д ЛУК ООД, ЕИК 175172901. Как обработваме личните данни е описано в ',
+            { text: 'Политиката за поверителност', href: '/privacy' },
             '.',
           ],
         },
       ],
     },
     {
-      heading: '3. За какво ги използваме',
+      heading: '3. Какво използваме',
       blocks: [
         {
           type: 'paragraph',
-          text: [
-            // EDITORIAL [C] statement tied to the review date or draft; may read as public text, needs a decision: section 3: "Към датата на публичния преглед панелът на сайта показва ...".
-            'Към датата на публичния преглед панелът на сайта показва ',
-            { text: '11 групи необходими записи', strong: true },
-            ' за следните функции:',
-          ],
+          text: 'Използваме само необходими технологии. Без тях сайтът не може да работи или да изпълни функция, която сте поискали:',
         },
         {
           type: 'list',
           items: [
-            'сигурен вход, поддържане на сесия и защита на заявките;',
-            'запомняне на езика и избраната тема;',
-            'запомняне на избора за бисквитки;',
-            'запазване на завършени практики на устройството без профил;',
-            'локални предпочитания на администратори/модератори;',
-            'защита от автоматизирани регистрации чрез Google reCAPTCHA.',
+            'вход, поддържане на сесията и защита на формулярите;',
+            'запомняне на езика, темата и избора ви за бисквитки;',
+            'запазване на завършените практики на устройството, когато нямате профил;',
+            'настройки на менюто за администратори и модератори;',
+            'защита от автоматизирани регистрации чрез Google reCAPTCHA, само на страницата за регистрация.',
           ],
         },
         {
           type: 'paragraph',
           text: [
-            'Публичният панел изрично посочва, че в момента ',
-            { text: 'няма активни технологии в категориите „Предпочитания“, „Анализ“ и „Маркетинг“', strong: true },
-            // EDITORIAL [B] instruction or verification task addressed to the team: section 3: "Това следва да остане вярно и технически; ако добавите инструменти, ...".
-            '. Това следва да остане вярно и технически; ако добавите инструменти, списъкът и панелът се актуализират предварително.',
-          ],
-        },
-      ],
-    },
-    {
-      heading: '4. Как управлявате избора си',
-      blocks: [
-        {
-          type: 'paragraph',
-          text: [
-            'При първото посещение се показва панел с възможности ',
-            { text: '„Персонализирай“', strong: true },
-            ', ',
-            { text: '„Отказвам незадължителните“', strong: true },
-            ' и ',
-            { text: '„Приемам всички“', strong: true },
-            '. По всяко време можете отново да отворите ',
+            'Пълният списък с имената и сроковете е в ',
             { text: '„Настройки на бисквитките“', strong: true },
-            ' в долната част на сайта, да промените избора си и да го запазите. Възможно е да изтривате бисквитки и локалното съхранение и през настройките на браузъра; това може да доведе до изход от профила или загуба на локална история, която не е синхронизирана.',
+            ' в долната част на сайта. Не използваме бисквитки за анализ или реклама.',
           ],
         },
-        {
-          type: 'paragraph',
-          text: 'Ако в момента няма активни незадължителни инструменти, бутоните за съгласие не означават, че потребителят разрешава неопределени бъдещи инструменти. При добавяне на нова цел ще предоставим ясна информация и ще поискаме съответния нов избор.',
-        },
       ],
     },
     {
-      heading: '5. Бисквитки от трети лица и вградено съдържание',
+      heading: '4. Външни услуги',
       blocks: [
         {
-          type: 'paragraph',
-          text: 'На сайта е видимо Google reCAPTCHA за защита на регистрацията. При бъдещо вграждане на YouTube, платежни прозорци, социални мрежи, чат или други външни услуги може да възникнат допълнителни бисквитки или заявки; те следва да се инвентаризират и да се блокират до съгласие, когато то е необходимо. Понастоящем не твърдим, че такива външни услуги са активни на всички страници.',
+          type: 'list',
+          items: [
+            [
+              { text: 'Google reCAPTCHA', strong: true },
+              ' записва бисквитка и запис в локалното съхранение, за да различава хора от автоматизирани програми. За тях се прилага ',
+              { text: 'Политиката за поверителност на Google', href: 'https://policies.google.com/privacy' },
+              '.',
+            ],
+            [
+              { text: 'YouTube:', strong: true },
+              ' страницата „Безплатни видеа“ зарежда миниатюри от YouTube (Google), който получава IP адреса ви. Видеата се отварят в YouTube, където се прилагат правилата на YouTube.',
+            ],
+          ],
         },
       ],
     },
     {
-      heading: '6. Актуализации и контакт',
+      heading: '5. Как управлявате избора си',
       blocks: [
         {
           type: 'paragraph',
           text: [
-            'Преглеждаме политиката при промяна на технология, доставчик, цел или срок на съхранение. Актуалната версия остава публикувана на този адрес. За въпроси: ',
-            { text: '[имейл]', strong: true },
-            '.',
-          ],
-        },
-        {
-          type: 'paragraph',
-          text: [
-            { text: 'Дата на влизане в сила:', strong: true },
-            ' [действителна дата на публикуване]',
-            { lineBreak: true },
-            { text: 'Администратор:', strong: true },
-            ' [●]',
-            { lineBreak: true },
-            { text: 'Контакт:', strong: true },
-            ' [●]',
+            'Понастоящем не използваме незадължителни технологии. Ако добавим такива, ще поискаме съгласието ви, преди да ги активираме. Можете да промените избора си чрез ',
+            { text: '„Настройки на бисквитките“', strong: true },
+            '. Можете също да изтриете бисквитките и локалното съхранение от настройките на браузъра. Тогава може да излезете от профила си или да загубите напредъка, запазен без профил.',
           ],
         },
       ],
     },
-  ],
-  // EDITORIAL [B] instruction or verification task addressed to the team: the note after the closing rule ("Контрол преди публикуване: ...").
-  closing: [
     {
-      type: 'paragraph',
-      text: [
-        { text: 'Контрол преди публикуване:', strong: true },
-        ' извършете проверка в чист браузър преди и след отказ/приемане, на всички основни страници (вход, регистрация, общност, плащане); документирайте заявките към Google и Stripe и обновете списъка при всяка интеграция.',
+      heading: '6. Промени',
+      blocks: [
+        {
+          type: 'paragraph',
+          text: 'При промяна на използваните технологии ще актуализираме тази политика и при нужда ще поискаме избора ви отново.',
+        },
       ],
     },
   ],
