@@ -10,6 +10,7 @@ import type { DictKey } from '@/lib/i18n/dictionaries';
 import { useLegal } from './LegalProvider';
 import { CookieSettingsButton } from './CookieSettingsButton';
 import { NewsletterSignup } from '@/components/newsletter/NewsletterSignup';
+import { BrandMark } from '@/components/layout/BrandMark';
 import { SUPPORT_NAV } from '@/components/layout/nav';
 import { isModeratorOnly } from '@/lib/permissions';
 import { Button } from '@/components/ui';
@@ -76,9 +77,7 @@ export function SiteFooter({
               aria-label={appName}
               className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight text-ink-900"
             >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-lg text-white">
-                {appName.charAt(0).toUpperCase()}
-              </span>
+              <BrandMark size={45} className="h-10 w-10 rounded-xl" />
               <span>{appName}</span>
             </Link>
             {/* No background of its own: white on the dark footer in dark

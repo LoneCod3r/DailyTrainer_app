@@ -4,6 +4,9 @@
 *.png
 # ...except the footer's donation icon, which the app imports.
 !/platform/donate_icon.png
+# ...and the KUKO WAY app icons Next.js serves from app/ (file conventions).
+!/platform/app/icon.png
+!/platform/app/apple-icon.png
 *.webm
 *.mp4
 Website-цена.txt

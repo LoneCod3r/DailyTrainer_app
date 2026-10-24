@@ -11,6 +11,7 @@ import { useT } from '@/lib/i18n/LocaleProvider';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { BrandMark } from './BrandMark';
 import { ACCOUNT_NAV, PRIMARY_NAV, isNavItemActive } from './nav';
 import { LIBRARY_PATH, librarySearchHref } from '@/modules/kuko-way/search';
 import {
@@ -42,6 +43,8 @@ const ACCOUNT_ICONS: Record<string, typeof AccountIcon> = {
 // which enforce the same boundary server-side).
 const FINANCIAL_ACCOUNT_HREFS = new Set(['/account/membership', '/account/billing']);
 
+const ACCOUNT_MENU_ID = 'topbar-account-menu';
+
 export function Topbar({
   appName,
   planName,
@@ -60,6 +63,23 @@ export function Topbar({
 
   const accountMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(accountMenuRef, () => setMenuOpen(false), menuOpen);
+
+  // The account dropdown also closes after any navigation (a link inside it,
+  // browser back, …) and on Escape, which hands focus back to its trigger.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuOpen(false);
+      accountMenuRef.current?.querySelector<HTMLElement>(`button[aria-controls="${ACCOUNT_MENU_ID}"]`)?.focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
 
   // Practices/Community default to expanded while you're inside them
   // (`active`) and collapsed otherwise. Once you click the arrow, that
@@ -89,27 +109,36 @@ export function Topbar({
     router.push(librarySearchHref(query));
   };
 
+  const menuPanelClass = 'absolute right-0 z-20 mt-2 rounded-xl border border-sand-200 bg-surface shadow-soft';
+
   return (
     <header className="sticky top-0 z-20 border-b border-sand-200 bg-surface/90 backdrop-blur">
       {/* lg–xl (1024–1279px) is a compact desktop range: the full nav plus
           search only fit if the logo wordmark, account name and plan badge
           collapse and the guest CTA uses its short label. The plan badge
-          returns at 1440px (it is also shown inside the account menu). */}
+          returns at 1440px (it is also shown inside the account menu).
+          Below md (768px) the account area is a single account icon (log in
+          / join, or the account menu, behind it; no name or plan badge), so
+          the full logo + wordmark, language and theme fit on one row down to
+          320px. Below sm the icon buttons and gaps are slightly tighter, and
+          below 360px the wordmark steps down one size. */}
       <div className="mx-auto flex h-16 max-w-[100rem] items-center gap-1 px-2 sm:gap-3 sm:px-6 lg:px-6 xl:px-10">
         <button
           type="button"
           onClick={onOpenMenu}
           aria-label={t('topbar.openMenu')}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-700 hover:bg-sand-100 lg:hidden"
+          className="inline-flex h-9 w-8 shrink-0 items-center justify-center rounded-lg text-ink-700 hover:bg-sand-100 sm:w-9 lg:hidden"
         >
           <MenuIcon />
         </button>
 
-        <Link href="/" aria-label={appName} className="flex shrink-0 items-center gap-2 text-xl font-semibold text-ink-900">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-            {appName.charAt(0).toUpperCase()}
-          </span>
-          <span className="hidden truncate sm:inline lg:hidden xl:inline">{appName}</span>
+        <Link
+          href="/"
+          aria-label={appName}
+          className="flex shrink-0 items-center gap-1.5 text-base font-semibold text-ink-900 min-[360px]:text-xl sm:gap-2"
+        >
+          <BrandMark size={36} className="h-8 w-8 rounded-lg" />
+          <span className="truncate lg:hidden xl:inline">{appName}</span>
         </Link>
 
         {/* Centered between the logo and the account controls, same way
@@ -185,9 +214,10 @@ export function Topbar({
         </form>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
           <LanguageSwitcher />
-          <ThemeToggle />
+          {/* !-prefixed: must beat ThemeToggle's own built-in w-9. */}
+          <ThemeToggle className="!w-8 sm:!w-9" />
 
           {status === 'loading' ? null : session?.user ? (
             <div className="relative" ref={accountMenuRef}>
@@ -198,30 +228,32 @@ export function Topbar({
                 // apply once you're managing the admin panel).
                 <Link
                   href="/admin"
-                  className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-900 hover:bg-sand-100"
+                  className="flex h-9 w-9 items-center justify-center gap-2 rounded-lg text-sm font-medium text-ink-900 hover:bg-sand-100 md:w-auto md:justify-start md:px-2"
                 >
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
                     <AccountIcon width={16} height={16} />
                   </span>
-                  <span className="hidden max-w-[8rem] truncate sm:inline lg:hidden xl:inline">{session.user.name ?? t('topbar.account')}</span>
-                  <span className="sr-only sm:hidden lg:inline xl:hidden">{t('topbar.account')}</span>
+                  <span className="hidden max-w-[8rem] truncate md:inline lg:hidden xl:inline">{session.user.name ?? t('topbar.account')}</span>
+                  <span className="sr-only md:hidden lg:inline xl:hidden">{t('topbar.account')}</span>
                 </Link>
               ) : (
                 <button
                   type="button"
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-900 hover:bg-sand-100"
+                  aria-expanded={menuOpen}
+                  aria-controls={ACCOUNT_MENU_ID}
+                  className="flex h-9 w-9 items-center justify-center gap-2 rounded-lg text-sm font-medium text-ink-900 hover:bg-sand-100 md:w-auto md:justify-start md:px-2"
                 >
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
                     <AccountIcon width={16} height={16} />
                   </span>
-                  <span className="hidden max-w-[8rem] truncate sm:inline lg:hidden xl:inline">{session.user.name ?? t('topbar.account')}</span>
-                  <span className="sr-only sm:hidden lg:inline xl:hidden">{t('topbar.account')}</span>
+                  <span className="hidden max-w-[8rem] truncate md:inline lg:hidden xl:inline">{session.user.name ?? t('topbar.account')}</span>
+                  <span className="sr-only md:hidden lg:inline xl:hidden">{t('topbar.account')}</span>
                   {/* Subtle, tasteful plan indicator — visible app-wide (not
                       just /account), same restrained brand-tone badge used
                       elsewhere, never a different color system. */}
                   {planName && (
-                    <Badge tone="brand" className="hidden sm:inline-flex lg:hidden min-[1440px]:inline-flex">
+                    <Badge tone="brand" className="hidden md:inline-flex lg:hidden min-[1440px]:inline-flex">
                       {planName}
                     </Badge>
                   )}
@@ -229,7 +261,7 @@ export function Topbar({
               )}
 
               {!isAdmin(session.user.role) && menuOpen && (
-                <div className="absolute right-0 z-20 mt-2 w-60 rounded-xl border border-sand-200 bg-surface p-1.5 shadow-soft">
+                <div id={ACCOUNT_MENU_ID} className={clsx(menuPanelClass, 'w-60 p-1.5')}>
                   <p className="truncate px-3 py-2 text-xs text-ink-500">{session.user.email}</p>
                   {planName && (
                     <p className="px-3 pb-2">
@@ -280,24 +312,60 @@ export function Topbar({
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-1 sm:gap-2">
+            <>
+            <div className="hidden items-center gap-2 md:flex">
               <Link href="/login">
-                {/* Tighter horizontal padding below sm — !-prefixed so it
-                    reliably wins over the Button component's own built-in
-                    size padding regardless of Tailwind's class ordering. */}
+                {/* !-prefixed so it reliably wins over the Button component's
+                    own built-in size padding regardless of Tailwind's class
+                    ordering. */}
                 <Button variant="ghost" size="sm" className="!px-2 sm:!px-3">
                   {t('topbar.login')}
                 </Button>
               </Link>
               {/* Calm invitation rather than a sales CTA (concept §2/§20). The
-                  short label keeps it on one line at 375px. */}
+                  short label keeps the compact lg–xl range on one line. */}
               <Link href="/register">
                 <Button variant="primary" size="sm" className="!px-2 sm:!px-3">
                   <span className="sm:hidden lg:inline xl:hidden">{t('topbar.join')}</span>
-                  <span className="hidden sm:inline lg:hidden xl:inline">{t('topbar.startJourney')} →</span>
+                  <span className="hidden sm:inline lg:hidden xl:inline">{t('topbar.startJourney')}</span>
                 </Button>
               </Link>
             </div>
+            {/* Below md: log in / join behind one account icon, so the full
+                wordmark keeps its room. */}
+            <div className="relative md:hidden" ref={accountMenuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-label={t('topbar.account')}
+                aria-expanded={menuOpen}
+                aria-controls={ACCOUNT_MENU_ID}
+                className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-sand-100"
+              >
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-tint text-link">
+                  <AccountIcon width={16} height={16} />
+                </span>
+              </button>
+              {menuOpen && (
+                <div id={ACCOUNT_MENU_ID} className={clsx(menuPanelClass, 'flex w-40 flex-col items-stretch gap-0.5 p-1')}>
+                  <Link
+                    href="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="rounded-lg px-3 py-1.5 text-center text-sm font-medium text-ink-900 hover:bg-sand-100"
+                  >
+                    {t('topbar.signIn')}
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setMenuOpen(false)}
+                    className="rounded-lg px-3 py-1.5 text-center text-sm text-link underline-offset-4 hover:underline focus-visible:underline"
+                  >
+                    {t('topbar.signUp')}
+                  </Link>
+                </div>
+              )}
+            </div>
+            </>
           )}
         </div>
       </div>

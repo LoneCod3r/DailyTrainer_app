@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getSettings } from '@/modules/settings/settings.service';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
+import { BrandMark } from '@/components/layout/BrandMark';
 import { SiteFooter } from '@/components/legal/SiteFooter';
 
 // Deliberately lighter chrome than the main app shell (no sidebar/bottom
@@ -24,9 +25,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     <div className="flex min-h-screen flex-col bg-page">
       <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-ink-900">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-            {settings.appName.charAt(0).toUpperCase()}
-          </span>
+          <BrandMark size={36} className="h-8 w-8 rounded-lg" />
           {settings.appName}
         </Link>
         <div className="flex items-center gap-2">

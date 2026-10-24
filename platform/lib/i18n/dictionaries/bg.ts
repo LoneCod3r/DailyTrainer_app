@@ -50,6 +50,8 @@ const bg = {
     searchPlaceholder: 'Търси практики, статии…',
     login: 'Вход',
     join: 'Регистрация',
+    signIn: 'Вход',
+    signUp: 'Регистрация',
     startJourney: 'Започни своя път',
     account: 'Профил',
     admin: 'Администрация',

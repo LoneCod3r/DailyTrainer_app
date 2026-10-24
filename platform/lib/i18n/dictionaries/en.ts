@@ -52,6 +52,8 @@ const en: typeof bg = {
     searchPlaceholder: 'Search practices, articles…',
     login: 'Log in',
     join: 'Join',
+    signIn: 'Log in',
+    signUp: 'Start your journey',
     startJourney: 'Start your journey',
     account: 'Account',
     admin: 'Admin',
