@@ -99,15 +99,17 @@ function programName(slug: string, title: string, locale: Locale): string {
 // prices), formatted like PriceTag. The page shows them only while
 // `pricingPreview` is on and the program tiles are visible, which, with no
 // program published yet, takes `programsPreview` (modules/programs/service).
-// Otherwise the answer names no amounts and points to the page instead.
-// While checkout is off, it repeats the page's note that purchasing isn't
-// open yet.
+// Otherwise the site shows no program price anywhere (the program overview
+// gates its price on `pricingPreview` too), so the answer says so plainly,
+// names no amounts and points to the page. A test guards the "no program
+// published yet" assumption. While checkout is off, it repeats the page's
+// note that purchasing isn't open yet.
 function programPricing(): Text {
   const showPrices = features.pricingPreview && features.programsPreview;
   if (!showPrices) {
     return {
-      bg: 'Програмите за рестарт се заплащат еднократно – не са абонамент. Актуалната информация за тях е на страницата „Програми“.',
-      en: 'The Reset Programs are one-time payments, not subscriptions. The Programs page has the current information about them.',
+      bg: 'Цените на програмите за рестарт все още не са публикувани в сайта, затова не мога да ги посоча. Програмите се заплащат еднократно – не са абонамент. Актуалната информация е на страницата „Програми“.',
+      en: 'The Reset Program prices aren’t published on the site yet, so I can’t list them. The programs are one-time payments, not subscriptions. The Programs page has the current information.',
     };
   }
   const list = (locale: Locale, and: string) => {

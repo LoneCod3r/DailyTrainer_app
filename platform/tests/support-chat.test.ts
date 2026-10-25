@@ -150,6 +150,9 @@ describe('matchFaq', () => {
     ['What are the fees?', 'pricing'],
     ['Can I buy a program?', 'pricing'],
     ['Има ли цени?', 'pricing'],
+    ['Какви са цените на програмите?', 'pricing'],
+    ['What are the program prices?', 'pricing'],
+    ['Are there any prices?', 'pricing'],
     ['Колко струва 28-дневният рестарт?', 'pricing'],
     ['Колко струват програмите?', 'pricing'],
     ['Платени ли са програмите?', 'pricing'],
@@ -485,19 +488,51 @@ describe('pricing answer under the feature flags', () => {
     return faq.find((e) => e.id === 'pricing')!;
   }
 
-  it('names no amounts while the Programs page hides prices, and points to the page', async () => {
+  // The questions from the Preview bug report, in both languages, all reach
+  // this one answer, whichever flags are on.
+  const QUESTIONS = ['Какви са цените на програмите?', 'Има ли цени?', 'What are the program prices?', 'Are there any prices?'];
+
+  it('lists the catalog prices as one-time payments while the Programs page shows them', async () => {
+    const pricing = await pricingWith({ pricingPreview: true, programsPreview: true, programCheckout: false });
+    const { matchFaq: match } = await import('@/modules/support/faq');
+    for (const q of QUESTIONS) expect(match(q)?.answer, q).toEqual(pricing.answer);
+    expect(pricing.answer!.bg).toMatch(
+      /^Програмите за рестарт се заплащат еднократно: Еднодневен ресет — 19\s€, 3-дневен ресет — 39\s€, 7-дневен ресет — 79\s€ и 28-дневен ресет — 149\s€\./,
+    );
+    expect(pricing.answer!.en).toMatch(
+      /^The Reset Programs are one-time payments: 1 Day Reset – €19, 3 Day Reset – €39, 7 Day Reset – €79 and 28 Day Reset – €149\./,
+    );
+    expect(pricing.links[0].href).toBe('/practices/programs');
+  });
+
+  it('says plainly that prices are not published while the Programs page hides them', async () => {
     for (const flags of [
       { pricingPreview: false, programsPreview: true, programCheckout: false },
       { pricingPreview: true, programsPreview: false, programCheckout: false },
+      { pricingPreview: false, programsPreview: false, programCheckout: false },
     ]) {
       const pricing = await pricingWith(flags);
-      expect(pricing.answer!.en).toBe(
-        'The Reset Programs are one-time payments, not subscriptions. The Programs page has the current information about them.',
+      const { matchFaq: match } = await import('@/modules/support/faq');
+      for (const q of QUESTIONS) expect(match(q)?.answer, `${q} ${JSON.stringify(flags)}`).toEqual(pricing.answer);
+      expect(pricing.answer!.bg).toBe(
+        'Цените на програмите за рестарт все още не са публикувани в сайта, затова не мога да ги посоча. Програмите се заплащат еднократно – не са абонамент. Актуалната информация е на страницата „Програми“.',
       );
-      expect(pricing.answer!.bg).toContain('страницата „Програми“');
-      for (const text of [pricing.answer!.bg, pricing.answer!.en]) expect(text).not.toMatch(/[€$\d]|confirmed|потвърдена/i);
+      expect(pricing.answer!.en).toBe(
+        'The Reset Program prices aren’t published on the site yet, so I can’t list them. The programs are one-time payments, not subscriptions. The Programs page has the current information.',
+      );
+      // Never claims prices or a purchase are available.
+      for (const text of [pricing.answer!.bg, pricing.answer!.en]) expect(text).not.toMatch(/[€$\d]|confirmed|потвърдена|preview|преглед/i);
       expect(pricing.links[0].href).toBe('/practices/programs');
     }
+  });
+
+  it('relies on no program being published yet', async () => {
+    // With `programsPreview` off, the page shows only published programs.
+    // While none is published, it shows no program price at all, which the
+    // flag-off answer above states. Publishing a program makes that untrue:
+    // update programPricing (modules/support/faq.ts) before changing this.
+    const { getAllProgramsUnfiltered } = await import('@/modules/programs/service');
+    expect(getAllProgramsUnfiltered().filter((p) => p.published).map((p) => p.slug)).toEqual([]);
   });
 
   it('drops the "purchasing isn’t open yet" note once checkout is on', async () => {
