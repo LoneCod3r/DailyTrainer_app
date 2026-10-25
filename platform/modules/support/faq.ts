@@ -396,8 +396,8 @@ export const FAQ: FaqEntry[] = [
     question: { bg: 'Кой си ти?', en: 'Who are you?' },
     keywords: ['who are you ', 'what are you ', 'кой си ', 'какво си ти', 'какво представляваш'],
     answer: {
-      bg: 'Аз съм Тед, виртуалният помощник на KUKO WAY, и отговарям с готови отговори. Помагам да се ориентираш в сайта и да намериш практики и програми.',
-      en: 'I’m Ted, the KUKO WAY virtual assistant, and I reply with ready-made answers. I help you find your way around the site and find practices and programs.',
+      bg: 'Аз съм Тед, виртуалният помощник на KUKO WAY. Помагам да се ориентираш в сайта и да намериш практики и програми.',
+      en: 'I’m Ted, the KUKO WAY virtual assistant. I help you find your way around the site and find practices and programs.',
     },
     links: [
       { href: '/practices', label: { bg: 'Виж практиките', en: 'See the practices' } },
