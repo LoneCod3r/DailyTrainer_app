@@ -1,14 +1,17 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui';
-import { BrandMark } from '@/components/layout/BrandMark';
 import { useLegal } from '@/components/legal/LegalProvider';
 import { clsx } from '@/lib/clsx';
 import { useLocale } from '@/lib/i18n/LocaleProvider';
 import type { Locale } from '@/lib/i18n/locale';
 import { matchFaq, type FaqEntry, type FaqLink } from '@/modules/support/faq';
+// Ted, the assistant's portrait. Imported (not served from public/) so
+// next/image resizes the large original down to the header's size.
+import tedAvatar from '@/tedd-avatar.jpeg';
 
 const QUESTION_MAX = 300;
 
@@ -349,7 +352,7 @@ export function SupportChat({ contactEmail }: { contactEmail: string }) {
           )}
         >
           <div className="flex items-center gap-2.5 border-b border-sand-200 px-4 py-2.5">
-            <BrandMark size={36} className="h-8 w-8 rounded-full" />
+            <Image src={tedAvatar} alt="" width={32} height={32} className="h-8 w-8 rounded-full object-cover object-top" />
             <h2 id="support-chat-title" className="flex-1 text-sm font-semibold text-ink-900">
               {t('supportChat.title')}
             </h2>

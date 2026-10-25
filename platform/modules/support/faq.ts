@@ -306,8 +306,9 @@ export const FAQ: FaqEntry[] = [
   // ordinary questions that merely contain "мога", "знам" or "човек" are not
   // caught. After the site topics, so "Can you help me find programs?" still
   // gets Programs; before greetings, so "Hi, who are you?" gets Identity.
-  // None of these invent personal facts: no age, name, creator or abilities
-  // beyond fixed answers about the site.
+  // None of these invent personal facts: no age, creator or abilities beyond
+  // fixed answers about the site. The only given fact is the assistant's
+  // name, Тед / Ted (one "d"), as in the chat title and welcome.
   {
     id: 'age',
     question: { bg: 'На колко си години?', en: 'How old are you?' },
@@ -345,8 +346,8 @@ export const FAQ: FaqEntry[] = [
       'твоето име',
     ],
     answer: {
-      bg: 'Нямам собствено име – аз съм помощникът на KUKO WAY. С какво да помогна?',
-      en: 'I don’t have a name of my own – I’m the KUKO WAY assistant. How can I help?',
+      bg: 'Казвам се Тед – виртуалният асистент на Kuko Way. С какво мога да помогна?',
+      en: 'My name is Ted – I’m the Kuko Way virtual assistant. How can I help?',
     },
     links: [],
   },
@@ -378,8 +379,8 @@ export const FAQ: FaqEntry[] = [
     question: { bg: 'Кой си ти?', en: 'Who are you?' },
     keywords: ['who are you ', 'what are you ', 'кой си ', 'какво си ти', 'какво представляваш'],
     answer: {
-      bg: 'Аз съм виртуалният помощник на KUKO WAY и отговарям с готови отговори. Помагам да се ориентираш в сайта и да намериш практики и програми.',
-      en: 'I’m the KUKO WAY virtual assistant, and I reply with ready-made answers. I help you find your way around the site and find practices and programs.',
+      bg: 'Аз съм Тед, виртуалният помощник на KUKO WAY, и отговарям с готови отговори. Помагам да се ориентираш в сайта и да намериш практики и програми.',
+      en: 'I’m Ted, the KUKO WAY virtual assistant, and I reply with ready-made answers. I help you find your way around the site and find practices and programs.',
     },
     links: [
       { href: '/practices', label: { bg: 'Виж практиките', en: 'See the practices' } },

@@ -9,7 +9,7 @@ import { test, expect } from './fixtures/base';
 test.skip(process.env.NEXT_PUBLIC_FEATURE_SUPPORT_CHAT !== 'true', 'support chat feature flag is off');
 
 const launcher = (page: Page) => page.getByRole('button', { name: /Open the help assistant|Отвори асистента за помощ/ });
-const dialog = (page: Page) => page.getByRole('dialog', { name: /KUKO WAY Assistant|Виртуален асистент/ });
+const dialog = (page: Page) => page.getByRole('dialog', { name: /^(Ted|Тед)$/ });
 const log = (page: Page) => dialog(page).getByRole('log');
 const input = (page: Page) => dialog(page).getByRole('textbox');
 const sendButton = (page: Page) => dialog(page).getByRole('button', { name: /^(Send|Изпрати)$/ });
@@ -31,8 +31,14 @@ async function ask(page: Page, question: string) {
 test.describe('support chat', () => {
   test('opens with a welcome message and closes with × or Escape, returning focus', async ({ page }) => {
     await openChat(page);
-    await expect(log(page)).toContainText('I’m the KUKO WAY assistant');
+    await expect(log(page).locator(':scope > p').first()).toHaveText('Hi! I’m Ted, the Kuko Way virtual assistant. How can I help?');
     await expect(input(page)).toBeFocused();
+
+    // Ted's portrait in the header, served through next/image and loaded.
+    const avatar = dialog(page).locator('img[src*="tedd-avatar"]');
+    await expect(avatar).toBeVisible();
+    // The first request makes next/image optimize the original, so wait.
+    await expect.poll(() => avatar.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
 
     await page.keyboard.press('Escape');
     await expect(dialog(page)).toBeHidden();
@@ -109,7 +115,7 @@ test.describe('support chat', () => {
   test('answers in Bulgarian', async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: 'ptd_locale', value: 'bg', url: baseURL! }]);
     await openChat(page);
-    await expect(log(page).locator(':scope > p').first()).toHaveText('Здравей! Аз съм виртуалният асистент на KUKO WAY. С какво мога да ти помогна?');
+    await expect(log(page).locator(':scope > p').first()).toHaveText('Здравей! Аз съм Тед, виртуалният асистент на Kuko Way. С какво мога да помогна?');
     await ask(page, 'Къде мога да намеря програми');
     await expect(lastReply(page)).toContainText('„Програми“');
     await expect(lastReply(page).getByRole('link', { name: 'Виж програмите' })).toHaveAttribute('href', '/practices/programs');
@@ -177,7 +183,7 @@ test.describe('support chat', () => {
 
     // BG → EN: recognised questions and every reply read in English.
     await switchTo(/Език: БГ/, 'EN');
-    await expect(log(page)).toContainText('I’m the KUKO WAY assistant');
+    await expect(log(page)).toContainText('I’m Ted, the Kuko Way virtual assistant');
     await expect(userBubbles.nth(0)).toHaveText('Who are you?');
     await expect(userBubbles.nth(0)).toHaveAttribute('lang', 'en');
     await expect(userBubbles.nth(1)).toHaveText('Where can I find the programs?');
@@ -199,7 +205,7 @@ test.describe('support chat', () => {
     // EN → BG: the visitor's own words come back exactly.
     // In the English UI the Bulgarian option is labelled "BG".
     await switchTo(/Language: EN/, 'BG');
-    await expect(log(page)).toContainText('Аз съм виртуалният асистент на KUKO WAY');
+    await expect(log(page)).toContainText('Аз съм Тед, виртуалният асистент на Kuko Way');
     await expect(userBubbles.nth(0)).toHaveText('Кой си ти');
     await expect(userBubbles.nth(1)).toHaveText('Къде мога да намеря програми');
     await expect(userBubbles.nth(2)).toHaveText('Кой те създаде?');

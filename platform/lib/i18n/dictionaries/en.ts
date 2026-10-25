@@ -868,8 +868,8 @@ const en: typeof bg = {
   supportChat: {
     openLabel: 'Open the help assistant',
     close: 'Close the help assistant',
-    title: 'KUKO WAY Assistant',
-    welcome: 'Hi! I’m the KUKO WAY assistant. How can I help – practices, programs or something on the site?',
+    title: 'Ted',
+    welcome: 'Hi! I’m Ted, the Kuko Way virtual assistant. How can I help?',
     conversationLabel: 'Conversation with the assistant',
     placeholder: 'Type a message…',
     inputLabel: 'Your message',

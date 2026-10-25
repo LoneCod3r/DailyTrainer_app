@@ -364,6 +364,27 @@ describe('FAQ content', () => {
     }
   });
 
+  it('names the assistant Тед / Ted (one "d") and shows his portrait', () => {
+    expect(lookup(bg, 'supportChat.title')).toBe('Тед');
+    expect(lookup(en, 'supportChat.title')).toBe('Ted');
+    expect(lookup(bg, 'supportChat.welcome')).toBe('Здравей! Аз съм Тед, виртуалният асистент на Kuko Way. С какво мога да помогна?');
+    expect(lookup(en, 'supportChat.welcome')).toBe('Hi! I’m Ted, the Kuko Way virtual assistant. How can I help?');
+    for (const id of ['name', 'identity']) {
+      const answer = FAQ.find((e) => e.id === id)!.answer!;
+      expect(answer.bg, id).toContain('Тед');
+      expect(answer.en, id).toContain('Ted');
+    }
+    // Every visible chat text: the name is never spelled with two d's.
+    const visible = [
+      JSON.stringify(lookup(bg, 'supportChat')),
+      JSON.stringify(lookup(en, 'supportChat')),
+      ...FAQ.flatMap((e) => (e.answer ? [e.answer.bg, e.answer.en] : [])),
+    ].join('\n');
+    expect(visible).not.toMatch(/Тедд|Tedd/i);
+    // The portrait SupportChat imports (components/support/SupportChat.tsx).
+    expect(existsSync(join(__dirname, '..', 'tedd-avatar.jpeg'))).toBe(true);
+  });
+
   it('answers the topics the welcome message invites', () => {
     // The welcome invites questions about practices and programs.
     expect(matchFaq('практики')?.id).toBe('practices');
