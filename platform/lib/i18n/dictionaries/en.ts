@@ -869,6 +869,7 @@ const en: typeof bg = {
     openLabel: 'Open the help assistant',
     close: 'Close the help assistant',
     title: 'Ted',
+    online: 'Online',
     welcome: 'Hi! I’m Ted, the Kuko Way virtual assistant. How can I help?',
     conversationLabel: 'Conversation with the assistant',
     placeholder: 'Type a message…',

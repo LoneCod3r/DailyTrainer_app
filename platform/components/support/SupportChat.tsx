@@ -8,7 +8,8 @@ import { useLegal } from '@/components/legal/LegalProvider';
 import { clsx } from '@/lib/clsx';
 import { useLocale } from '@/lib/i18n/LocaleProvider';
 import type { Locale } from '@/lib/i18n/locale';
-import { matchFaq, type FaqEntry, type FaqLink } from '@/modules/support/faq';
+import { DOC_OVERRIDABLE_IDS, matchFaq, type FaqEntry, type FaqLink } from '@/modules/support/faq';
+import type { DocAnswer } from '@/modules/support/retrieval';
 // Ted, the assistant's portrait. Imported (not served from public/) so
 // next/image resizes the large original down to the header's size.
 import tedAvatar from '@/tedd-avatar.jpeg';
@@ -18,9 +19,21 @@ const QUESTION_MAX = 300;
 // A visitor's message keeps their own words and the language they wrote in,
 // plus the entry it matched, so a language switch can re-display it without
 // matching again (see userText). entry null: the question matched nothing.
+// doc: a passage from the approved documentation, when the FAQ had no
+// answer (modules/support/retrieval.ts); its question then stays in the
+// visitor's own words, like an unmatched one.
 type Message =
   | { role: 'user'; text: string; locale: Locale; entry: FaqEntry | null }
-  | { role: 'bot'; entry: FaqEntry | null };
+  | { role: 'bot'; entry: FaqEntry | null; doc?: DocAnswer | null };
+
+// The documentation search and its content load on demand (the chat
+// preloads it when opened), so pages don't carry it in their bundle.
+let retrieval: Promise<typeof import('@/modules/support/retrieval')> | null = null;
+const loadRetrieval = () =>
+  (retrieval ??= import('@/modules/support/retrieval').catch((error) => {
+    retrieval = null; // let a later question try again
+    throw error;
+  }));
 
 // Chat bubbles: bot on the left, visitor on the right, each with one
 // squared corner on its own side.
@@ -100,6 +113,14 @@ export function SupportChat({ contactEmail }: { contactEmail: string }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
+  // Answers in question order (see send).
+  const queue = useRef<Promise<void>>(Promise.resolve());
+
+  // Fetch the documentation search when the chat opens, so the first
+  // question that needs it isn't kept waiting.
+  useEffect(() => {
+    if (open) loadRetrieval().catch(() => {});
+  }, [open]);
   const inputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -237,13 +258,27 @@ export function SupportChat({ contactEmail }: { contactEmail: string }) {
     setOpen(false);
   }
 
+  // The FAQ answers at once. Only when it has no answer, or a general
+  // section answer a passage might beat, is the documentation searched; the
+  // queue keeps replies in the order the questions were asked.
   function send(e: FormEvent) {
     e.preventDefault();
     const question = draft.trim();
     if (!question) return;
     setDraft('');
-    const entry = matchFaq(question);
-    setMessages((m) => [...m, { role: 'user', text: question, locale, entry }, { role: 'bot', entry }]);
+    const asked = locale;
+    queue.current = queue.current.then(async () => {
+      let entry = matchFaq(question);
+      let doc: DocAnswer | null = null;
+      if (entry === null || DOC_OVERRIDABLE_IDS.has(entry.id)) {
+        try {
+          ({ entry, doc } = (await loadRetrieval()).answerQuestion(question));
+        } catch {
+          // Search unavailable (e.g. offline): keep the FAQ's result.
+        }
+      }
+      setMessages((m) => [...m, { role: 'user', text: question, locale: asked, entry }, { role: 'bot', entry, doc }]);
+    });
   }
 
   // In the language it was written in, a message shows the visitor's own
@@ -299,8 +334,17 @@ export function SupportChat({ contactEmail }: { contactEmail: string }) {
   }
 
   // Unmatched: say so, and the contact address only when one is set. Asked
-  // for contact: say so honestly if there is none.
-  function answerBody(entry: FaqEntry | null) {
+  // for contact: say so honestly if there is none. A documentation passage:
+  // the quoted text and a link to its page.
+  function answerBody(entry: FaqEntry | null, doc?: DocAnswer | null) {
+    if (doc) {
+      return (
+        <>
+          <p>{doc.text[locale]}</p>
+          {links([doc.link])}
+        </>
+      );
+    }
     return (
       <>
         {entry === null ? (
@@ -353,9 +397,16 @@ export function SupportChat({ contactEmail }: { contactEmail: string }) {
         >
           <div className="flex items-center gap-2.5 border-b border-sand-200 px-4 py-2.5">
             <Image src={tedAvatar} alt="" width={32} height={32} className="h-8 w-8 rounded-full object-cover object-top" />
-            <h2 id="support-chat-title" className="flex-1 text-sm font-semibold text-ink-900">
-              {t('supportChat.title')}
-            </h2>
+            {/* The dot only suggests the assistant is available; it reflects
+                no presence check. Outside the heading, so the dialog's name
+                stays just "Тед" / "Ted". */}
+            <div className="flex flex-1 items-center gap-1.5">
+              <h2 id="support-chat-title" className="text-sm font-semibold text-ink-900">
+                {t('supportChat.title')}
+              </h2>
+              <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-brand-500" />
+              <span className="sr-only">{t('supportChat.online')}</span>
+            </div>
             <button
               type="button"
               onClick={close}
@@ -385,7 +436,7 @@ export function SupportChat({ contactEmail }: { contactEmail: string }) {
               }
               return (
                 <div key={i} className={botBubble}>
-                  {answerBody(m.entry)}
+                  {answerBody(m.entry, m.doc)}
                 </div>
               );
             })}

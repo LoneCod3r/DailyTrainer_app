@@ -33,6 +33,9 @@ test.describe('support chat', () => {
     await openChat(page);
     await expect(log(page).locator(':scope > p').first()).toHaveText('Hi! I’m Ted, the Kuko Way virtual assistant. How can I help?');
     await expect(input(page)).toBeFocused();
+    // The "online" dot next to the name, with its status for screen readers;
+    // the dialog's own name stays just "Ted" (see `dialog`).
+    await expect(dialog(page).getByText('Online', { exact: true })).toHaveCount(1);
 
     // Ted's portrait in the header, served through next/image and loaded.
     const avatar = dialog(page).locator('img[src*="tedd-avatar"]');
@@ -100,19 +103,75 @@ test.describe('support chat', () => {
     await expect(lastReply(page)).toContainText('not sure I understood');
   });
 
-  // Regression: "история" used to send this to Journey („Път“).
+  // Regression: "история" used to send this to Journey („Път“). It now gets
+  // the handbook's story of KUKO WAY.
   test('does not mistake the history of KUKO WAY for the visitor’s Journey', async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: 'ptd_locale', value: 'bg', url: baseURL! }]);
     await openChat(page);
     await ask(page, 'Кажи ми за историята на Kuko Way');
-    await expect(lastReply(page)).toContainText('Не съм сигурен, че разбрах');
+    await expect(lastReply(page)).toContainText('Garry Lineham');
     await expect(lastReply(page)).not.toContainText('„Път“ показва');
     await expect(lastReply(page).locator('a[href="/journey"]')).toHaveCount(0);
+    await expect(lastReply(page).getByRole('link', { name: 'Прочети „Какво е KUKO WAY?“' })).toHaveAttribute(
+      'href',
+      '/practices/start-here/kakvo-e-kuko-way',
+    );
 
     // The visitor's own history still leads to Journey.
     await ask(page, 'Къде е историята ми?');
     await expect(lastReply(page)).toContainText('„Път“ показва напредъка ти');
     await expect(lastReply(page).getByRole('link', { name: 'Виж „Път“' })).toHaveAttribute('href', '/journey');
+  });
+
+  test('explains what KUKO WAY is, in both languages, and follows a language switch', async ({ page, context, baseURL }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openChat(page);
+    await ask(page, 'Tell me about Kuko Way');
+    await expect(lastReply(page)).toContainText('KUKO WAY is an approach and community');
+    await expect(lastReply(page).getByRole('link', { name: 'Read “What Is KUKO WAY?”' })).toHaveAttribute(
+      'href',
+      '/practices/start-here/kakvo-e-kuko-way',
+    );
+
+    // Switching the site to Bulgarian re-displays the same answer in Bulgarian.
+    await page.getByRole('button', { name: /Language: EN/ }).click();
+    await page.getByRole('option', { name: 'BG' }).click();
+    await expect(lastReply(page)).toContainText('KUKO WAY е подход и общност');
+
+    await context.addCookies([{ name: 'ptd_locale', value: 'bg', url: baseURL! }]);
+    await openChat(page);
+    await ask(page, 'Какво е KUKO WAY?');
+    await expect(lastReply(page)).toContainText('KUKO WAY е подход и общност');
+    await expect(lastReply(page).getByRole('link', { name: 'Нашите убеждения' })).toHaveAttribute('href', '/practices/start-here/nashite-ubezhdeniya');
+  });
+
+  // Documentation search (modules/support/retrieval.ts): when the FAQ has no
+  // answer, a quoted passage from the approved content, with its page.
+  test('quotes the approved documentation, with its page, in both languages', async ({ page, context, baseURL }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openChat(page);
+    await ask(page, 'How do I do the Palate Swipe?');
+    await expect(lastReply(page)).toContainText('From “Palate Swipe”:');
+    await expect(lastReply(page).getByRole('link', { name: 'Read “Palate Swipe”' })).toHaveAttribute('href', '/practices/plazgane-po-nebtseto');
+
+    // The quoted passage follows a language switch.
+    await page.getByRole('button', { name: /Language: EN/ }).click();
+    await page.getByRole('option', { name: 'BG' }).click();
+    await expect(lastReply(page)).toContainText('От „Плъзгане по небцето“:');
+
+    await context.addCookies([{ name: 'ptd_locale', value: 'bg', url: baseURL! }]);
+    await openChat(page);
+    await ask(page, 'Какво е фасция?');
+    await expect(lastReply(page)).toContainText('От „Какво е фасция?“:');
+    await expect(lastReply(page).getByRole('link', { name: 'Прочети „Какво е фасция?“' })).toHaveAttribute('href', '/learn/kakvo-e-fastsiya');
+
+    // A health claim gets the medical disclaimer, not a quoted benefit.
+    await ask(page, 'Лекува ли болки в гърба?');
+    await expect(lastReply(page)).toContainText('не замества медицинска диагноза');
+
+    // Still nothing reliable: the usual fallback.
+    await ask(page, 'Какво е времето утре?');
+    await expect(lastReply(page)).toContainText('Не съм сигурен, че разбрах');
   });
 
   test('uses readable, relative internal links', async ({ page, baseURL }) => {
@@ -189,6 +248,9 @@ test.describe('support chat', () => {
     await ask(page, 'абв гдеж');
     const userBubbles = log(page).locator(':scope > p:not(:first-child)');
     const replies = log(page).locator(':scope > div:not(:empty)');
+    // Unmatched questions are also looked up in the documentation, which
+    // answers a moment later; count once every reply is in.
+    await expect(replies).toHaveCount(4);
     const count = await bubbles(page).count();
 
     const switchTo = async (current: RegExp, option: string) => {

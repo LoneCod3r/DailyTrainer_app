@@ -5,6 +5,8 @@ import bg from '@/lib/i18n/dictionaries/bg';
 import en from '@/lib/i18n/dictionaries/en';
 import { formatCurrency } from '@/lib/format-currency';
 import { getCatalog } from '@/modules/commerce/catalog';
+import { handbookSectionHref } from '@/modules/kuko-way/handbook';
+import { getHandbookSections } from '@/modules/kuko-way/service';
 import { localize } from '@/modules/kuko-way/types';
 import { FAQ, matchFaq, type FaqEntry } from '@/modules/support/faq';
 
@@ -13,8 +15,12 @@ import { FAQ, matchFaq, type FaqEntry } from '@/modules/support/faq';
 
 const APP_DIR = join(__dirname, '..', 'app');
 
-// Static routes only; the FAQ never links to a dynamic one.
+// Static routes, plus handbook chapters at their one canonical URL (Start
+// Here or Learn, see modules/kuko-way/handbook.ts) — the only dynamic routes
+// the FAQ links to.
+const HANDBOOK_HREFS = new Set(getHandbookSections().map((s) => handbookSectionHref(s)));
 function routeExists(href: string): boolean {
+  if (HANDBOOK_HREFS.has(href)) return true;
   const segments = href === '/' ? [] : href.slice(1).split('/');
   return ['(app)', '(auth)'].some((group) => existsSync(join(APP_DIR, group, ...segments, 'page.tsx')));
 }
@@ -165,7 +171,8 @@ describe('matchFaq', () => {
     ['Where can I find programs?', 'programs'],
     ['Tell me about the 28 day reset', 'programs'],
     ['Къде мога да намеря програми', 'programs'],
-    ['Безплатни ли са програмите?', 'programs'],
+    // The free-content answer says plainly that the programs are paid.
+    ['Безплатни ли са програмите?', 'free'],
   ])('program discovery stays with Programs: %s → %s', (question, id) => {
     expect(matchFaq(question)?.id).toBe(id);
   });
@@ -307,8 +314,8 @@ describe('matchFaq', () => {
   });
 
   // Regression: the bare stem 'истори' / 'history' used to send any history
-  // question to Journey. KUKO WAY's own story has no FAQ answer, so these
-  // get the honest "not sure I understood" fallback (SupportChat, no match).
+  // question to Journey. KUKO WAY's own history now has a verified answer
+  // (the handbook's story), matched only together with the brand name.
   it.each([
     'Кажи ми за историята на Kuko Way',
     'кажи ми за историята на kuko way',
@@ -316,14 +323,29 @@ describe('matchFaq', () => {
     'Кажи ми за историята на KUKO WAY?',
     'Каква е историята на KUKO WAY?',
     'Разкажи ми историята на Kuko Way.',
+    'Разкажи ми за историята на KUKO WAY',
     'История на Kuko Way',
-    'Разкажи ми историята си',
+    'История на Куко Уей',
+    'Кой създаде KUKO WAY?',
+    'Как възникна KUKO WAY?',
     'Tell me about the history of Kuko Way',
     'What is the history of KUKO WAY?',
-    'history',
-  ])('history of KUKO WAY is not Journey: %s', (question) => {
-    expect(matchFaq(question)?.id).not.toBe('journey');
-    expect(matchFaq(question)).toBeNull();
+    'What is the story behind Kuko Way?',
+    'Who founded KUKO WAY?',
+  ])('the history of KUKO WAY gets its story, never Journey: %s', (question) => {
+    expect(matchFaq(question)?.id).toBe('story');
+  });
+
+  it.each(['Разкажи ми историята си', 'history', 'История', 'Tell me a story'])(
+    'other history questions still match nothing (fallback): %s',
+    (question) => {
+      expect(matchFaq(question)).toBeNull();
+    },
+  );
+
+  it('keeps the visitor’s own history with Journey even when the brand is named', () => {
+    expect(matchFaq('Къде е историята ми в KUKO WAY?')?.id).toBe('journey');
+    expect(matchFaq('Where is my practice history on Kuko Way?')?.id).toBe('journey');
   });
 
   it.each([
@@ -338,6 +360,102 @@ describe('matchFaq', () => {
     'Show my streak',
   ])('the visitor’s own progress or history is Journey: %s', (question) => {
     expect(matchFaq(question)?.id).toBe('journey');
+  });
+
+  // The 20 support topics, each in Bulgarian and English with natural
+  // variations (case, punctuation, Cyrillic brand spelling).
+  it.each([
+    // 1. What is KUKO WAY?
+    ['Какво е KUKO WAY?', 'about'],
+    ['какво е kuko way', 'about'],
+    ['Какво представлява Куко Уей?', 'about'],
+    ['Кажи ми за Kuko Way', 'about'],
+    ['What is KUKO WAY?', 'about'],
+    ['Tell me about Kuko Way', 'about'],
+    ['tell me about kuko way!!!', 'about'],
+    ["What's Kuko Way?", 'about'],
+    // 2. History → the story (see the history tests above)
+    ['Разкажи ми за историята на KUKO WAY', 'story'],
+    ['Tell me about the history of KUKO WAY', 'story'],
+    // 3. Getting started
+    ['Как да започна?', 'start'],
+    ['Откъде да започна?', 'start'],
+    ['How do I get started?', 'start'],
+    ['Where should I start?', 'start'],
+    // 4. Who is it for
+    ['За кого е предназначен KUKO WAY?', 'audience'],
+    ['Подходящ ли е за начинаещи?', 'audience'],
+    ['Who is KUKO WAY for?', 'audience'],
+    ['Who is it for?', 'audience'],
+    // 5. What are the practices
+    ['Какво представляват практиките?', 'practices'],
+    ['What are the practices?', 'practices'],
+    // 6. Practice vs program
+    ['Каква е разликата между практика и програма?', 'difference'],
+    ['What is the difference between a practice and a program?', 'difference'],
+    ['Practice vs program?', 'difference'],
+    // 7. Which program
+    ['Коя програма да избера?', 'chooseProgram'],
+    ['Which program should I choose?', 'chooseProgram'],
+    ['Which reset is best for me?', 'chooseProgram'],
+    // 8. Duration
+    ['Колко време отнема една практика?', 'duration'],
+    ['How long does a practice take?', 'duration'],
+    ['How much time does a practice take?', 'duration'],
+    // 9. Browse first
+    ['Мога ли да разглеждам практиките, преди да избера?', 'browse'],
+    ['Can I browse the practices before choosing?', 'browse'],
+    // 10. Find a specific practice
+    ['Как да намеря конкретна практика?', 'findPractice'],
+    ['How do I find a specific practice?', 'findPractice'],
+    ['Can I search for a practice by name?', 'findPractice'],
+    // 11. Program prices
+    ['Колко струват програмите?', 'pricing'],
+    ['How much do the programs cost?', 'pricing'],
+    // 12. Free content
+    ['Има ли безплатно съдържание?', 'free'],
+    ['Is any content free?', 'free'],
+    ['Are the programs free?', 'free'],
+    // 13. Price before paying
+    ['Как да разбера цената, преди да платя?', 'priceBeforePaying'],
+    ['How can I check the price before paying?', 'priceBeforePaying'],
+    // 14. Payment help
+    ['Къде да потърся помощ за плащане?', 'paymentHelp'],
+    ['Where can I get help with a payment?', 'paymentHelp'],
+    ['I have a problem with my payment', 'paymentHelp'],
+    // 15. Progress
+    ['Как да видя напредъка си?', 'journey'],
+    ['How can I see my progress?', 'journey'],
+    // 16. Practice history
+    ['Къде да намеря историята на практиките си?', 'journey'],
+    ['Where can I find my practice history?', 'journey'],
+    // 17. Update the profile
+    ['Как да променя информацията в профила си?', 'account'],
+    ['How can I update my profile?', 'account'],
+    // 18. Learn
+    ['Какво е „Знание“?', 'learn'],
+    ['What is Learn?', 'learn'],
+    // 19. Medical care
+    ['Практиките заместител ли са на медицинска помощ?', 'medical'],
+    ['Are the practices a substitute for medical care?', 'medical'],
+    ['Should I see a doctor?', 'medical'],
+    // 20. Policies and help
+    ['Къде да намеря правилата и помощта?', 'policies'],
+    ['Where can I find the policies or get help?', 'policies'],
+  ])('support topic: %s → %s', (question, id) => {
+    expect(matchFaq(question)?.id).toBe(id);
+  });
+
+  it('keeps neighbouring topics apart', () => {
+    expect(matchFaq('Има ли безплатни видеа?')?.id).toBe('videos');
+    expect(matchFaq('Where are the terms?')?.id).toBe('terms');
+    expect(matchFaq('Where can I find practices?')?.id).toBe('practices');
+    expect(matchFaq('Can I buy a program?')?.id).toBe('pricing');
+    expect(matchFaq('Where are my invoices?')?.id).toBe('account');
+    expect(matchFaq('Как да създам профил в KUKO WAY?')?.id).toBe('register');
+    expect(matchFaq('How can I contact the KUKO WAY team?')?.id).toBe('contact');
+    expect(matchFaq('Кой те създаде?')?.id).toBe('creator');
+    expect(matchFaq('Здравей!')?.id).toBe('greeting');
   });
 
   it('returns null for a question it does not recognize', () => {
@@ -392,7 +510,7 @@ describe('FAQ content', () => {
   });
 
   it('has the chat window strings in both languages', () => {
-    for (const key of ['welcome', 'title', 'conversationLabel', 'noMatch', 'placeholder', 'inputLabel', 'send', 'close', 'openLabel']) {
+    for (const key of ['welcome', 'title', 'online', 'conversationLabel', 'noMatch', 'placeholder', 'inputLabel', 'send', 'close', 'openLabel']) {
       expect(typeof lookup(bg, `supportChat.${key}`), key).toBe('string');
       expect(typeof lookup(en, `supportChat.${key}`), key).toBe('string');
     }
@@ -502,7 +620,9 @@ describe('FAQ content', () => {
     const answers = texts(FAQ);
     expect(answers).not.toMatch(/[\w.+-]+@[\w-]+\.\w+/);
     expect(answers).not.toMatch(/https?:\/\//);
-    expect(texts(FAQ.filter((e) => e.id !== 'pricing'))).not.toMatch(/[€$\d]|\b(eur|bgn)\b|лв/i);
+    // Amounts only in the pricing answer (from the catalog). Digits elsewhere
+    // are program names ("7-дневен ресет") or the handbook's "15-minute".
+    expect(texts(FAQ.filter((e) => e.id !== 'pricing'))).not.toMatch(/[€$]|\b(eur|bgn)\b|лв/i);
     expect(FAQ.every((e) => e.links.every((l) => l.href.startsWith('/')))).toBe(true);
   });
 
@@ -515,6 +635,56 @@ describe('FAQ content', () => {
         expect(link.href, link.href).toMatch(/^\/(?!\/)[a-z0-9/-]*$/);
       }
     }
+  });
+
+  it('answers the support topics with the verified facts and links', () => {
+    const entry = (id: string) => FAQ.find((e) => e.id === id)!;
+    const hrefs = (id: string) => entry(id).links.map((l) => l.href);
+
+    // Overview and story: the handbook's own words (content/start-here.ts).
+    expect(entry('about').answer!.bg).toContain('подход и общност');
+    expect(entry('about').answer!.en).toContain('approach and community');
+    expect(entry('about').answer!.en).toContain('fascial maneuvers');
+    expect(hrefs('about')).toContain('/practices/start-here/kakvo-e-kuko-way');
+    for (const name of ['Garry Lineham', 'Cynthia Leavoy', 'Jason van Blerk']) {
+      expect(entry('story').answer!.bg).toContain(name);
+      expect(entry('story').answer!.en).toContain(name);
+    }
+    // No founding date or founder of KUKO WAY itself is in the source.
+    expect(entry('story').answer!.en).not.toMatch(/founded|founder|\d{4}/i);
+    expect(hrefs('story')).toEqual(['/practices/start-here/kakvo-e-kuko-way']);
+
+    // Duration: no fixed length, only the handbook's ~15-minute reset.
+    expect(entry('duration').answer!.en).toContain('no fixed length');
+    expect(entry('duration').answer!.en).toContain('approximately 15-minute');
+    expect(entry('duration').answer!.bg).toContain('приблизително 15-минутен');
+
+    // Medical: the site's disclaimer, never a promise of benefit.
+    expect(entry('medical').answer!.en).toMatch(/^No\. .*does not replace medical diagnosis, treatment or consultation/);
+    expect(entry('medical').answer!.bg).toMatch(/^Не\. .*не замества медицинска диагноза/);
+    expect(hrefs('medical')).toEqual(['/practices/start-here/kakvo-da-ochakvate']);
+
+    // Free vs paid, profile, payments, policies.
+    expect(entry('free').answer!.en).toContain('one-time payment');
+    expect(entry('account').answer!.en).toContain('can’t be edited');
+    expect(hrefs('paymentHelp')).toEqual(['/account', '/account/billing']);
+    expect(entry('paymentHelp').offerContact).toBe(true);
+    expect(hrefs('policies')).toEqual(['/terms', '/privacy', '/cookies']);
+    expect(entry('policies').offerContact).toBe(true);
+    // Answers that depend on a contact address never invent one.
+    for (const id of ['paymentHelp', 'policies']) expect(entry(id).answer!.en).toContain('once it’s published');
+  });
+
+  it('builds the program-choice answer from the catalog taglines', () => {
+    const answer = FAQ.find((e) => e.id === 'chooseProgram')!.answer!;
+    for (const product of getCatalog().filter((p) => p.kind === 'PROGRAM')) {
+      const tagline = localize(product.tagline, 'en').value;
+      expect(answer.en).toContain(`${product.title.en} – ${tagline.charAt(0).toLowerCase()}${tagline.slice(1)}`);
+    }
+    expect(answer.bg).toContain('28-дневен ресет – флагманска програма');
+    expect(answer.en).toContain('gradually moving on to longer, more structured programs');
+    // Names no price: amounts belong to the pricing answer.
+    expect(answer.bg + answer.en).not.toMatch(/€/);
   });
 
   it('describes programs as their own section, not as practices', () => {
@@ -578,6 +748,33 @@ describe('pricing answer under the feature flags', () => {
       // Never claims prices or a purchase are available.
       for (const text of [pricing.answer!.bg, pricing.answer!.en]) expect(text).not.toMatch(/[€$\d]|confirmed|потвърдена|preview|преглед/i);
       expect(pricing.links[0].href).toBe('/practices/programs');
+    }
+  });
+
+  it('says where to check a price before paying, under the same flags', async () => {
+    const load = async (flags: { pricingPreview: boolean; programsPreview: boolean; programCheckout: boolean }) => {
+      await pricingWith(flags);
+      const { FAQ: faq } = await import('@/modules/support/faq');
+      return faq.find((e) => e.id === 'priceBeforePaying')!.answer!;
+    };
+    const shown = await load({ pricingPreview: true, programsPreview: true, programCheckout: false });
+    expect(shown.en).toContain('on the Programs page and on its own page – before any payment step');
+    expect(shown.en).toContain('Purchasing isn’t open yet');
+    expect(shown.bg).toContain('Покупките все още не са отворени');
+
+    // Checkout flag on: no "not open" note, and still no claim that buying is open.
+    const checkout = await load({ pricingPreview: true, programsPreview: true, programCheckout: true });
+    expect(checkout.en).not.toContain('Purchasing isn’t open yet');
+    expect(checkout.en).not.toMatch(/you can (buy|purchase)|available to buy/i);
+
+    for (const flags of [
+      { pricingPreview: false, programsPreview: true, programCheckout: false },
+      { pricingPreview: true, programsPreview: false, programCheckout: true },
+    ]) {
+      const hidden = await load(flags);
+      expect(hidden.en).toMatch(/^Program prices aren’t published on the site yet\./);
+      expect(hidden.bg).toMatch(/^Цените на програмите все още не са публикувани в сайта\./);
+      expect(hidden.bg + hidden.en).not.toMatch(/€/);
     }
   });
 
