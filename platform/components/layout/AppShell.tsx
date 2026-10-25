@@ -6,6 +6,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { MobileDrawer } from './MobileDrawer';
 import { VerificationBanner } from './VerificationBanner';
 import { SiteFooter } from '@/components/legal/SiteFooter';
+import { SupportChat } from '@/components/support/SupportChat';
 import { useDeviceProgressImport } from '@/lib/progress/client';
 import { features } from '@/lib/features';
 
@@ -18,10 +19,12 @@ import { features } from '@/lib/features';
 export function AppShell({
   appName,
   planName,
+  contactEmail = '',
   children,
 }: {
   appName: string;
   planName?: string | null;
+  contactEmail?: string;
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -39,6 +42,7 @@ export function AppShell({
       </div>
       <MobileBottomNav />
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      {features.supportChat && <SupportChat contactEmail={contactEmail} />}
     </div>
   );
 }

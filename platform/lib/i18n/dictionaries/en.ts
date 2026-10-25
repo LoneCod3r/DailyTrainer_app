@@ -865,6 +865,19 @@ const en: typeof bg = {
     accessNone: 'No access',
     openProgram: 'Open program',
   },
+  supportChat: {
+    openLabel: 'Open the help assistant',
+    close: 'Close the help assistant',
+    title: 'KUKO WAY Assistant',
+    welcome: 'Hi! I’m the KUKO WAY assistant. How can I help – practices, programs or something on the site?',
+    conversationLabel: 'Conversation with the assistant',
+    placeholder: 'Type a message…',
+    inputLabel: 'Your message',
+    send: 'Send',
+    noMatch: 'I’m not sure I understood that. I can help with practices, programs, Learn, your account or the site’s policies – try asking another way.',
+    contactEmail: 'You can contact the KUKO WAY team at',
+    noContact: 'No contact address is published on the site yet.',
+  },
 };
 
 export default en;

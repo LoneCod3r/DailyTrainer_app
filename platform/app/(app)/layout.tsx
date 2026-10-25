@@ -16,7 +16,11 @@ export default async function AppGroupLayout({ children }: { children: React.Rea
   const subscription = session?.user ? await getActiveSubscriptionForUser(session.user.id) : null;
 
   return (
-    <AppShell appName={settings.appName} planName={subscription?.membershipPlan.name ?? null}>
+    <AppShell
+      appName={settings.appName}
+      planName={subscription?.membershipPlan.name ?? null}
+      contactEmail={settings.contactEmail}
+    >
       {children}
     </AppShell>
   );

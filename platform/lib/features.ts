@@ -47,4 +47,8 @@ export const features = {
   // a success it can't deliver. Turn on only once lib/newsletter.ts is wired
   // to a real provider.
   newsletter: flag(process.env.NEXT_PUBLIC_FEATURE_NEWSLETTER),
+
+  // Help assistant (modules/support): a small FAQ/navigation chat with fixed
+  // answers, matched by keywords in the browser. No AI, API or key needed.
+  supportChat: flag(process.env.NEXT_PUBLIC_FEATURE_SUPPORT_CHAT),
 };
