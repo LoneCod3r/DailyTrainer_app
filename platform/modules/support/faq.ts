@@ -80,6 +80,19 @@ const PRICE_WORDS = [
   'покупк',
 ];
 
+// The visitor's own history of practice (BG and EN), for Journey. Whole
+// phrases with "my" / "ми" / "моята" or "practice", so a question about
+// some other history ("историята на Kuko Way") doesn't match. Not
+// "историята си": in "Разкажи ми историята си" it means the assistant's.
+const PERSONAL_HISTORY = [
+  'my history',
+  'practice history',
+  'моята истори',
+  'историята ми ',
+  'история на практик',
+  'историята на практик',
+];
+
 // Bulgarian program names for the assistant's answer, by catalog slug. The
 // catalog titles (shown on the site) stay the English product names; a
 // program missing here falls back to its catalog title.
@@ -208,7 +221,11 @@ export const FAQ: FaqEntry[] = [
   {
     id: 'journey',
     question: { bg: 'Къде виждам напредъка си?', en: 'Where can I see my progress?' },
-    keywords: ['journey', 'progress', 'statistic', 'history', 'favorite', 'favourite', 'note', 'streak', 'път', 'напред', 'статистик', 'истори', 'любим', 'бележк', 'серия'],
+    keywords: ['journey', 'progress', 'statistic', 'favorite', 'favourite', 'note', 'streak', 'път', 'напред', 'статистик', 'любим', 'бележк', 'серия'],
+    // "History" only as the visitor's own (practice) history, never a bare
+    // 'history' / 'истори', which also caught "the history of KUKO WAY".
+    // A compound so "my practice history" wins over the practice keyword.
+    whenAll: [PERSONAL_HISTORY],
     answer: {
       bg: '„Път“ показва напредъка ти – дни с практика, минути, програми, любими практики и бележки. Без вход напредъкът се пази на устройството и се добавя към профила, когато влезеш.',
       en: 'Journey shows your progress – days you practised, minutes, programs, favorite practices and notes. Without signing in, it is kept on your device and added to your account when you log in.',

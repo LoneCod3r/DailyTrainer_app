@@ -100,6 +100,21 @@ test.describe('support chat', () => {
     await expect(lastReply(page)).toContainText('not sure I understood');
   });
 
+  // Regression: "история" used to send this to Journey („Път“).
+  test('does not mistake the history of KUKO WAY for the visitor’s Journey', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: 'ptd_locale', value: 'bg', url: baseURL! }]);
+    await openChat(page);
+    await ask(page, 'Кажи ми за историята на Kuko Way');
+    await expect(lastReply(page)).toContainText('Не съм сигурен, че разбрах');
+    await expect(lastReply(page)).not.toContainText('„Път“ показва');
+    await expect(lastReply(page).locator('a[href="/journey"]')).toHaveCount(0);
+
+    // The visitor's own history still leads to Journey.
+    await ask(page, 'Къде е историята ми?');
+    await expect(lastReply(page)).toContainText('„Път“ показва напредъка ти');
+    await expect(lastReply(page).getByRole('link', { name: 'Виж „Път“' })).toHaveAttribute('href', '/journey');
+  });
+
   test('uses readable, relative internal links', async ({ page, baseURL }) => {
     await openChat(page);
     await ask(page, 'Where can I find practices?');

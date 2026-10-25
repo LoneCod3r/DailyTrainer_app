@@ -306,6 +306,40 @@ describe('matchFaq', () => {
     expect(matchFaq('Hilton hotel')).toBeNull();
   });
 
+  // Regression: the bare stem 'истори' / 'history' used to send any history
+  // question to Journey. KUKO WAY's own story has no FAQ answer, so these
+  // get the honest "not sure I understood" fallback (SupportChat, no match).
+  it.each([
+    'Кажи ми за историята на Kuko Way',
+    'кажи ми за историята на kuko way',
+    'КАЖИ МИ ЗА ИСТОРИЯТА НА KUKO WAY!!!',
+    'Кажи ми за историята на KUKO WAY?',
+    'Каква е историята на KUKO WAY?',
+    'Разкажи ми историята на Kuko Way.',
+    'История на Kuko Way',
+    'Разкажи ми историята си',
+    'Tell me about the history of Kuko Way',
+    'What is the history of KUKO WAY?',
+    'history',
+  ])('history of KUKO WAY is not Journey: %s', (question) => {
+    expect(matchFaq(question)?.id).not.toBe('journey');
+    expect(matchFaq(question)).toBeNull();
+  });
+
+  it.each([
+    'Къде виждам напредъка си?',
+    'Къде е историята ми?',
+    'Къде виждам моята история?',
+    'Покажи историята на практиките ми',
+    'Къде е историята на практиките?',
+    'Where can I see my progress?',
+    'Where can I see my history?',
+    'Where is my practice history?',
+    'Show my streak',
+  ])('the visitor’s own progress or history is Journey: %s', (question) => {
+    expect(matchFaq(question)?.id).toBe('journey');
+  });
+
   it('returns null for a question it does not recognize', () => {
     expect(matchFaq('What is the weather tomorrow?')).toBeNull();
     expect(matchFaq('')).toBeNull();
